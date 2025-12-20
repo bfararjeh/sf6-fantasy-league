@@ -1,0 +1,52 @@
+using SF6FantasyLeague.Core.Models;
+using Supabase;
+using Postgrest;
+using System.Threading.Tasks;
+
+namespace SF6FantasyLeague.Core.Scripts
+{
+    public class SupabaseService
+    {
+        private readonly Client _client;
+
+        public SupabaseService(string url, string apiKey)
+        {
+            _client = new Client(url, apiKey);
+            _client.InitializeAsync().Wait();
+        }
+
+        // Check if a username already exists
+        public async Task<bool> UserExistsAsync(string username)
+        {
+            var user = await _client
+                .From<User>()
+                .Where(u => u.Username == username)
+                .SingleOrDefaultAsync();
+
+            return user != null;
+        }
+
+        // Save a new user to the database
+        public async Task SaveUserAsync(User user)
+        {
+            var response = await _client
+                .From<User>()
+                .Insert(user)
+                .ExecuteAsync();
+
+            if (!response.ResponseMessage.StartsWith("2")) // crude check for HTTP 2xx
+                throw new Exception("Failed to save user to Supabase.");
+        }
+
+        // Retrieve a user by username
+        public async Task<User> GetUserByUsernameAsync(string username)
+        {
+            var user = await _client
+                .From<User>()
+                .Where(u => u.Username == username)
+                .SingleOrDefaultAsync();
+
+            return user; // null if not found
+        }
+    }
+}

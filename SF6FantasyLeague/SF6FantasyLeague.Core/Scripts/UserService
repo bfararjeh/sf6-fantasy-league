@@ -1,0 +1,53 @@
+using SF6FantasyLeague.Core.Models;
+
+namespace SF6FantasyLeague.Core.Scripts;
+
+public class UserService
+{
+    private readonly SupabaseService _supabaseService;  // database client
+
+    public UserService(SupabaseService supabaseService)
+    {
+        _supabaseService = supabaseService;
+    }
+
+    public async Task<User> CreateUserAsync(string username, string password)
+    {
+        username = username?.Trim() ?? "";
+
+        if (username.Length < 6 || username.Length > 16)
+            throw new InvalidOperationException("Username must be between 6 and 16 characters long!");
+
+        if (!Regex.IsMatch(username, @"^[a-zA-Z0-9_]+$"))
+            throw new InvalidOperationException("Username can only contain letters, numbers, and underscores!");
+
+        if (await _supabaseService.UserExistsAsync(username))
+            throw new InvalidOperationException("Username already taken!");
+        
+
+        if (string.IsNullOrWhiteSpace(password) || password.Length < 8)
+            throw new InvalidOperationException("Password must be at least 8 characters long.");
+
+
+        var user = new User
+        {
+            UserId = Guid.NewGuid().ToString(),
+            Username = username,
+            PasswordHash = PasswordHelper.HashPassword(password)
+        };
+
+
+        await _supabaseService.SaveUserAsync(user);
+
+        return user;
+    }
+
+    public async Task<User> AuthenticateUserAsync(string username, string password)
+    {
+        var user = await _supabaseService.GetUserByUsernameAsync(username);
+        if (user == null || !PasswordHelper.VerifyPassword(password, user.PasswordHash))
+            throw new InvalidOperationException("Invalid username or password.");
+
+        return user;
+    }
+}
