@@ -79,16 +79,16 @@ class LeagueService(BaseService):
             raise Exception("You are already in a league.")
 
         # check if league exists
-        check = (
-            self.supabase
-            .table("leagues")
-            .select("*")
-            .eq("league_id", league_id)
-            .execute()
-            )
-        
-        if not check.data:
-            raise Exception("League not found")
+        try:
+            check = (
+                self.supabase
+                .table("leagues")
+                .select("*")
+                .eq("league_id", league_id)
+                .execute()
+                )
+        except Exception as e:
+            print("League not found.")
 
         update = (
             self.supabase
