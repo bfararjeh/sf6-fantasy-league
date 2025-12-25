@@ -1,3 +1,4 @@
+import re
 from sf6_fantasy_league.db.supabase_client import get_supabase_client
 
 class BaseService:
@@ -5,47 +6,72 @@ class BaseService:
     Base service class for all authenticated Supabase-backed services.
 
     This class is responsible for:
-    - Initializing an authenticated Supabase client using a user's access token
-    - Verifying that the client session is properly authenticated
-    - Storing the authenticated user's `user_id` for downstream queries
-    - Providing common helper methods for accessing manager (user) data
+    - Initialising an authenticated Supabase client by logging in a user
+    - Assigning attributes for use by other services
+    - Providing helper functions multiple services might use
 
     Attributes:
+        supabase (Client):
+            An authenticated Supabase client instance.
+
         user_id (str):
             The authenticated user's UUID, used as the primary key in the
             `managers` table.
 
-        supabase (Client):
-            An authenticated Supabase client instance scoped to the user
-            session via the provided access token.
+        access_token (str):
+            The authenticated user's access token
 
-        auth_id (str):
-            The authenticated Supabase auth user ID, as returned by
-            `supabase.auth.get_user()`.
+        refresh_token (str):
+            The authenticated user's refresh token
+
 
     Methods:
-        get_my_user():
+        __init__(email: str, password: str):
+            Signs in a user using the provided credentials and assigns the
+            attributes outlined above.
+
+        verify_query(query: query) -> APIResponse:
+            Verifies a query by ensuring it is executed without issue and
+            actually returns data. 
+            Returns the APIResponse.
+            
+        get_my_user() -> str:
             Returns the current user's manager row from the `managers` table.
 
-        get_all_user():
+        get_all_user() -> str:
             Returns all manager rows from the `managers` table.
-    """
-    def __init__(self, access_token: str, user_id: str):
-        if not access_token or not user_id:
-            raise ValueError("Access token and user_id required")
 
-        self.user_id = user_id
+        get_my_league() -> str:
+            Returns the user's league UUID.
+    """
+    def __init__(self, email: str, password: str):
+        if not email or not password:
+            raise ValueError("Email and password must be provided.")
+
         self.supabase = get_supabase_client()
 
-        # attach access token to session
-        self.supabase.auth.set_session(access_token, refresh_token="dummy_refresh_token")
+        try:
+            response = self.supabase.auth.sign_in_with_password({
+                "email": email,
+                "password": password
+            })
+            session = response.session
+        except Exception as e:
+            raise Exception(f"Login failed: {e}")
 
-        # get authenticated user
-        user_response = self.supabase.auth.get_user()
-        if user_response is None or user_response.user is None:
-            raise Exception("Client is not authenticated.")
-        self.auth_id = user_response.user.id
-    
+        # init tokens and user id
+        self.user_id = response.user.id
+        self.access_token = session.access_token
+        self.refresh_token = session.refresh_token
+        self.supabase.auth.set_session(session.access_token, session.refresh_token)
+
+        self.verify_query(
+            self.supabase
+            .table("managers")
+            .select("*")
+            .eq("user_id", self.user_id)
+        )
+
     def verify_query(self, query):
         try:
             result = query.execute()
@@ -67,6 +93,15 @@ class BaseService:
 
         return result.data[0]
     
+    def get_all_users(self):
+        result = self.verify_query((
+            self.supabase
+            .table("managers")
+            .select("*")
+            ))
+        
+        return result.data
+
     def get_my_league(self):
         result = self.verify_query((
             self.supabase
@@ -75,13 +110,4 @@ class BaseService:
             .eq("user_id", self.user_id)
             ))
 
-        return result.data[0]
-
-    def get_all_user(self):
-        result = self.verify_query((
-            self.supabase
-            .table("managers")
-            .select("*")
-            ))
-        
-        return result.data
+        return result.data[0]["league_id"]
