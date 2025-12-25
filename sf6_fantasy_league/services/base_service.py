@@ -66,6 +66,16 @@ class BaseService:
             ))
 
         return result.data[0]
+    
+    def get_my_league(self):
+        result = self.verify_query((
+            self.supabase
+            .table("managers")
+            .select("league_id")
+            .eq("user_id", self.user_id)
+            ))
+
+        return result.data[0]
 
     def get_all_user(self):
         result = self.verify_query((

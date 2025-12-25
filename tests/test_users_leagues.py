@@ -24,7 +24,7 @@ def delete_test_league(league_name):
     except Exception as e:
         print(f"Error deleting league '{league_name}': {e}")
 
-def main():
+def main_create_5_assign_all():
     user_service = UserService()
     logged_in_users = []
 
@@ -89,4 +89,4 @@ def main():
         delete_test_league(league_name)
 
 if __name__ == "__main__":
-    main()
+    pass
