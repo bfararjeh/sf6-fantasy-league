@@ -38,9 +38,6 @@ class BaseService:
         get_my_user() -> str:
             Returns the current user's manager row from the `managers` table.
 
-        get_all_user() -> str:
-            Returns all manager rows from the `managers` table.
-
         get_my_league() -> str:
             Returns the user's league UUID.
     """
@@ -92,15 +89,6 @@ class BaseService:
             ))
 
         return result.data[0]
-    
-    def get_all_users(self):
-        result = self.verify_query((
-            self.supabase
-            .table("managers")
-            .select("*")
-            ))
-        
-        return result.data
 
     def get_my_league(self):
         result = self.verify_query((
