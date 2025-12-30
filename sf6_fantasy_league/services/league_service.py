@@ -7,8 +7,7 @@ class LeagueService(BaseService):
     This service inherits the `BaseService` class and provides methods for
     league creation, joining, leaving
 
-    Methods
-    -------
+    Methods:
     create_then_join_league(league_name: str) -> bool
         Creates a new league with the given name and assigns the current user to
         it. 
@@ -137,6 +136,6 @@ class LeagueService(BaseService):
         )
 
         if not result.data:
-            raise Exception("Only the league owner can close or open a league.")
+            raise Exception("Only the league owner can open or close a league.")
 
         return True

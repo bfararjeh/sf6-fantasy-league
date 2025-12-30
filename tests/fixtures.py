@@ -4,16 +4,19 @@ PLAYER_POOL = [
     "Fuudo", "Zhen", "SURINI", "Samurai", "Shuto",
     "Akira", "Chris Wong", "Hurricane", "Tachikawa", "MenaRD",
     "xiaohai", "MysticSmash", "pugera", "NL", "Beslem",
+
     "Latif", "broski", "Agxxs", "Micky", "Psycho",
     "EndingWalker", "Big Bird", "Mister Crimson", "NARIKUN", "Nyanpi",
     "FREESER", "Axela", "Armperor", "Ryukichi", "LUGABO",
     "Torimeshi", "tako", "Jojotaro", "Juicyjoe", "Oil King",
     "Kawano", "KEI.B", "joxero", "Cosa", "Kobayan",
+
     "Yanai", "Nephew", "AngryBird", "NotPedro", "PrinceGR",
     "Takamura", "NoahTheProdigy", "Booce_Lee", "Harumi", "Kyuki",
     "Roy", "Dogura", "GO1", "NuckleDu", "Tantanmen",
     "DCQ", "Zangief_bolado", "harms", "moke", "Vxbao",
     "Punk", "ACQUA", "KR_Wrestlingman", "Jr.", "Ryusei",
+
     "Higuchi", "Itabashi Zangief", "Sahara", "gachikun", "JuniorLeo",
     "Travis Styles", "Caba", "Mago", "iDom", "Nauman",
     "Phenom", "Kakeru", "Daigo", "Kintyo", "Machabo",
@@ -71,4 +74,16 @@ FALSE_USERS = [
     {"email": "user18@gmail.com", "password": "9P$Z!H@2M7F8", "manager_name": "Ra"},     # name too short
     {"email": "user19@gmail.com", "password": "M2$P@7Z!9HF8", "manager_name": "Samuel_1234567890123"}, # name too long
     {"email": "user20@gmailcom", "password": "H@9!ZP$M27F8", "manager_name": "Tina!"}   # invalid email & char
+]
+
+TEAM_NAMES = [
+    "CrimsonFists", "IronWolves", "Nova_Raiders", "PixelSquad", "BlitzCrew",
+    "ShadowStrike", "MegaMasters", "UltraForceX", "PrimeHunters", "SilverClaws",
+    "CyberKnights", "StormUnit_7", "BattleTigers", "WarpDriveX", "GalaxyRivals",
+    "ThunderRaid", "NightEclipse", "FrostGuard", "ChaosChamps", "OmegaElite",
+    "MysticRogue1", "SteelLegionX", "RoyalFalcons", "QuantumCrew", "ApexSquad"
+]
+
+DUMMY_LEAGUE_NAMES = [
+    "Test League 1", "Test League 2", "Test League 3", "Test League 4", "Test League 5"
 ]

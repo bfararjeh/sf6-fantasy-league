@@ -26,7 +26,7 @@ def get_my_league(sv):
 
     return my_league
 
-def test_user_sign_in():
+def test_a_user():
     users = deepcopy(TEST_USERS)
     test_user = choice(users)
     test_email = test_user["email"]
@@ -36,7 +36,7 @@ def test_user_sign_in():
     print(f"User ID: {get_my_user(service)["user_id"]}\nLeague ID: {get_my_league(service)}")
 
 def main():
-    pass
+    test_a_user()
 
 if __name__ == "__main__":
     main()
