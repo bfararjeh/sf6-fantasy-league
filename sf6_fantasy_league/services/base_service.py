@@ -42,7 +42,7 @@ class BaseService:
             Returns the user's league UUID.
 
         get_my_team() -> str:
-            Returns the user's team name.
+            Returns the user's team ID.
     """
     def __init__(self, email: str, password: str):
         if not email or not password:
@@ -106,9 +106,12 @@ class BaseService:
     def get_my_team(self):
         result = self.verify_query((
             self.supabase
-            .table("managers")
-            .select("team_id")
-            .eq("user_id", self.user_id)
+            .table("teams")
+            .select("*")
+            .eq("team_owner", self.user_id)
             ))
+
+        if not result.data:
+            return None
 
         return result.data[0]["team_id"]

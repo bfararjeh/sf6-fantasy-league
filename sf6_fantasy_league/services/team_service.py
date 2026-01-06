@@ -8,9 +8,11 @@ class TeamService(BaseService):
     priority submission, and draft order assignment.
 
     Methods:
-    Creates a new team for the authenticated manager within their current 
-    league. On success, inserts a new row into the teams table and links it to
-    the manager via managers.team_id and returns True.
+    create_team(team_name: str, player_list: list[str]) -> bool
+        Creates a new team for the authenticated manager within their current 
+        league. On success, inserts a new row into the teams table and links 
+        it to the manager via managers.team_id.
+        Returns True if successful
     """
     def create_team(self, team_name: str, player_list: list[str]):
         # validate state
@@ -42,15 +44,9 @@ class TeamService(BaseService):
             .insert({
                 "league_id": self.get_my_league(),
                 "team_name": team_name,
+                "team_owner": self.user_id,
                 "player_priority_list": json.dumps(player_list)
             })
-        )
-
-        self.verify_query(
-            self.supabase
-            .table("managers")
-            .update({"team_id": result.data[0]["team_id"]})
-            .eq("user_id", self.user_id)
         )
 
         return True
