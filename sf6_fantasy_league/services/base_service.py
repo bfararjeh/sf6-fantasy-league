@@ -42,7 +42,7 @@ class BaseService:
             Returns the user's league UUID.
 
         get_my_team() -> str:
-            Returns the user's team ID.
+            Returns the user's team UUID.
     """
     def __init__(self, email: str, password: str):
         if not email or not password:

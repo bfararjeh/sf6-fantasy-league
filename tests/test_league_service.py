@@ -4,7 +4,7 @@ from random import choice
 from dotenv import load_dotenv
 import supabase
 from sf6_fantasy_league.services.league_service import LeagueService
-from tests.fixtures import DUMMY_LEAGUE_NAMES, TEST_USERS
+from tests.fixtures import DUMMY_LEAGUE_NAMES, TEST_USERS, PLAYER_POOL
 
 load_dotenv()
 
@@ -81,8 +81,8 @@ def assign_draft_orders_for_all_leagues():
             continue
 
 def main():
-    create_dummy_leagues()
-    join_dummy_leagues()
+    pass
+
 
 if __name__ == "__main__":
     main()

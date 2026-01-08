@@ -14,7 +14,7 @@ class TeamService(BaseService):
         it to the manager via managers.team_id.
         Returns True if successful
     """
-    def create_team(self, team_name: str, player_list: list[str]):
+    def create_team(self, team_name: str):
         # validate state
         if not self.get_my_league():
             raise Exception("You are not in a league!")
@@ -26,27 +26,81 @@ class TeamService(BaseService):
             raise Exception("Team name must be inbetween 4 and 16 characters.")
         if not re.fullmatch(r'^\w+$', team_name):
             raise Exception("Team name must only include letters, numbers, and underscores.")
-        if len(player_list) != 25:
-            raise Exception("Draft list must contain exactly 25 players.")
-
-        player_pool = self.verify_query(
-            self.supabase.table("players")
-            .select("name")
-            .in_("name", player_list)
-            )
-
-        if len(player_pool.data) != 25:
-            raise Exception(f"The submitted player list is invalid.")
     
-        result = self.verify_query(
+        self.verify_query(
             self.supabase
             .table("teams")
             .insert({
                 "league_id": self.get_my_league(),
-                "team_name": team_name,
                 "team_owner": self.user_id,
-                "player_priority_list": json.dumps(player_list)
+                "team_name": team_name
             })
         )
 
+        return True
+
+    def pick_player(self, player_name: str):
+        # validate state
+        if not self.get_my_league():
+            raise Exception("You are not in a league!")
+        if not self.get_my_team():
+            raise Exception("You do not have a team!")
+
+        league = self.verify_query(
+            self.supabase
+            .table("leagues")
+            .select("draft_order, pick_turn")
+            .eq("league_id", self.get_my_league())
+        ).data
+
+        if league[0]["pick_turn"] != self.user_id:
+            raise Exception("It's not your turn to pick a player!")
+        
+        result = self.verify_query(
+            self.supabase
+            .table("players")
+            .select("name")
+            .eq("name", player_name)
+        )
+
+        if not result.data:
+            raise Exception("Entered player is not in the player pool!")
+        
+        taken_players = self.verify_query(
+            self.supabase
+            .table("team_players")
+            .select("player_name, team_id")
+            .eq("league_id", self.get_my_league())
+        )
+
+        if player_name in {row["player_name"] for row in taken_players.data}:
+            raise Exception("This player has already been picked!")
+        
+        team_player_count = sum(
+            1 for row in taken_players.data if row["team_id"] == self.get_my_team()
+        )
+
+        if team_player_count == 5:
+            raise Exception("This team is full!")
+        
+        self.verify_query(
+            self.supabase
+            .table("team_players")
+            .insert({
+                "league_id": self.get_my_league(),
+                "team_id": self.get_my_team(),
+                "player_name": player_name,
+                })
+            )
+        
+        draft_order = league[0]["draft_order"]
+        next_pick = draft_order[(draft_order.index(league[0]["pick_turn"])+1)%len(draft_order)] 
+    
+        self.verify_query(
+            self.supabase
+            .table("leagues")
+            .update({"pick_turn": next_pick})
+            .eq("league_id", self.get_my_league())
+        )
+    
         return True

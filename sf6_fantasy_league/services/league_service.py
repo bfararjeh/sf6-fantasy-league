@@ -22,11 +22,6 @@ class LeagueService(BaseService):
         Removes the authenticated user from their current league.
         Returns True if successful.
 
-    set_league_lock(locked: bool) -> bool
-        Locks the league to prevent new managers joining. Can only be done by
-        the league owner.
-        Returns True if successful.
-
     assign_draft_order(ordered_usernames: list[str]) -> bool
         Assigns draft positions to all managers in the league based on the order
         of usernames provided. Can only be done by the league owner and only
@@ -129,23 +124,6 @@ class LeagueService(BaseService):
 
         return True
 
-    def set_league_lock(self, locked: bool):
-        if not(self.get_my_league()):
-            raise Exception("User is not in a league.")
-
-        result = self.verify_query(
-            self.supabase
-            .table("leagues")
-            .update({"locked": locked})
-            .eq("league_id", self.get_my_league())
-            .eq("league_owner", self.user_id)
-        )
-
-        if not result.data:
-            raise Exception("Only the league owner can open or close a league.")
-
-        return True
-
     def assign_draft_order(self, ordered_usernames: list[str]):
 
         if not ordered_usernames:
@@ -186,13 +164,64 @@ class LeagueService(BaseService):
             if username not in manager_map:
                 raise Exception(f"Invalid username in draft list: {username}")
 
-        for i, username in enumerate(ordered_usernames, start=1):
-            user_id = manager_map[username]
-            self.verify_query(
-                self.supabase
-                .table("managers")
-                .update({"draft_order": i})
-                .eq("user_id", user_id)
-                )
+        draft_order = [manager_map[name] for name in ordered_usernames]
+
+        self.verify_query(
+            self.supabase
+            .table("leagues")
+            .update({"draft_order": draft_order})
+            .eq("league_owner", self.user_id)
+        )
+
+        self.verify_query(
+            self.supabase
+            .table("leagues")
+            .update({"pick_turn": draft_order[0]})
+            .eq("league_owner", self.user_id)
+        )
+
+        return True
+    
+    def begin_draft(self):
+
+        league_id = self.get_my_league()
+
+        if not league_id:
+            raise Exception("You are not currently in a league.")
+
+        league = self.verify_query(
+            self.supabase
+            .table("leagues")
+            .select("league_owner, locked, draft_order")
+            .eq("league_id", league_id)
+            .single()
+        ).data
+
+        if league["league_owner"] != self.user_id:
+            raise Exception("Only the league owner can begin the draft.")
+
+        if league["locked"]:
+            raise Exception("The draft has already begun!")
+
+        if league["draft_order"] is None:
+            raise Exception("Draft order must be set before beginning the draft.")
+        
+        managers = self.verify_query(
+            self.supabase
+            .table("managers")
+            .select("user_id")
+            .eq("league_id", league_id)
+        ).data
+
+        if len(managers) < 2:
+            raise Exception("A league must have at least 2 managers to begin the draft.")
+
+        self.verify_query(
+            self.supabase
+            .table("leagues")
+            .update({"locked": True})
+            .eq("league_id", league_id)
+            .eq("league_owner", self.user_id)
+        )
 
         return True

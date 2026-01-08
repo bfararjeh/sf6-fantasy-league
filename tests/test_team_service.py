@@ -37,7 +37,7 @@ def establish_all_test_user_teams():
             print(f"Error creating team for user {user['email']}: {e}")
 
 def main():
-    establish_all_test_user_teams()
+    pass
 
 if __name__ == "__main__":
     main()
