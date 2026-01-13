@@ -2,7 +2,7 @@ import json
 import re
 from app.services.base_service import BaseService
 
-class TeamService(BaseService):
+class TeamService():
     """
     Service for managing teams. Handles team setup tasks such as naming, draft
     priority submission, and draft order assignment.
@@ -17,9 +17,17 @@ class TeamService(BaseService):
         Adds a player to a user's team within the game specification.
         Returns True if successful
     """
+    def __init__(self, base: BaseService):
+        self.base = base
+
+    def __getattr__(self, name):
+        return getattr(self.base, name)
+    
     def create_team(self, team_name: str):
+        my_league = self.get_my_league()
+
         # validation
-        if not self.get_my_league():
+        if not my_league:
             raise Exception("You are not in a league!")
         if self.get_my_team():
             raise Exception("You already have a team!")
@@ -35,7 +43,7 @@ class TeamService(BaseService):
             self.supabase
             .table("teams")
             .insert({
-                "league_id": self.get_my_league(),
+                "league_id": my_league,
                 "team_owner": self.user_id,
                 "team_name": team_name
             })
@@ -44,8 +52,10 @@ class TeamService(BaseService):
         return True
 
     def pick_player(self, player_name: str):
+        my_league = self.get_my_league()
+
         # validate state
-        if not self.get_my_league():
+        if not my_league:
             raise Exception("You are not in a league!")
         if not self.get_my_team():
             raise Exception("You do not have a team!")
@@ -55,7 +65,7 @@ class TeamService(BaseService):
             self.supabase
             .table("leagues")
             .select("draft_order, pick_turn, pick_direction, locked")
-            .eq("league_id", self.get_my_league())
+            .eq("league_id", my_league)
         ).data
 
         if league[0]["locked"] == False:
@@ -80,7 +90,7 @@ class TeamService(BaseService):
             self.supabase
             .table("team_players")
             .select("player_name, team_id")
-            .eq("league_id", self.get_my_league())
+            .eq("league_id", my_league)
         )
         if player_name in {row["player_name"] for row in taken_players.data}:
             raise Exception("This player has already been picked!")
@@ -114,7 +124,7 @@ class TeamService(BaseService):
                 "pick_turn": next_pick,
                 "pick_direction": direction
             })
-            .eq("league_id", self.get_my_league())
+            .eq("league_id", my_league)
         )
     
         # insert player into table
@@ -122,7 +132,7 @@ class TeamService(BaseService):
             self.supabase
             .table("team_players")
             .insert({
-                "league_id": self.get_my_league(),
+                "league_id": my_league,
                 "team_id": self.get_my_team(),
                 "player_name": player_name,
                 })

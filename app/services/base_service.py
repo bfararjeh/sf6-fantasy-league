@@ -6,8 +6,7 @@ class BaseService:
     Base service class for all authenticated Supabase-backed services.
 
     This class is responsible for:
-    - Initialising an authenticated Supabase client by logging in a user
-    - Assigning attributes for use by other services
+    - Assigning attributes for use by other services from the AuthService
     - Providing helper functions multiple services might use
 
     Attributes:
@@ -37,26 +36,13 @@ class BaseService:
         get_my_team() -> str:
             Returns the user's team UUID.
     """
-    def __init__(self, email: str, password: str):
-        if not email or not password:
-            raise ValueError("Email and password must be provided.")
+    def __init__(self, supabase, user_id, access_token, refresh_token):
+        self.supabase = supabase
+        self.user_id = user_id
+        self.access_token = access_token
+        self.refresh_token = refresh_token
 
-        self.supabase = get_supabase_client()
-
-        try:
-            response = self.supabase.auth.sign_in_with_password({
-                "email": email,
-                "password": password
-            })
-            session = response.session
-        except Exception as e:
-            raise Exception(f"Login failed: {e}")
-
-        # init tokens and user id
-        self.user_id = response.user.id
-        self.access_token = session.access_token
-        self.refresh_token = session.refresh_token
-        self.supabase.auth.set_session(session.access_token, session.refresh_token)
+        self.supabase.auth.set_session(access_token, refresh_token)
         
     def verify_query(self, query):
         try:
@@ -65,9 +51,19 @@ class BaseService:
             raise Exception(f"Query execution failed: {e}")
 
         if result.data is None:
-            raise Exception("Query ran successfully but returned no data.")
+            return None
 
         return result
+    
+    def get_my_username(self):
+        result = self.verify_query((
+            self.supabase
+            .table("managers")
+            .select("manager_name")
+            .eq("user_id", self.user_id)
+            ))
+        
+        return result.data[0]["manager_name"]
 
     def get_my_league(self):
         result = self.verify_query((
@@ -76,9 +72,6 @@ class BaseService:
             .select("league_id")
             .eq("user_id", self.user_id)
             ))
-        
-        if not result.data:
-            return None
 
         return result.data[0]["league_id"]
 
@@ -86,11 +79,8 @@ class BaseService:
         result = self.verify_query((
             self.supabase
             .table("teams")
-            .select("*")
+            .select("team_id")
             .eq("team_owner", self.user_id)
             ))
-
-        if not result.data:
-            return None
 
         return result.data[0]["team_id"]

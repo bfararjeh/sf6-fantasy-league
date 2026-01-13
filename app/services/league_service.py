@@ -1,7 +1,7 @@
 import re
 from app.services.base_service import BaseService
 
-class LeagueService(BaseService):
+class LeagueService():
     """
     Service for managing league-related operations for the authenticated user.
     This service inherits the `BaseService` class and provides methods for
@@ -37,6 +37,12 @@ class LeagueService(BaseService):
         to select their player.
         Returns True if successful.
     """
+    def __init__(self, base: BaseService):
+        self.base = base
+
+    def __getattr__(self, name):
+        return getattr(self.base, name)
+
     def create_then_join_league(self, league_name: str):
         if self.get_my_league():
             raise Exception("User is already in a league.")
@@ -224,14 +230,10 @@ class LeagueService(BaseService):
         self.verify_query(
             self.supabase
             .table("leagues")
-            .update({"draft_order": draft_order})
-            .eq("league_owner", self.user_id)
-        )
-
-        self.verify_query(
-            self.supabase
-            .table("leagues")
-            .update({"pick_turn": draft_order[0]})
+            .update({
+                "draft_order": draft_order,
+                "pick_turn": draft_order[0]
+            })
             .eq("league_owner", self.user_id)
         )
 

@@ -31,12 +31,11 @@ class SignupService():
 
         # insert user to database
         # if this fails, the user will become orphaned - fix this later
-        result = (
-            self.supabase
-            .table("managers")
-            .insert({
-                "user_id": auth_id,
-                "manager_name": manager_name
-                })
-            .execute()
-            )
+        (self.supabase
+        .table("managers")
+        .insert({
+            "user_id": auth_id,
+            "manager_name": manager_name
+            })
+        .execute()
+        )

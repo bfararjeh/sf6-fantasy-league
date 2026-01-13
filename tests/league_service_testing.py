@@ -5,6 +5,7 @@ from copy import deepcopy
 from random import choice
 from dotenv import load_dotenv
 
+from app.services.auth_service import AuthService
 from app.services.league_service import LeagueService
 from .fixtures import DUMMY_LEAGUE_NAMES, TEST_USERS
 
@@ -12,10 +13,6 @@ load_dotenv()
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_SECRET_KEY = os.getenv("SUPABASE_SECRET_KEY")
-
-def league_service_init(email, password):
-    sv = LeagueService(email, password)
-    return sv
 
 
 def create_dummy_leagues():
@@ -25,7 +22,8 @@ def create_dummy_leagues():
     users = deepcopy(TEST_USERS[:5])
 
     for i, user in enumerate(users):
-        sv = LeagueService(user["email"], user["password"])
+        base = AuthService.login(user["email"], user["password"])
+        sv = LeagueService(base)
         league_name = DUMMY_LEAGUE_NAMES[i]
         try:
             sv.create_then_join_league(league_name)
@@ -61,7 +59,9 @@ def leave_dummy_league():
     test_email = test_user["email"]
     test_pass = test_user["password"]
 
-    sv = league_service_init(test_email, test_pass)
+    base = AuthService.login(test_email, test_pass)
+    sv = LeagueService(base)
+
     print(f"User ID: {sv.user_id}\nLeague ID: {sv.get_my_league()}")
     sv.leave_league()
     print(f"League left successuly for user {test_email}")
@@ -123,7 +123,7 @@ def alice_league():
 
 
 def main():
-    leave_dummy_league()
+    create_dummy_leagues()
 
 if __name__ == "__main__":
     main()

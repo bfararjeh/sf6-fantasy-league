@@ -54,8 +54,6 @@ def signup_all_false_users():
         print(f"Error when creating users: {e}")
 
 def main():
-    signup_all_false_users()
-    input("Press enter to continue.")
     signup_all_test_users()
 
 if __name__ == "__main__":
