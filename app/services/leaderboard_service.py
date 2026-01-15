@@ -5,15 +5,14 @@ class LeaderboardService():
     Service for grabbing scores of players, their teams, and their leagues.
 
     Methods:
-    get_my_standings() ->
-        Returns the user's team's player standings in
+    get_my_standings() -> jsonb
+        Returns the user's team's player standings.
 
-    get_leaguemate_standings() ->
-        Returns the standings of all players in all teams of a user's league
-        in
+    get_leaguemate_standings() -> jsonb
+        Returns the standings of all players in all teams of a user's league.
 
-    get_player_cum_points() ->
-        Returns the total cumulative point standings of all players in
+    get_player_cum_points() -> jsonb
+        Returns the total cumulative point standings of all players.
     """
     def __init__(self, base: BaseService):
         self.base = base
