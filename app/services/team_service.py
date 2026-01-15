@@ -25,7 +25,6 @@ class TeamService():
     
     def create_team(self, team_name: str):
         my_league = self.get_my_league()
-
         # validation
         if not my_league:
             raise Exception("You are not in a league!")
@@ -64,12 +63,15 @@ class TeamService():
         league = self.verify_query(
             self.supabase
             .table("leagues")
-            .select("draft_order, pick_turn, pick_direction, locked")
+            .select("draft_order, pick_turn, pick_direction, locked, draft_complete")
             .eq("league_id", my_league)
         ).data
 
         if league[0]["locked"] == False:
             raise Exception("The draft hasn't begun yet!")
+
+        if league[0]["draft_complete"] == True:
+            raise Exception("The draft is over!")
 
         if league[0]["pick_turn"] != self.user_id:
             raise Exception("It's not your turn to pick a player!")
@@ -85,23 +87,22 @@ class TeamService():
         if not result.data:
             raise Exception("Entered player is not in the player pool!")
         
-        # check player is available
+        # check player is available and team has room
         taken_players = self.verify_query(
             self.supabase
             .table("team_players")
             .select("player_name, team_id")
             .eq("league_id", my_league)
         )
-        if player_name in {row["player_name"] for row in taken_players.data}:
-            raise Exception("This player has already been picked!")
         
-        # check users team is not full
         team_player_count = sum(
             1 for row in taken_players.data if row["team_id"] == self.get_my_team()
         )
 
         if team_player_count == 5:
             raise Exception("This team is full!")
+        if player_name in {row["player_name"] for row in taken_players.data}:
+            raise Exception("This player has already been picked!")
         
         # update pick turn with snake draft logic
         draft_order = league[0]["draft_order"]
@@ -114,6 +115,16 @@ class TeamService():
         if next_idx >= len(draft_order) or next_idx < 0:
             direction *= -1
             next_idx = idx
+
+            if direction == -1 and team_player_count == 4:
+                self.verify_query(
+                    self.supabase
+                    .table("leagues")
+                    .update({
+                        "draft_complete": True
+                    })
+                    .eq("league_id", my_league)
+                )
 
         next_pick = draft_order[next_idx]
             

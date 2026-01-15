@@ -72,6 +72,9 @@ class BaseService:
             .select("league_id")
             .eq("user_id", self.user_id)
             ))
+        
+        if not result.data:
+            return None
 
         return result.data[0]["league_id"]
 
@@ -82,5 +85,8 @@ class BaseService:
             .select("team_id")
             .eq("team_owner", self.user_id)
             ))
+        
+        if not result.data:
+            return None
 
         return result.data[0]["team_id"]

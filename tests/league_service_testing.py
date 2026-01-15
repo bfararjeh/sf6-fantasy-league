@@ -31,7 +31,6 @@ def create_dummy_leagues():
         except Exception as e:
             print(f"Failed to create league '{league_name}': {e}")
 
-
 def join_dummy_leagues():
     '''
     Joins all test users to all dummy leagues randomly. Some users may remain
@@ -45,27 +44,14 @@ def join_dummy_leagues():
     league_ids = list(league_id_map.values())
 
     for user in users:
-        sv = LeagueService(user["email"], user["password"])
+        base = AuthService.login(user["email"], user["password"])
+        sv = LeagueService(base)
         chosen_league_id = choice(league_ids)
         try:
             sv.join_league(chosen_league_id)
             print(f"User '{user['email']}' joined league '{chosen_league_id}'")
         except Exception as e:
             print(f"Failed to join league for user '{user['email']}': {e}")
-
-
-def leave_dummy_league():
-    test_user = choice(TEST_USERS)
-    test_email = test_user["email"]
-    test_pass = test_user["password"]
-
-    base = AuthService.login(test_email, test_pass)
-    sv = LeagueService(base)
-
-    print(f"User ID: {sv.user_id}\nLeague ID: {sv.get_my_league()}")
-    sv.leave_league()
-    print(f"League left successuly for user {test_email}")
-
 
 def assign_draft_orders_for_all_leagues():
     '''
@@ -88,7 +74,8 @@ def assign_draft_orders_for_all_leagues():
         email = owner_user["email"]
         password = owner_user["password"]
 
-        sv = LeagueService(email, password)
+        base = AuthService.login(email, password)
+        sv = LeagueService(base)
 
         managers_in_league = admin_client.table("managers") \
             .select("manager_name") \
@@ -103,27 +90,35 @@ def assign_draft_orders_for_all_leagues():
             print(f"Failed to assign draft order: {e}")
             continue
 
+def start_drafts():
+    admin_client = supabase.create_client(SUPABASE_URL, SUPABASE_SECRET_KEY)
+    leagues = admin_client.table("leagues").select("*").execute()
 
-def alice_league():
-    '''
-    Logs in as Alice and creates a league which the first 5 users all join.
-    Assigns draft order for said league.
-    '''
-    alice = TEST_USERS[0]
-    sv = league_service_init(alice["email"], alice["password"])
-    sv.create_then_join_league("Alices League")
-    alices_league = sv.get_my_league()
+    for idx, league in enumerate(leagues.data):
+        owner_user_id = league["league_owner"]
 
-    for i in range(1,5):
-        user = TEST_USERS[i]
-        temp_sv = league_service_init(user["email"], user["password"])
-        temp_sv.join_league(alices_league)
-    
-    sv.assign_draft_order(["Alice", "Dana", "Evan", "Bobert", "Charlie"])
+        manager_row = admin_client.table("managers") \
+            .select("manager_name, user_id") \
+            .eq("user_id", owner_user_id) \
+            .single() \
+            .execute().data
 
+        manager_name = manager_row["manager_name"]
+        owner_user = next(u for u in TEST_USERS if u["manager_name"] == manager_name)
+        email = owner_user["email"]
+        password = owner_user["password"]
+
+        base = AuthService.login(email, password)
+        sv = LeagueService(base)
+
+        try:
+            sv.begin_draft()
+        except Exception as e:
+            print(f"Failed to begin draft: {e}")
+            continue
 
 def main():
-    create_dummy_leagues()
+    pass
 
 if __name__ == "__main__":
     main()
