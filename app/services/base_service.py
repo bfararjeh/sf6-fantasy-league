@@ -90,3 +90,14 @@ class BaseService:
             return None
 
         return result.data[0]["team_id"]
+
+    def get_system_state(self):
+        result = self.verify_query((
+            self.supabase
+            .table("system_state")
+            .select("blocking, warning_message, banner_message")
+            .order("updated_at", desc=True)
+            .limit(1)
+        ))
+
+        return result.data[0] if result.data else None

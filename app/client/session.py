@@ -6,6 +6,7 @@ class Session:
     VERSION = "1.0.0"
 
     user = None
+
     current_league_name = None
     current_league_id = None
     is_league_owner = False
@@ -15,6 +16,10 @@ class Session:
     team_service = None
     league_service = None
     leaderboard_service = None
+
+    blocking_state = True
+    warning_message = None
+    banner_message = None
 
     @classmethod
     def init_services(cls):
@@ -63,10 +68,22 @@ class Session:
             cls.current_team_name = cls.team_service.get_my_team_name() or None
         except Exception:
             cls.current_team_name = None
-    
+
+        try:
+            system_state = cls.auth_base.get_system_state()
+            cls.blocking_state = system_state["blocking"]
+            cls.banner_message = system_state["banner_message"]
+            cls.warning_message = system_state["warning_message"]
+
+        except Exception as e:
+            cls.blocking_state = True
+            cls.banner_message = None
+            cls.warning_message = "Critical Error: Unable to interact with database."
+
     @classmethod
     def reset(cls):
         cls.user = None
+
         cls.current_league_id = None
         cls.current_league_name = None
         cls.is_league_owner = False
