@@ -8,6 +8,9 @@ class TeamService():
     priority submission, and draft order assignment.
 
     Methods:
+    get_my_team_name() -> str
+        Returns the users team name as a string.
+        
     create_team(team_name: str) -> bool
         Creates a new team for the authenticated manager within their current 
         league. Returns the users new team ID.
@@ -21,7 +24,24 @@ class TeamService():
 
     def __getattr__(self, name):
         return getattr(self.base, name)
-    
+
+    def get_my_team_name(self):
+        team_id = self.get_my_team()
+        if not team_id:
+            raise Exception("You are not currently in a team.")
+        
+        result = self.verify_query((
+            self.supabase
+            .table("teams")
+            .select("team_name")
+            .eq("team_id", team_id)
+            ))
+        
+        if not result.data:
+            return None
+
+        return result.data[0]["team_name"]
+   
     def create_team(self, team_name: str):
         my_league = self.get_my_league()
         # validation

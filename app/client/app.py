@@ -13,7 +13,7 @@ class FantasyApp(QMainWindow):
         super().__init__()
 
         self.setWindowTitle("SF6 Fantasy League")
-        self.resize(800, 600)
+        self.resize(1000, 800)
 
         if self._try_restore_session():
             self.show_home_view()
@@ -37,11 +37,6 @@ class FantasyApp(QMainWindow):
             print(e)
             SessionStore.clear()
             return False
-
-    def logout(self):
-        Session.reset()
-        SessionStore.clear()
-        self.show_login_view()
     
     def show_login_view(self):
         self.login_view = LoginView(app=self)
@@ -51,20 +46,9 @@ class FantasyApp(QMainWindow):
         self.home_view = HomeView(app=self)
         self.setCentralWidget(self.home_view)
 
-        self.home_view.open_league_view.connect(self.show_league_view)
-        self.home_view.open_team_view.connect(self.show_team_view)
-        self.home_view.open_players.connect(self.show_players_view)
-        self.home_view.open_leaderboards.connect(self.show_leaderboards_view)
-
-        self.home_view.open_help.connect(self.open_help)
-        self.home_view.logout.connect(self.perform_logout)
-
     def show_league_view(self):
         self.league_view = LeagueView(app=self)
         self.setCentralWidget(self.league_view)
-
-        # Connect back signal to return to HomeView
-        self.league_view.back_to_home.connect(self.show_home_view)
 
     def show_team_view(self):
         print("Team view requested")
@@ -78,11 +62,3 @@ class FantasyApp(QMainWindow):
     def open_help(self):
         import webbrowser
         webbrowser.open("https://github.com/bfararjeh/sf6-fantasy-league/blob/main/README.md#faqs")
-
-    def perform_logout(self):
-        from app.client.session import Session
-        from app.services.session_store import SessionStore
-
-        Session.reset()
-        SessionStore.clear()
-        self.show_login_view()

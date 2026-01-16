@@ -8,6 +8,12 @@ class LeagueService():
     league creation, joining, leaving
 
     Methods:
+    get_my_league_name() -> str
+        Returns the users league name as a string.
+    
+    get_league_owner_status() -> bool
+        Returns True/False if the user is the league owner or not.
+
     create_then_join_league(league_name: str) -> bool
         Creates a new league with the given name and assigns the current user to
         it. Returns the users new league ID.
@@ -61,6 +67,44 @@ class LeagueService():
             return None
 
         return result.data[0]["league_name"]
+
+    def get_league_owner_status(self):
+        league_id = self.get_my_league()
+        if not league_id:
+            raise Exception("You are not currently in a league.")
+
+        # validation
+        league = self.verify_query(
+            self.supabase
+            .table("leagues")
+            .select("league_owner")
+            .eq("league_id", league_id)
+            .single()
+        ).data
+
+        if league["league_owner"] != self.user_id:
+            return False
+        else:
+            return True
+
+    def get_league_forfeit(self):
+        league_id = self.get_my_league()
+        if not league_id:
+            raise Exception("You are not currently in a league.")
+
+        # validation
+        league = self.verify_query(
+            self.supabase
+            .table("leagues")
+            .select("forfeit")
+            .eq("league_id", league_id)
+            .single()
+        ).data
+
+        if not league:
+            return None
+        else:
+            return league["forfeit"]
 
     def create_then_join_league(self, league_name: str):
         if self.get_my_league():

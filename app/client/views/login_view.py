@@ -4,9 +4,13 @@ from PyQt6.QtWidgets import (
     QLabel,
     QLineEdit,
     QPushButton,
-    QApplication,
+    QApplication
 )
-from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtCore import (
+    Qt, 
+    QTimer)
+
+from PyQt6.QtGui import QPixmap
 
 from app.client.session import Session
 from app.services.session_store import SessionStore
@@ -66,19 +70,20 @@ class LoginView(QWidget):
             QPushButton {
                 font-size: 14px;
                 font-weight: bold;
-                background-color: #2d7df6;
+                background-color: #4200ff;
                 color: white;
                 border-radius: 6px;
             }
             QPushButton:hover {
-                background-color: #1f6ae1;
+                background-color: #642bff;
             }
             QPushButton:pressed {
-                background-color: #1a5bc4;
+                background-color: #3900d5;
             }
             """
         )
 
+        # status label
         self.status_label = QLabel("")
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.status_label.setStyleSheet(
@@ -120,6 +125,11 @@ class LoginView(QWidget):
         root_layout.addWidget(footer)
 
         self.setLayout(root_layout)
+
+    def _set_inputs_enabled(self, enabled: bool):
+        self.email_input.setEnabled(enabled)
+        self.password_input.setEnabled(enabled)
+        self.submit_button.setEnabled(enabled)
     
     def attempt_login(self):
         '''
@@ -129,6 +139,8 @@ class LoginView(QWidget):
         '''
         email = self.email_input.text()
         password = self.password_input.text()
+        self._set_inputs_enabled(False)
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         
         self.status_label.setText("Logging in...")
         self.status_label.setStyleSheet("color: #555555;")
@@ -145,6 +157,7 @@ class LoginView(QWidget):
                 "refresh_token": base.refresh_token,
             })
 
+            QApplication.restoreOverrideCursor()
             self.status_label.setText(f"Login successful! Welcome back {Session.user}.")
             self.status_label.setStyleSheet("color: #2e7d32;")
 
@@ -154,3 +167,5 @@ class LoginView(QWidget):
         except Exception as e:
             self.status_label.setText(f"Login failed: {e}")
             self.status_label.setStyleSheet("color: #cc0000;")
+            self._set_inputs_enabled(True)
+            QApplication.restoreOverrideCursor()

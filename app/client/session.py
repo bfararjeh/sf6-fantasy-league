@@ -8,6 +8,8 @@ class Session:
     user = None
     current_league_name = None
     current_league_id = None
+    is_league_owner = False
+    league_forfeit = None
 
     auth_base = None
     team_service = None
@@ -38,6 +40,18 @@ class Session:
         except Exception:
             cls.current_league_name = None
 
+        # Current League Owner status
+        try:
+            cls.is_league_owner = cls.league_service.get_league_owner_status() or False
+        except Exception:
+            cls.is_league_owner = False
+
+        # Current League forfeit
+        try:
+            cls.league_forfeit = cls.league_service.get_league_forfeit() or None
+        except Exception:
+            cls.league_forfeit = None
+
         # Current Team ID
         try:
             cls.current_team_id = cls.team_service.get_my_team() or None
@@ -55,6 +69,8 @@ class Session:
         cls.user = None
         cls.current_league_id = None
         cls.current_league_name = None
+        cls.is_league_owner = False
+        cls.league_forfeit = None
 
         cls.auth_base = None
         cls.team_service = None
