@@ -4,6 +4,7 @@ from PyQt6.QtWidgets import QMainWindow
 
 from app.services.session_store import SessionStore
 from app.services.auth_service import AuthService
+from app.services.session_store import SessionStore
 
 from app.client.session import Session
 
@@ -72,9 +73,6 @@ class FantasyApp(QMainWindow):
         )
 
     def logout(self):
-        from app.client.session import Session
-        from app.services.session_store import SessionStore
-
         Session.reset()
         SessionStore.clear()
-        self.app.show_login_view()
+        self.show_login_view()

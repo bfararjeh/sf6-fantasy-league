@@ -62,7 +62,7 @@ class Session:
         try:
             league_aesthetics = cls.league_service.get_league_aesthetics() or None
             cls.current_league_name = league_aesthetics["league_name"]
-            cls.league_forfeit = league_aesthetics["forfeit"]
+            cls.league_forfeit = league_aesthetics["forfeit"] or None
             cls.is_league_owner = True if league_aesthetics["league_owner"] == cls.user_id else False
 
         except Exception:

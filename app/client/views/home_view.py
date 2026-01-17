@@ -1,8 +1,14 @@
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel
+from PyQt6.QtWidgets import (
+    QWidget, 
+    QVBoxLayout, 
+    QLabel
+)
+
 from PyQt6.QtCore import Qt
 
 from app.client.widgets.header_bar import HeaderBar
 from app.client.widgets.footer_nav import FooterNav
+
 from app.client.session import Session
 
 
@@ -13,6 +19,7 @@ class HomeView(QWidget):
         self._build_ui()
 
     def _build_ui(self):
+        # create root layout
         root_layout = QVBoxLayout()
         root_layout.setContentsMargins(0, 0, 0, 0)
         root_layout.setSpacing(0)
@@ -20,17 +27,16 @@ class HomeView(QWidget):
         # header
         root_layout.addWidget(HeaderBar(self.app))
 
-        # main
+        # main content 
         content = QWidget()
         content_layout = QVBoxLayout(content)
         content_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
         content_layout.setContentsMargins(200,0,200,0)
 
-        # ----- welcome block -----
+        # welcome
         welcome_container = QWidget()
         welcome_layout = QVBoxLayout(welcome_container)
         welcome_layout.setSpacing(15)
-
         welcome_title = QLabel(f"Welcome back, {Session.user}")
         welcome_title.setStyleSheet("""
             QLabel {
@@ -39,7 +45,6 @@ class HomeView(QWidget):
                 color: #222;
             }
         """)
-
         welcome_subtitle = QLabel(
 "Welcome to the first Street Fighter 6 Fantasy League! If you're reading this, you've been selected to beta test this application.\n\n" \
 
@@ -57,6 +62,7 @@ class HomeView(QWidget):
         """)
         welcome_subtitle.setWordWrap(True)
 
+        # adding all widgets
         welcome_layout.addWidget(welcome_title)
         welcome_layout.addWidget(welcome_subtitle)
 
