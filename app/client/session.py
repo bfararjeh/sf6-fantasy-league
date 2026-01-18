@@ -21,6 +21,7 @@ class Session:
     current_league_name = None
     league_forfeit = None
     is_league_owner = False
+    leaguemates = {}
 
     # services locked and loaded
     team_service = None
@@ -64,11 +65,13 @@ class Session:
             cls.current_league_name = league_aesthetics["league_name"]
             cls.league_forfeit = league_aesthetics["forfeit"] or None
             cls.is_league_owner = True if league_aesthetics["league_owner"] == cls.user_id else False
+            cls.leaguemates = cls.league_service.get_league_mate_names() or {}
 
         except Exception:
             cls.current_league_name = None
             cls.league_forfeit = None
             cls.is_league_owner = False
+            cls.leaguemates = {}
 
         # team id
         try:
@@ -106,6 +109,7 @@ class Session:
         cls.current_league_name = None
         cls.league_forfeit = None
         cls.is_league_owner = False
+        cls.leaguemates = {}
 
         cls.team_service = None
         cls.league_service = None

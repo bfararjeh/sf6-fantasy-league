@@ -8,9 +8,12 @@ class LeagueService():
     league creation, joining, leaving
 
     Methods:
-    get_my_league_aesthetics() -> dics
+    get_league_aesthetics() -> dict
         Returns the users league name, league forfeit, and league owner id
         in a dict.
+
+    get_league_mate_names() -> dict
+        Returns a dict of all usernames within the users league.
 
     create_then_join_league(league_name: str) -> bool
         Creates a new league with the given name and assigns the current user to
@@ -61,6 +64,21 @@ class LeagueService():
         ).data
 
         return aesthetics
+
+    def get_league_mate_names(self):
+        # validating league state
+        league_id = self.get_my_league()
+        if not league_id:
+            raise Exception("You are not currently in a league.")
+        
+        mates = self.verify_query(
+            self.supabase
+            .table("managers")
+            .select("manager_name")
+            .eq("league_id", league_id)
+        ).data
+
+        return mates
 
     def create_then_join_league(self, league_name: str):
         # validating league state

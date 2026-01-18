@@ -23,7 +23,7 @@ class FantasyApp(QMainWindow):
         super().__init__()
 
         self.setWindowTitle("SF6 Fantasy League")
-        self.resize(1000, 800)
+        self.setFixedSize(1000, 800)
 
         if self._try_restore_session():
             self.show_home_view()

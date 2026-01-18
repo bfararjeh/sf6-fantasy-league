@@ -42,6 +42,7 @@ def join_dummy_leagues():
 
     users = deepcopy(TEST_USERS[5:])
     league_ids = list(league_id_map.values())
+    print(league_ids)
 
     for user in users:
         base = AuthService.login(user["email"], user["password"])
@@ -142,7 +143,7 @@ def set_a_random_leagues_forfeit():
         break
 
 def main():
-    set_a_random_leagues_forfeit()
+    pass
 
 if __name__ == "__main__":
     main()
