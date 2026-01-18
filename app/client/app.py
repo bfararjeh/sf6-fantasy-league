@@ -6,7 +6,7 @@ from app.services.session_store import SessionStore
 from app.services.auth_service import AuthService
 from app.services.session_store import SessionStore
 
-from app.client.session import Session
+from app.client.controllers.session import Session
 
 from app.client.views.league_view import LeagueView
 from app.client.views.login_view import LoginView

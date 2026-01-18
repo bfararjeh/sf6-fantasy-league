@@ -9,7 +9,7 @@ from PyQt6.QtCore import Qt
 from app.client.widgets.header_bar import HeaderBar
 from app.client.widgets.footer_nav import FooterNav
 
-from app.client.session import Session
+from app.client.controllers.session import Session
 
 
 class HomeView(QWidget):

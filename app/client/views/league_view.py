@@ -14,7 +14,8 @@ from PyQt6.QtWidgets import (
 
 from PyQt6.QtCore import Qt
 
-from app.client.session import Session
+from app.client.controllers.session import Session
+from app.client.controllers.async_runner import run_async
 
 from app.client.widgets.header_bar import HeaderBar
 from app.client.widgets.footer_nav import FooterNav
@@ -51,8 +52,8 @@ class LeagueView(QWidget):
         league_id = Session.current_league_id or "N/A"
         league_forfeit = Session.league_forfeit or None
         is_owner = Session.is_league_owner or False
-        capacity = f"{len(Session.leaguemates)}/5" or ""
-        leaguemates = [d['manager_name'] for d in Session.leaguemates] or ""
+        capacity = f"{len(Session.leaguemates)}/5"
+        leaguemates = [d['manager_name'] for d in Session.leaguemates]
 
         # league owner, name, and id
         league_info_container = QWidget()
@@ -87,13 +88,13 @@ class LeagueView(QWidget):
         league_users_container = QWidget()
         league_users_layout = QVBoxLayout(league_users_container)
         league_users_layout.setSpacing(10)
-        league_users_layout.setAlignment(Qt.AlignmentFlag.AlignAbsolute)
+        league_users_layout.setAlignment(Qt.AlignmentFlag.AlignHCenter)
 
         self.league_capacity = QLabel(f"Capacity: {capacity}")
         self.league_capacity.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.league_capacity.setStyleSheet("font-size: 18px; font-weight: bold; color: #333;")
 
-        self.leaguemates = QLabel(f"{", ".join(leaguemates)}")
+        self.leaguemates = QLabel(f'{", ".join(leaguemates)}')
         self.leaguemates.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.leaguemates.setStyleSheet("font-size: 16px; color: #333;")
 
@@ -151,10 +152,7 @@ class LeagueView(QWidget):
 
         # draft order
         self.draft_input = QLineEdit()
-        self.draft_input.setPlaceholderText("Usernames") 
-
-        draft_order_btn = QPushButton("Assign Draft Order")
-        draft_order_btn.clicked.connect(self.assign_draft_order)
+        self.draft_input.setPlaceholderText("Alice, Bob, Charlie") 
 
         draft_btn = QPushButton("Submit")
         draft_btn.clicked.connect(self.assign_draft_order)
@@ -251,9 +249,9 @@ class LeagueView(QWidget):
         content_layout.addWidget(self.in_league_controls)
         content_layout.addWidget(self.status_label)
 
-        self.owner_controls.setVisible(Session.is_league_owner)
+        self.owner_controls.setVisible(bool(Session.is_league_owner))
 
-        if Session.current_league_id == None:
+        if Session.current_league_id is None:
             self.leagueless_controls.setVisible(True)
             self.in_league_controls.setVisible(False)
         else:
@@ -268,98 +266,156 @@ class LeagueView(QWidget):
     # methods wired up to league service
     def create_league(self):
         name = self.create_input.text().strip()
+        print("create_league: CLICK")
 
         if not name:
-            self.status_label.setText("Please enter a league name.")
+            self._set_status("Please enter a league name.", status_type="e")
             return
 
-        try:
-            success = Session.league_service.create_then_join_league(name)
+        def _success(success):
             if success:
-                Session.init_aesthetics()
+                Session.init_aesthetics()  
                 self._refresh_view()
 
-                self.status_label.setText("League created successfully!")
-                self.status_label.setStyleSheet("color: #2e7d32;")
+                self._set_status("League created successfully!", status_type="s")
 
-        except Exception as e:
-            self.status_label.setText(f"Failed to create league: {e}")
-            self.status_label.setStyleSheet("color: #cc0000;")
+        def _error(error):
+            self._set_status(f"Failed to create league: {error}", status_type="e")
+
+        self._set_status("Creating League...", status_type="u")
+        run_async(
+            parent_widget= self.content_widget,
+            fn=Session.league_service.create_then_join_league,
+            args=(name,),
+            on_success=_success,
+            on_error=_error
+        )
 
     def join_league(self):
         league_id = self.join_input.text().strip()
+        print("join_league: CLICK")
 
         if not league_id:
-            self.status_label.setText("Please enter a league ID.")
+            self._set_status("Please enter a league ID.", status_type="e")
             return
         
-        try:
-            success = Session.league_service.join_league(league_id)
-            if success:
-                Session.init_aesthetics()
-                self._refresh_view()
-
-                self.status_label.setText("League joined successfully!")
-                self.status_label.setStyleSheet("color: #2e7d32;")
-
-        except Exception as e:
-            self.status_label.setText(f"Failed to join league: {e}")
-            self.status_label.setStyleSheet("color: #cc0000;")
-
-    def leave_league(self):
-        try:
-            success = Session.league_service.leave_league()
+        def _success(success):
             if success:
                 Session.init_aesthetics()  
                 self._refresh_view()
 
-                self.status_label.setText("You have left the league successfully.")
-                self.status_label.setStyleSheet("color: #2e7d32;")
+                self._set_status("League joined successfully!", status_type="s")
 
-        except Exception as e:
-            self.status_label.setText(f"Failed to leave league: {e}")
-            self.status_label.setStyleSheet("color: #cc0000;")
+        def _error(error):
+            self._set_status(f"Failed to join league: {error}", status_type="e")
+
+        self._set_status("Joining League...", status_type="p")
+        run_async(
+            parent_widget= self.content_widget,
+            fn=Session.league_service.join_league,
+            args=(league_id,),
+            on_success=_success,
+            on_error=_error
+        )
+
+    def leave_league(self):
+        print("leave_league: CLICK")
+
+        def _success(success):
+            if success:
+                Session.init_aesthetics()  
+                self._refresh_view()
+
+                self._set_status("League left successfully!", status_type="s")
+
+        def _error(error):
+            self._set_status(f"Failed to leave league: {error}", status_type="e")
+
+        self._set_status("Leaving League...", status_type="p")
+        run_async(
+            parent_widget= self.content_widget,
+            fn=Session.league_service.leave_league,
+            args=(),
+            on_success=_success,
+            on_error=_error
+        )
 
     def assign_draft_order(self):
-        try:
-            ordered_usernames = ["user1", "user2"]
-            success = Session.league_service.assign_draft_order(ordered_usernames)
+        usernames = self.draft_input.text().strip()
+        print("assign_draft_order: CLICK")
 
+        if not usernames:
+            self._set_status("Please enter a list of usernames.", status_type="e")
+            return
+
+        user_list = [name.strip() for name in usernames.split(",")]
+
+        def _success(success):
             if success:
-                self.status_label.setText("Draft order assigned successfully!")
-                self.status_label.setStyleSheet("color: #2e7d32;")
+                Session.init_aesthetics()  
+                self._refresh_view()
 
-        except Exception as e:
-            self.status_label.setText(f"Failed to assign draft order: {e}")
-            self.status_label.setStyleSheet("color: #cc0000;")
+                self._set_status("Draft order assigned successfully!", status_type="s")
+
+        def _error(error):
+            self._set_status(f"Failed to assign draft order: {error}", status_type="e")
+
+        self._set_status("Assignign draft order...", status_type="p")
+        run_async(
+            parent_widget= self.content_widget,
+            fn=Session.league_service.assign_draft_order,
+            args=(user_list,),
+            on_success=_success,
+            on_error=_error
+        )
 
     def begin_draft(self):
-        try:
-            success = Session.league_service.begin_draft()
+        print("begin_draft: CLICK")
 
+        def _success(success):
             if success:
-                self.status_label.setText("Draft has begun!")
-                self.status_label.setStyleSheet("color: #2e7d32;")
+                Session.init_aesthetics()  
+                self._refresh_view()
 
-        except Exception as e:
-            self.status_label.setText(f"Failed to begin draft: {e}")
-            self.status_label.setStyleSheet("color: #cc0000;")
+                self._set_status("Draft started successfully! Head over to the team page to pick your players!", status_type="s")
+
+        def _error(error):
+            self._set_status(f"Failed to begin draft: {error}", status_type="e")
+
+        self._set_status("Beginning draft...", status_type="p")
+        run_async(
+            parent_widget= self.content_widget,
+            fn=Session.league_service.begin_draft,
+            args=(),
+            on_success=_success,
+            on_error=_error
+        )
 
     def set_forfeit(self):
         forfeit = self.forfeit_input.text().strip()
+        print("set_forfeit: CLICK")
 
-        try:
-            success = Session.league_service.set_forfeit(forfeit)
+        if not forfeit:
+            self._set_status("Please enter a forfeit.", status_type="e")
+            return
+
+        def _success(success):
             if success:
                 Session.init_aesthetics()  
                 self._refresh_view()
 
-                self.status_label.setText(f"Forfeit set!")
-                self.status_label.setStyleSheet("color: #2e7d32;")
+                self._set_status("Forfeit set!", status_type="s")
 
-        except Exception as e:
-            self.status_label.setText(f"Failed to set forfeit: {e}")
-            self.status_label.setStyleSheet("color: #cc0000;")
+        def _error(error):
+            self._set_status(f"Failed to set forfeit: {error}", status_type="e")
+
+        run_async(
+            parent_widget= self.content_widget,
+            fn=Session.league_service.set_forfeit,
+            args=(forfeit,),
+            on_success=_success,
+            on_error=_error
+        )
 
     def _refresh_view(self):
         self._clear_layout(self.layout())
@@ -388,3 +444,15 @@ class LeagueView(QWidget):
         separator.setStyleSheet("color: #7a7a7a;")
         separator.setFixedHeight(2)
         return separator
+
+    def _set_status(self, msg, status_type):
+        self.status_label.setText(msg)
+
+        if status_type == "s":
+            color = "#2e7d32"
+        elif status_type == "e":
+            color = "#cc0000"
+        else:
+            color = "#333333"
+
+        self.status_label.setStyleSheet(f"color: {color};")

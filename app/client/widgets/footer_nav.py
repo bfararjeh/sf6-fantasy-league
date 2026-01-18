@@ -8,7 +8,7 @@ from PyQt6.QtWidgets import (
 
 from PyQt6.QtCore import Qt
 
-from app.client.session import Session
+from app.client.controllers.session import Session
 
 class FooterNav(QWidget):
     '''
