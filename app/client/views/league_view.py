@@ -1,5 +1,3 @@
-import time
-
 from PyQt6.QtWidgets import (
     QWidget, 
     QLabel, 
@@ -427,7 +425,6 @@ class LeagueView(QWidget):
 
     def create_league(self):
         name = self.create_input.text().strip()
-        print("create_league: CLICK")
 
         if not name:
             self._set_status("Please enter a league name.", status_type="e")
@@ -435,9 +432,7 @@ class LeagueView(QWidget):
 
         def _success(success):
             if success:
-                Session.init_aesthetics()  
                 self._refresh_view()
-
                 self._set_status("League created successfully!", status_type="s")
 
         def _error(error):
@@ -461,8 +456,7 @@ class LeagueView(QWidget):
             return
         
         def _success(success):
-            if success:
-                Session.init_aesthetics()  
+            if success:  
                 self._refresh_view()
 
                 self._set_status("League joined successfully!", status_type="s")
@@ -483,10 +477,8 @@ class LeagueView(QWidget):
         print("leave_league: CLICK")
 
         def _success(success):
-            if success:
-                Session.init_aesthetics()  
+            if success:  
                 self._refresh_view()
-
                 self._set_status("League left successfully!", status_type="s")
 
         def _error(error):
@@ -512,8 +504,7 @@ class LeagueView(QWidget):
         user_list = [name.strip() for name in usernames.split(",")]
 
         def _success(success):
-            if success:
-                Session.init_aesthetics()  
+            if success:  
                 self._refresh_view()
 
                 self._set_status("Draft order assigned successfully!", status_type="s")
@@ -534,8 +525,7 @@ class LeagueView(QWidget):
         print("begin_draft: CLICK")
 
         def _success(success):
-            if success:
-                Session.init_aesthetics()  
+            if success:  
                 self._refresh_view()
 
                 self._set_status("Draft started successfully! Head over to the team page to pick your players!", status_type="s")
@@ -561,10 +551,8 @@ class LeagueView(QWidget):
             return
 
         def _success(success):
-            if success:
-                Session.init_aesthetics()  
+            if success:  
                 self._refresh_view()
-
                 self._set_status("Forfeit set!", status_type="s")
 
         def _error(error):
@@ -581,6 +569,7 @@ class LeagueView(QWidget):
 
     def _refresh_view(self):
         self._clear_layout(self.layout())
+        Session.init_aesthetics()
         self._build_main()
 
     def _clear_layout(self, layout):

@@ -15,9 +15,16 @@ class Session:
     user = None
     user_id = None
 
+    '''
+    cached system state info
+    blocking defaults True: block everything if connection fails
+    '''
+    blocking_state = True
+    warning_message = None
+    banner_message = None
+
     # cached league info
     current_league_id = None
-
     current_league_name = None
     league_forfeit = None
     is_league_owner = False
@@ -29,14 +36,6 @@ class Session:
     team_service = None
     league_service = None
     leaderboard_service = None
-
-    '''
-    cached system state info
-    blocking defaults True: block everything if connection fails
-    '''
-    blocking_state = True
-    warning_message = None
-    banner_message = None
 
     @classmethod
     def init_services(cls):
@@ -55,32 +54,37 @@ class Session:
     
     @classmethod
     def init_aesthetics(cls):
-        # league id
+        # system state info
         try:
-            cls.current_league_id = cls.league_service.get_my_league() or None
+            system_state = cls.auth_base.get_system_state()
+            cls.blocking_state = system_state["blocking"]
+            cls.banner_message = system_state["banner_message"]
+            cls.warning_message = system_state["warning_message"]
+
+        except Exception as e:
+            cls.blocking_state = True
+            cls.banner_message = None
+            cls.warning_message = "CRITICAL ERROR: Unable to connect to database."
+            return
+
+        # league data
+        try:
+            league_data = cls.league_service.get_full_league_info() or None
+
+            cls.current_league_id = league_data["league_id"] or None
+            cls.current_league_name = league_data["league_name"] or None
+            cls.league_forfeit = league_data["forfeit"] or None
+            cls.is_league_owner = True if league_data["league_owner"] == cls.user_id else False
+            cls.leaguemates = league_data["leaguemates"]
+            cls.draft_order = league_data["draft_order"]
+            cls.next_pick = league_data["next_pick"]
+
         except Exception:
             cls.current_league_id = None
-
-        # league aesthetics
-        try:
-            league_aesthetics = cls.league_service.get_league_aesthetics() or None
-            cls.current_league_name = league_aesthetics["league_name"]
-            cls.league_forfeit = league_aesthetics["forfeit"] or None
-            cls.is_league_owner = True if league_aesthetics["league_owner"] == cls.user_id else False
-            cls.leaguemates = cls.league_service.get_league_mate_names() or {}
-
-        except Exception:
             cls.current_league_name = None
             cls.league_forfeit = None
             cls.is_league_owner = False
             cls.leaguemates = {}
-
-        # league draft info
-        try:
-            draft_info = cls.league_service.get_draft_stats()
-            cls.draft_order = draft_info[0]
-            cls.next_pick = draft_info[1]
-        except Exception as e:
             cls.draft_order = []
             cls.next_pick = None
 
@@ -96,18 +100,6 @@ class Session:
         except Exception:
             cls.current_team_name = None
 
-        # system state info
-        try:
-            system_state = cls.auth_base.get_system_state()
-            cls.blocking_state = system_state["blocking"]
-            cls.banner_message = system_state["banner_message"]
-            cls.warning_message = system_state["warning_message"]
-
-        except Exception as e:
-            cls.blocking_state = True
-            cls.banner_message = None
-            cls.warning_message = "CRITICAL ERROR: Unable to connect to database."
-
     @classmethod
     def reset(cls):
         cls.auth_base = None
@@ -115,8 +107,11 @@ class Session:
         cls.user = None
         cls.user_id = None
 
-        cls.current_league_id = None
+        cls.blocking_state = True
+        cls.warning_message = None
+        cls.banner_message = None
 
+        cls.current_league_id = None
         cls.current_league_name = None
         cls.league_forfeit = None
         cls.is_league_owner = False
@@ -127,7 +122,3 @@ class Session:
         cls.team_service = None
         cls.league_service = None
         cls.leaderboard_service = None
-
-        cls.blocking_state = True
-        cls.warning_message = None
-        cls.banner_message = None

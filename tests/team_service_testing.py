@@ -34,7 +34,7 @@ def establish_all_test_user_teams():
 
 def draft_wave():
     admin_client = supabase.create_client(SUPABASE_URL, SUPABASE_SECRET_KEY)
-    pick_turns = admin_client.table("leagues").select("pick_turn").execute()
+    pick_turns = admin_client.table("leagues").select("pick_turn").is_("pick_turn", "not_null").execute()
 
     for idx, league in enumerate(pick_turns.data):
         pick_turn_user_id = league["pick_turn"]

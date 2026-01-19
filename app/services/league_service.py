@@ -8,16 +8,9 @@ class LeagueService():
     league creation, joining, leaving
 
     Methods:
-    get_league_aesthetics() -> dict
-        Returns the users league name, league forfeit, and league owner id
-        in a dict.
-
-    get_league_mate_names() -> dict
-        Returns a dict of all usernames within the users league.
-
-    get_draft_stats() -> dict
-        Returns a list of two elements: a list of the current draft order, and
-        a string of the next user to pick.
+    get_full_league_info() -> dict
+        Returns the league info, draft status (if begun) and aesthetic 
+        information as a dict.
 
     create_then_join_league(league_name: str) -> bool
         Creates a new league with the given name and assigns the current user to
@@ -52,68 +45,53 @@ class LeagueService():
     def __getattr__(self, name):
         return getattr(self.base, name)
 
-    def get_league_aesthetics(self):
-        # validating league state
+    def get_full_league_info(self):
+        '''
+        Returns a combined dict of league aesthetics, members, and draft info (if draft started).
+        '''
+        # validate league state
         league_id = self.get_my_league()
         if not league_id:
             raise Exception("You are not currently in a league.")
 
-        # validation
-        aesthetics = self.verify_query(
-            self.supabase
-            .table("leagues")
-            .select("league_owner, forfeit, league_name")
-            .eq("league_id", league_id)
-            .single()
-        ).data
-
-        return aesthetics
-
-    def get_league_mate_names(self):
-        # validating league state
-        league_id = self.get_my_league()
-        if not league_id:
-            raise Exception("You are not currently in a league.")
-        
-        mates = self.verify_query(
-            self.supabase
-            .table("managers")
-            .select("manager_name")
-            .eq("league_id", league_id)
-        ).data
-
-        return mates
-
-    def get_draft_stats(self):
-        league_id = self.get_my_league()
-        if not league_id:
-            raise Exception("You are not currently in a league.")
-
-        # validation
+        # fetch basic league info
         league = self.verify_query(
             self.supabase
             .table("leagues")
-            .select("locked, draft_order, pick_turn, pick_direction")
+            .select("league_owner, forfeit, league_name, locked, draft_order, pick_turn, pick_direction")
             .eq("league_id", league_id)
             .single()
         ).data
 
-        if not league["locked"]:
-            raise Exception("Cannot view draft order until draft has begun.")
-
-        # create user_id -> manager_name map
-        managers = self.verify_query(
+        # fetch league members
+        mates = self.verify_query(
             self.supabase
             .table("managers")
             .select("user_id, manager_name")
             .eq("league_id", league_id)
         ).data
 
-        manager_map = {m["user_id"]: m["manager_name"] for m in managers}
-        draft_order = [manager_map[uid] for uid in league["draft_order"]]
-        next_picker = manager_map[league["pick_turn"]]
+        # build user_id -> manager_name map
+        manager_map = {m["user_id"]: m["manager_name"] for m in mates}
 
-        return [draft_order, next_picker]
+        # build the base dict
+        result = {
+            "league_id": league_id,
+            "league_name": league["league_name"],
+            "forfeit": league.get("forfeit"),
+            "league_owner": league["league_owner"],
+            "leaguemates": mates
+        }
+
+        # only include draft info if draft has begun i.e. locked is true
+        if league.get("locked"):
+            result.update({
+                "draft_order": [manager_map[uid] for uid in league["draft_order"]],
+                "next_pick": manager_map[league["pick_turn"]],
+                "pick_direction": league.get("pick_direction")
+            })
+
+        return result
 
     def create_then_join_league(self, league_name: str):
         # validating league state

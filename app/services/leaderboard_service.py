@@ -1,3 +1,5 @@
+import uuid
+
 from app.services.base_service import BaseService
 
 class LeaderboardService():
@@ -10,6 +12,9 @@ class LeaderboardService():
 
     get_leaguemate_standings() -> jsonb
         Returns the standings of all players in all teams of a user's league
+
+    get_favourite_standings(favourites: list[str]) -> jsonb
+        Returns the standings of all managers in the users favourite list.
 
     get_player_cum_points() -> jsonb
         Returns the total cumulative point standings of all players
@@ -118,7 +123,89 @@ class LeaderboardService():
             }
             for team_id, data in standings.items()
         ]
-    
+
+    def get_favourite_standings(self, favourites):
+
+        # helper class for storing favourites data and reducing api queries
+        class Favourite():
+            def __init__(self, uid, team_name, team_id, username):
+                self.id = uid
+                self.team_name = team_name
+                self.team_id = team_id
+                self.username = username
+
+            def __repr__(self):
+                return (
+                    f"Favourite(\n"
+                    f"id={self.id!r},\n"
+                    f"username={self.username!r},\n"
+                    f"team_id={self.team_id!r},\n"
+                    f"team_name={self.team_name!r}\n"
+                    f")"
+                )
+
+        # validating passed favourites list
+        if not all(isinstance(f, str) and uuid.UUID(f) for f in favourites):
+            raise Exception("Favourites must be of type list[UUID: str].")
+
+        # grabbing data of all favourites and creating class objects
+        owners = self.verify_query(
+            self.supabase
+            .table("teams")
+            .select("team_id, team_owner, team_name, managers!inner(manager_name, user_id)")
+            .in_("managers.user_id", favourites)
+        ).data
+
+        fav_list = []
+
+        for row in owners:
+            fav_list.append(Favourite(
+                uid = row["managers"]["user_id"],
+                username = row["managers"]["manager_name"],
+                team_id= row["team_id"],
+                team_name = row["team_name"]
+            ))
+        
+        team_id_list = {
+            f.team_id for f in fav_list
+        }
+
+        # grabbing all elements in team_players
+        rosters = self.verify_query(
+            self.supabase
+            .table("team_players")
+            .select("team_id, player_name, points")
+            .in_("team_id", team_id_list)
+        ).data
+
+        # formatting stuff
+        from collections import defaultdict
+
+        # aggregate players by team_id
+        standings = defaultdict(lambda: {"team_name": "", "owner": "", "players": []})
+
+        for f in fav_list:
+            standings[f.team_id]["team_name"] = f.team_name
+            standings[f.team_id]["owner"] = f.username
+
+        for row in rosters:
+            team_id = row["team_id"]
+            standings[team_id]["players"].append({
+                "player_name": row["player_name"],
+                "points": row["points"]
+            })
+
+        # convert to list with total points
+        return [
+            {
+                "name": data["team_name"],
+                "owner": data["owner"],
+                "players": data["players"],
+                "total_points": sum(p["points"] for p in data["players"])
+            }
+            for data in standings.values()
+        ]
+
     def get_player_cum_points(self):  
         players = self.verify_query(
             self.supabase

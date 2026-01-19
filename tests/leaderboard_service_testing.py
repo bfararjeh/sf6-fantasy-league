@@ -41,9 +41,25 @@ def check_player_cum_points():
     print(f"Current cumulative points:")
     print(standings)
 
+def check_favourite_standings():
+    user = choice(TEST_USERS)
+
+    base = AuthService.login(user["email"], user["password"])
+    sv = LeaderboardService(base)
+
+    favourites = [
+        "4c567e22-1208-4ba6-982d-7ef9f157b361", 
+        "af0a8dba-f566-4344-baa5-dd92864b1728",
+        "657d5c95-aab7-4cea-bcfa-e120049776f3", 
+        "7eda581c-a689-45a8-9c9a-a285fe8d3876"
+    ]
+
+    standings = sv.get_favourite_standings(favourites)
+    print(f"Standings for favourite users:")
+    print(standings)
+
 def main():
-    check_random_user_standings()
-    check_random_users_league_standings()
+    check_favourite_standings()
 
 if __name__ == "__main__":
     main()
