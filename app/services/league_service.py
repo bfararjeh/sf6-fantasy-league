@@ -15,6 +15,10 @@ class LeagueService():
     get_league_mate_names() -> dict
         Returns a dict of all usernames within the users league.
 
+    get_draft_stats() -> dict
+        Returns a list of two elements: a list of the current draft order, and
+        a string of the next user to pick.
+
     create_then_join_league(league_name: str) -> bool
         Creates a new league with the given name and assigns the current user to
         it. Returns the users new league ID.
@@ -79,6 +83,37 @@ class LeagueService():
         ).data
 
         return mates
+
+    def get_draft_stats(self):
+        league_id = self.get_my_league()
+        if not league_id:
+            raise Exception("You are not currently in a league.")
+
+        # validation
+        league = self.verify_query(
+            self.supabase
+            .table("leagues")
+            .select("locked, draft_order, pick_turn, pick_direction")
+            .eq("league_id", league_id)
+            .single()
+        ).data
+
+        if not league["locked"]:
+            raise Exception("Cannot view draft order until draft has begun.")
+
+        # create user_id -> manager_name map
+        managers = self.verify_query(
+            self.supabase
+            .table("managers")
+            .select("user_id, manager_name")
+            .eq("league_id", league_id)
+        ).data
+
+        manager_map = {m["user_id"]: m["manager_name"] for m in managers}
+        draft_order = [manager_map[uid] for uid in league["draft_order"]]
+        next_picker = manager_map[league["pick_turn"]]
+
+        return [draft_order, next_picker]
 
     def create_then_join_league(self, league_name: str):
         # validating league state

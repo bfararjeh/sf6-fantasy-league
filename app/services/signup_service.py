@@ -11,8 +11,10 @@ class SignupService():
         Create a new user and corresponding manager row. Also verifies password 
         is of correct length and manager name is valid (length, chars).
     """
-    def __init__(self, email: str, password: str, manager_name: str):
+    def __init__(self):
         self.supabase = get_supabase_client()
+
+    def signup(self, email: str, password: str, manager_name: str):
 
         # pass & username validation
         if len(password) < 8:
@@ -39,3 +41,5 @@ class SignupService():
             })
         .execute()
         )
+
+        return True

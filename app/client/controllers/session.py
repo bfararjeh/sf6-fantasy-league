@@ -22,6 +22,8 @@ class Session:
     league_forfeit = None
     is_league_owner = False
     leaguemates = {}
+    draft_order = []
+    next_pick = None
 
     # services locked and loaded
     team_service = None
@@ -73,6 +75,15 @@ class Session:
             cls.is_league_owner = False
             cls.leaguemates = {}
 
+        # league draft info
+        try:
+            draft_info = cls.league_service.get_draft_stats()
+            cls.draft_order = draft_info[0]
+            cls.next_pick = draft_info[1]
+        except Exception as e:
+            cls.draft_order = []
+            cls.next_pick = None
+
         # team id
         try:
             cls.current_team_id = cls.team_service.get_my_team() or None
@@ -110,6 +121,8 @@ class Session:
         cls.league_forfeit = None
         cls.is_league_owner = False
         cls.leaguemates = {}
+        cls.draft_order = []
+        cls.next_pick = None
 
         cls.team_service = None
         cls.league_service = None

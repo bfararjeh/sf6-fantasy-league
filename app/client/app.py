@@ -6,10 +6,13 @@ from app.services.session_store import SessionStore
 from app.services.auth_service import AuthService
 from app.services.session_store import SessionStore
 
+from app.client.widgets.blue_screen import BlueScreen
+
 from app.client.controllers.session import Session
 
-from app.client.views.league_view import LeagueView
+from app.client.views.signup_view import SignupView
 from app.client.views.login_view import LoginView
+from app.client.views.league_view import LeagueView
 from app.client.views.home_view import HomeView
 
 class FantasyApp(QMainWindow):
@@ -21,6 +24,9 @@ class FantasyApp(QMainWindow):
     '''
     def __init__(self):
         super().__init__()
+
+        # instantiating blue screen, just in case ;)
+        self.blue_screen = BlueScreen(self)
 
         self.setWindowTitle("SF6 Fantasy League")
         self.setFixedSize(1000, 800)
@@ -49,6 +55,10 @@ class FantasyApp(QMainWindow):
     def show_login_view(self):
         self.login_view = LoginView(app=self)
         self.setCentralWidget(self.login_view)
+
+    def show_signup_view(self):
+        self.signup_view = SignupView(app=self)
+        self.setCentralWidget(self.signup_view)
 
     def show_home_view(self):
         self.home_view = HomeView(app=self)

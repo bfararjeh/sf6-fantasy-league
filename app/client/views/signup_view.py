@@ -4,18 +4,17 @@ from PyQt6.QtWidgets import (
     QLabel,
     QLineEdit,
     QPushButton,
-    QApplication
+    QApplication,
+    QToolButton
 )
-from PyQt6.QtCore import (
-    Qt, 
-    QTimer)
+from PyQt6.QtCore import Qt
 
-from app.client.controllers.session import Session
-from app.services.session_store import SessionStore
-from app.services.auth_service import AuthService
+from PyQt6.QtGui import QIcon
+
+from app.services.signup_service import SignupService
 
 
-class LoginView(QWidget):
+class SignupView(QWidget):
     def __init__(self, app=None):
         super().__init__()
         self.app = app
@@ -48,7 +47,20 @@ class LoginView(QWidget):
             """
         )
 
-        # email & pass
+        # help button
+        help_label = QLabel()
+        help_label.setText("Username must be 2-16 characters, letters, numbers, underscores, and apostrophes only.\n\n"
+            "Password must be at least 8 characters long.")
+        help_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        help_label.setWordWrap(True)
+        help_label.setFixedHeight(65)
+        help_label.setStyleSheet("color: #333")
+
+        # email pass & username
+        self.name_input = QLineEdit()
+        self.name_input.setPlaceholderText("Username")
+        self.name_input.setFixedHeight(30)
+
         self.email_input = QLineEdit()
         self.email_input.setPlaceholderText("Email")
         self.email_input.setFixedHeight(30)
@@ -58,8 +70,13 @@ class LoginView(QWidget):
         self.password_input.setEchoMode(QLineEdit.EchoMode.Password)
         self.password_input.setFixedHeight(30)
 
-        # back to signup page
-        return_to_login = QPushButton("New user?")
+        self.password_verify_input = QLineEdit()
+        self.password_verify_input.setPlaceholderText("Re-enter password")
+        self.password_verify_input.setEchoMode(QLineEdit.EchoMode.Password)
+        self.password_verify_input.setFixedHeight(30)
+
+        # back to login page
+        return_to_login = QPushButton("Return to login page")
         return_to_login.setCursor(Qt.CursorShape.PointingHandCursor)
         return_to_login.setFlat(True)
         return_to_login.setStyleSheet("""
@@ -73,13 +90,13 @@ class LoginView(QWidget):
                 text-decoration: underline;
             }
         """)
-        return_to_login.clicked.connect(self.app.show_signup_view)
+        return_to_login.clicked.connect(self.app.show_login_view)
 
-        # login button
-        self.submit_button = QPushButton("Login")
+        # signup button
+        self.submit_button = QPushButton("Sign Up")
         self.submit_button.setFixedHeight(40)
         self.submit_button.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.submit_button.clicked.connect(self.attempt_login)
+        self.submit_button.clicked.connect(self.attempt_signup)
         self.submit_button.setStyleSheet(
             """
             QPushButton {
@@ -113,8 +130,12 @@ class LoginView(QWidget):
         # form container for width control
         form_layout = QVBoxLayout()
         form_layout.setSpacing(15)
+        form_layout.addWidget(help_label)
+        form_layout.addSpacing(5)
+        form_layout.addWidget(self.name_input)
         form_layout.addWidget(self.email_input)
         form_layout.addWidget(self.password_input)
+        form_layout.addWidget(self.password_verify_input)
         form_layout.addWidget(return_to_login)
         form_layout.addWidget(self.submit_button)
         form_layout.addWidget(self.status_label)
@@ -143,42 +164,41 @@ class LoginView(QWidget):
         self.setLayout(root_layout)
 
     def _set_inputs_enabled(self, enabled: bool):
+        self.name_input.setEnabled(enabled)
         self.email_input.setEnabled(enabled)
         self.password_input.setEnabled(enabled)
+        self.password_verify_input.setEnabled(enabled)
         self.submit_button.setEnabled(enabled)
     
-    def attempt_login(self):
+    def attempt_signup(self):
         '''
-        Attempts to login a user with the provided email and password.
-        Initialises the Session class as well as storing the access & refresh
-        token for subsequent logins.
+        Attempts to create a new user with provided credentials
         '''
         email = self.email_input.text()
         password = self.password_input.text()
+        username = self.name_input.text()
+
+        if password != self.password_verify_input.text():
+            self.status_label.setText(f"Passwords must match!")
+            self.status_label.setStyleSheet("color: #cc0000;")
+            return
+
         self._set_inputs_enabled(False)
         QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         
-        self.status_label.setText("Logging in...")
+        self.status_label.setText("Creating user...")
         self.status_label.setStyleSheet("color: #555555;")
         QApplication.processEvents()
 
+        signup = SignupService()
         try:
-            base = AuthService.login(email, password)
-            Session.auth_base = base
-            Session.user = base.get_my_username()
-            Session.init_services()
-
-            SessionStore.save({
-                "access_token": base.access_token,
-                "refresh_token": base.refresh_token,
-            })
-
-            QApplication.restoreOverrideCursor()
-            self.status_label.setText(f"Login successful! Welcome back {Session.user}.")
-            self.status_label.setStyleSheet("color: #2e7d32;")
-
-            if self.app:
-                QTimer.singleShot(2000, self.app.show_home_view)
+            success = signup.signup(email=email, password=password, manager_name=username)
+            if success == True:
+                QApplication.restoreOverrideCursor()
+                self.status_label.setText(f"Signup successful! You may return to the login page.")
+                self.status_label.setStyleSheet("color: #2e7d32;")
+            else:
+                raise Exception("Unable to create user.")
 
         except Exception as e:
             self.status_label.setText(f"Login failed: {e}")
