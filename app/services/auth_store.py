@@ -6,7 +6,7 @@ def get_app_data_dir() -> Path:
     if os.name == "nt":
         return Path(os.environ["APPDATA"]) / "SF6FantasyLeague"
 
-class SessionStore:
+class AuthStore:
     '''
     Methods for saving, loading, and clearing stored sessions. Nothing fancy,
     just json dumps and path grabbing using the os library.

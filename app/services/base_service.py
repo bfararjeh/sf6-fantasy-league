@@ -100,7 +100,7 @@ class BaseService:
         result = self.verify_query((
             self.supabase
             .table("system_state")
-            .select("blocking, warning_message, banner_message")
+            .select("blocking, warning_message, banner_message, last_live_scores")
             .order("updated_at", desc=True)
             .limit(1)
         ))

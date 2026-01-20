@@ -11,7 +11,7 @@ from PyQt6.QtCore import (
     QTimer)
 
 from app.client.controllers.session import Session
-from app.services.session_store import SessionStore
+from app.services.auth_store import AuthStore
 from app.services.auth_service import AuthService
 
 
@@ -167,8 +167,9 @@ class LoginView(QWidget):
             Session.auth_base = base
             Session.user = base.get_my_username()
             Session.init_services()
+            Session.init_aesthetics()
 
-            SessionStore.save({
+            AuthStore.save({
                 "access_token": base.access_token,
                 "refresh_token": base.refresh_token,
             })

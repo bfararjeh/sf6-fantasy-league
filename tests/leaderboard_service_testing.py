@@ -37,7 +37,7 @@ def check_player_cum_points():
 
     base = AuthService.login(user["email"], user["password"])
     sv = LeaderboardService(base)
-    standings = sv.get_player_cum_points()
+    standings = sv.get_players()
     print(f"Current cumulative points:")
     print(standings)
 

@@ -206,7 +206,7 @@ class LeaderboardService():
             for data in standings.values()
         ]
 
-    def get_player_cum_points(self):  
+    def get_players(self):  
         players = self.verify_query(
             self.supabase
             .table("players")

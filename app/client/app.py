@@ -2,9 +2,9 @@ import webbrowser
 
 from PyQt6.QtWidgets import QMainWindow
 
-from app.services.session_store import SessionStore
+from app.services.auth_store import AuthStore
+from app.services.app_store import AppStore
 from app.services.auth_service import AuthService
-from app.services.session_store import SessionStore
 
 from app.client.widgets.blue_screen import BlueScreen
 
@@ -32,24 +32,37 @@ class FantasyApp(QMainWindow):
         self.setFixedSize(1000, 800)
 
         if self._try_restore_session():
+            self._try_restore_app_cache()
             self.show_home_view()
         else:
             self.show_login_view()
 
+    def _try_restore_app_cache(self) -> bool:
+        cache = AppStore._load_all()
+        if not cache:
+            return False
+        
+        favourites = cache.get("favourites")
+        if isinstance(favourites, list):
+            Session.favourite_players = favourites
+
     def _try_restore_session(self) -> bool:
-        data = SessionStore.load()
+        data = AuthStore.load()
         if not data:
             return False
 
         try:
             base = AuthService.login_with_token(data)
             Session.auth_base = base
+            Session.init_system_state()
             Session.init_services()
+            Session.init_aesthetics()
             return True
         
         except Exception as e:
             # clears cached session if failed to login
-            SessionStore.clear()
+            AuthStore.clear()
+            AppStore.clear()
             return False
     
     def show_login_view(self):
@@ -84,5 +97,5 @@ class FantasyApp(QMainWindow):
 
     def logout(self):
         Session.reset()
-        SessionStore.clear()
+        AuthStore.clear()
         self.show_login_view()

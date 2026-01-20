@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from app.services.leaderboard_service import LeaderboardService
 from app.services.team_service import TeamService
 from app.services.league_service import LeagueService
@@ -22,20 +24,42 @@ class Session:
     blocking_state = True
     warning_message = None
     banner_message = None
+    last_live_scores = None
 
     # cached league info
     current_league_id = None
     current_league_name = None
     league_forfeit = None
     is_league_owner = False
-    leaguemates = {}
+    leaguemates = []
     draft_order = []
     next_pick = None
+
+    # cached leaderboard info
+    favourite_players = []
+    player_scores = []
 
     # services locked and loaded
     team_service = None
     league_service = None
     leaderboard_service = None
+
+    @classmethod
+    def init_system_state(cls):
+        # system state info
+        try:
+            system_state = cls.auth_base.get_system_state()
+            cls.blocking_state = system_state["blocking"]
+            cls.banner_message = system_state["banner_message"]
+            cls.warning_message = system_state["warning_message"]
+            cls.last_live_scores = system_state["last_live_scores"]
+            return cls.blocking_state
+
+        except Exception as e:
+            cls.blocking_state = True
+            cls.banner_message = None
+            cls.warning_message = "CRITICAL ERROR: Unable to connect to database."
+            return cls.blocking_state
 
     @classmethod
     def init_services(cls):
@@ -49,22 +73,10 @@ class Session:
         cls.team_service = TeamService(cls.auth_base)
         cls.league_service = LeagueService(cls.auth_base)
         cls.leaderboard_service = LeaderboardService(cls.auth_base)
-
-        cls.init_aesthetics()
     
     @classmethod
     def init_aesthetics(cls):
-        # system state info
-        try:
-            system_state = cls.auth_base.get_system_state()
-            cls.blocking_state = system_state["blocking"]
-            cls.banner_message = system_state["banner_message"]
-            cls.warning_message = system_state["warning_message"]
-
-        except Exception as e:
-            cls.blocking_state = True
-            cls.banner_message = None
-            cls.warning_message = "CRITICAL ERROR: Unable to connect to database."
+        if cls.init_system_state():
             return
 
         # league data
@@ -84,7 +96,7 @@ class Session:
             cls.current_league_name = None
             cls.league_forfeit = None
             cls.is_league_owner = False
-            cls.leaguemates = {}
+            cls.leaguemates = []
             cls.draft_order = []
             cls.next_pick = None
 
@@ -100,6 +112,13 @@ class Session:
         except Exception:
             cls.current_team_name = None
 
+        # players
+        try:
+            cls.player_scores = cls.leaderboard_service.get_players()
+        except Exception as e:
+            cls.player_scores = []
+            cls.blocking_state = True
+
     @classmethod
     def reset(cls):
         cls.auth_base = None
@@ -110,14 +129,18 @@ class Session:
         cls.blocking_state = True
         cls.warning_message = None
         cls.banner_message = None
+        cls.last_live_scores = None
 
         cls.current_league_id = None
         cls.current_league_name = None
         cls.league_forfeit = None
         cls.is_league_owner = False
-        cls.leaguemates = {}
+        cls.leaguemates = []
         cls.draft_order = []
         cls.next_pick = None
+
+        cls.favourite_players = []
+        cls.player_scores = []
 
         cls.team_service = None
         cls.league_service = None
