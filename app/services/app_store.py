@@ -10,11 +10,9 @@ def get_app_data_dir() -> Path:
         return Path(os.environ["APPDATA"]) / "SF6FantasyLeague"
 
 class AppStore:
-    '''
-    Methods for saving, loading, and clearing local app data.
-
-    Method names are self explanatory.
-    '''
+    """
+    Simple local cache where every key maps to a list.
+    """
     _filename = "appdata.json"
 
     @classmethod
@@ -43,53 +41,53 @@ class AppStore:
     # ---------- public API ----------
 
     @classmethod
-    def get(cls, key: str, default: Any = None) -> Any:
+    def get(cls, key: str) -> list:
         """
-        Supports dotted access: "players_cache.data"
+        Always returns a list.
         """
         data = cls._load_all()
-        current = data
-
-        for part in key.split("."):
-            if not isinstance(current, dict):
-                return default
-            current = current.get(part)
-            if current is None:
-                return default
-
-        return current
+        value = data.get(key, [])
+        return value if isinstance(value, list) else []
 
     @classmethod
-    def set(cls, key: str, value: Any):
+    def append(cls, key: str, value):
         """
-        Supports dotted access: "players_cache.data"
+        Appends value(s) to the list stored at key.
         """
         data = cls._load_all()
-        current = data
-        parts = key.split(".")
 
-        for part in parts[:-1]:
-            current = current.setdefault(part, {})
+        if key not in data or not isinstance(data[key], list):
+            data[key] = []
 
-        current[parts[-1]] = value
+        if isinstance(value, list):
+            data[key].extend(value)
+        else:
+            data[key].append(value)
+
         cls._save_all(data)
 
     @classmethod
-    def delete(cls, key: str):
+    def remove(cls, key, value):
         data = cls._load_all()
-        current = data
-        parts = key.split(".")
 
-        for part in parts[:-1]:
-            current = current.get(part)
-            if not isinstance(current, dict):
-                return
+        if key not in data:
+            raise KeyError(f"Key '{key}' does not exist.")
 
-        current.pop(parts[-1], None)
+        if not isinstance(data[key], list):
+            raise TypeError(f"Value for '{key}' is not a list.")
+
+        try:
+            data[key].remove(value)
+        except ValueError:
+            raise ValueError(f"Value '{value}' not found in '{key}'.")
+
         cls._save_all(data)
 
     @classmethod
     def clear(cls):
+        path = cls._path()
+        if path.exists():
+            path.unlink()
         path = cls._path()
         if path.exists():
             path.unlink()

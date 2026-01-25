@@ -186,6 +186,7 @@ class PlayerView(QWidget):
         return row
 
     def _rebuild_players_view(self, sort_by="name"):
+        self.built = True
         players = self.player_scores[:]
 
         players.sort(key=self.SORT_KEYS[sort_by])

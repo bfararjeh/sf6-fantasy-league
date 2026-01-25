@@ -1,5 +1,6 @@
 from packaging import version
 
+from app.services.app_store import AppStore
 from app.services.leaderboard_service import LeaderboardService
 from app.services.team_service import TeamService
 from app.services.league_service import LeagueService
@@ -126,23 +127,17 @@ class Session:
             cls.next_pick = None
             cls.draft_complete = False
 
-        # team id
+        # team data
         try:
-            cls.current_team_id = cls.team_service.get_my_team() or None
-        except Exception:
+            team_data = cls.team_service.get_full_team_info() or None
+            cls.current_team_id = team_data["team_id"] or None
+            cls.current_team_name = team_data["team_name"] or None
+            cls.my_team_standings = {k: team_data[k] for k in ("players", "total_points")} or None
+
+        except Exception as e:
             cls.current_team_id = None
-
-        # team name
-        try:
-            cls.current_team_name = cls.team_service.get_my_team_name() or None
-        except Exception:
             cls.current_team_name = None
-
-        # my team scores
-        try:
-            cls.my_team_data = cls.leaderboard_service.get_my_standings() or None
-        except Exception:
-            cls.my_team_data = []
+            cls.my_team_standings = None
 
     @classmethod
     def init_leaderboards(cls):
@@ -152,6 +147,21 @@ class Session:
         except Exception:
             cls.leaguemate_standings = []
             cls.favourite_standings = []
+
+    @classmethod
+    def init_favourites(cls):
+        # favourites
+        try:
+            favourites = AppStore._load_all().get("favourites")
+            if isinstance(favourites, list):
+                cls.favourite_players = favourites
+        except Exception as e:
+            pass
+
+        try:
+            cls.favourite_standings = cls.leaderboard_service.get_favourite_standings(cls.favourite_players) if cls.favourite_players else None
+        except Exception as e:
+            cls.favourite_standings = None
 
     @classmethod
     def reset(cls):
@@ -185,7 +195,7 @@ class Session:
         # cached team info
         cls.current_team_id = None
         cls.current_team_name = None
-        cls.my_team_data = []
+        cls.my_team_standings = []
 
         # cached leaderboard info
         cls.favourite_players = []

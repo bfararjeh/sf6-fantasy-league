@@ -24,10 +24,13 @@ class TeamService():
     def __getattr__(self, name):
         return getattr(self.base, name)
 
-    def get_my_team_name(self):
+    def get_full_team_info(self):
         team_id = self.get_my_team()
+
+        if not self.get_my_league():
+            raise Exception("You're not in a league!")
         if not team_id:
-            raise Exception("You are not currently in a team.")
+            raise Exception("You do not own a team!")
         
         result = self.verify_query((
             self.supabase
@@ -35,12 +38,24 @@ class TeamService():
             .select("team_name")
             .eq("team_id", team_id)
             ))
-        
-        if not result.data:
-            return None
 
-        return result.data[0]["team_name"]
-   
+        rows = self.verify_query(
+            self.supabase
+            .table("team_players")
+            .select("player_name, points, players(region), joined_at, left_at")
+            .eq("team_id", team_id)
+        ).data
+
+        return {
+            "team_name": result.data[0]["team_name"],
+            "team_id": team_id,
+            "players": [
+                {"id": r["player_name"], "points": r["points"], "region": r["players"]["region"], "joined_at":r["joined_at"], "left_at":r["left_at"]}
+                for r in rows
+            ],
+            "total_points": sum(r["points"] for r in rows)
+        }
+
     def create_team(self, team_name: str):
         my_league = self.get_my_league()
         # validation

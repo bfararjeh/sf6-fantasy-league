@@ -220,6 +220,7 @@ class LeagueView(QWidget):
         container = QWidget()
         layout = QVBoxLayout(container)
         layout.setSpacing(10)
+        layout.setContentsMargins(0,0,0,0)
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         info = QLabel("Draft Order")
@@ -583,6 +584,7 @@ class LeagueView(QWidget):
         self.my_draft_order = Session.draft_order
         self.my_next_pick = Session.next_pick
         self.is_owner = Session.is_league_owner
+        self.is_draft_complete = Session.draft_complete
 
         self._update_view()
 
@@ -611,9 +613,11 @@ class LeagueView(QWidget):
         
         # draft info
         has_draft = bool(self.my_draft_order)
+        draft_complete = bool(self.is_draft_complete)
         self.draft_info_container.setVisible(has_draft)
+        self.draft_info_container.setVisible(not draft_complete)
         if has_draft:
-            self.draft_order_label.setText("Draft Order:"+", ".join(self.my_draft_order))
+            self.draft_order_label.setText("Draft Order: "+", ".join(self.my_draft_order))
             self.next_pick_label.setText(f"<b>Next to Pick:</b> {self.my_next_pick}")
 
         # conditional controls

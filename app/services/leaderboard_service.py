@@ -24,47 +24,13 @@ class LeaderboardService():
 
     def __getattr__(self, name):
         return getattr(self.base, name)
-    
-    def get_my_standings(self):
-        my_team = self.get_my_team()
 
-        if not self.get_my_league():
-            raise Exception("You're not in a league!")
-        if not my_team:
-            raise Exception("You do not own a team!")
-
-        rows = self.verify_query(
-            self.supabase
-            .table("team_players")
-            .select("player_name, points, players(region), joined_at, left_at")
-            .eq("team_id", my_team)
-        ).data
-
-        return [{
-            "name": "My Team",
-            "players": [
-                {"id": r["player_name"], "points": r["points"], "region": r["players"]["region"], "joined_at":r["joined_at"], "left_at":r["left_at"]}
-                for r in rows
-            ],
-            "total_points": sum(r["points"] for r in rows)
-        }]
-    
     def get_leaguemate_standings(self):
         # validating league state
         my_league = self.get_my_league()
 
         if not my_league:
             raise Exception("You're not in a league!")
-        
-        league = self.verify_query(
-            self.supabase
-            .table("leagues")
-            .select("draft_complete")
-            .eq("league_id", my_league)
-        ).data
-
-        if league[0]["draft_complete"] == False:
-            raise Exception("The draft isn't complete yet!")
 
         # grabbing all teams and owners (knowing the draft is done)
         teams = self.verify_query(
@@ -116,8 +82,8 @@ class LeaderboardService():
 
         return [
             {
-                "name": data["team_name"],
-                "owner": data["owner_username"],
+                "team_name": data["team_name"],
+                "user_name": data["owner_username"],
                 "players": data["players"],
                 "total_points": sum(p["points"] for p in data["players"])
             }
@@ -145,14 +111,19 @@ class LeaderboardService():
                 )
 
         # validating passed favourites list
-        if not all(isinstance(f, str) and uuid.UUID(f) for f in favourites):
+        if not all(isinstance(f, str) and type(f) != uuid.UUID for f in favourites):
             raise Exception("Favourites must be of type list[UUID: str].")
+
+        if not favourites:
+            raise Exception("Favourites is empty.")
 
         # grabbing data of all favourites and creating class objects
         owners = self.verify_query(
             self.supabase
             .table("teams")
-            .select("team_id, team_owner, team_name, managers!inner(manager_name, user_id)")
+            .select(
+                "team_id, team_owner, team_name, managers!inner(manager_name, user_id)"
+            )
             .in_("managers.user_id", favourites)
         ).data
 
@@ -165,7 +136,7 @@ class LeaderboardService():
                 team_id= row["team_id"],
                 team_name = row["team_name"]
             ))
-        
+
         team_id_list = {
             f.team_id for f in fav_list
         }
@@ -182,11 +153,19 @@ class LeaderboardService():
         from collections import defaultdict
 
         # aggregate players by team_id
-        standings = defaultdict(lambda: {"team_name": "", "owner": "", "players": []})
+        standings = defaultdict(
+            lambda: {
+                "team_name": "",
+                "owner": "",
+                "owner_id": None,
+                "players": []
+            }
+        )
 
         for f in fav_list:
             standings[f.team_id]["team_name"] = f.team_name
             standings[f.team_id]["owner"] = f.username
+            standings[f.team_id]["owner_id"] = f.id
 
         for row in rosters:
             team_id = row["team_id"]
@@ -198,8 +177,9 @@ class LeaderboardService():
         # convert to list with total points
         return [
             {
-                "name": data["team_name"],
-                "owner": data["owner"],
+                "team_name": data["team_name"],
+                "user_name": data["owner"],
+                "user_id": data["owner_id"],
                 "players": data["players"],
                 "total_points": sum(p["points"] for p in data["players"])
             }

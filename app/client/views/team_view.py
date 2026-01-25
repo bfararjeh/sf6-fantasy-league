@@ -51,7 +51,7 @@ class TeamView(QWidget):
         self.team_name = Session.current_team_name
         self.next_pick = Session.next_pick
         self.draft_complete = Session.draft_complete
-        self.my_team_data = Session.my_team_data
+        self.my_team_standings = Session.my_team_standings
 
         # main content
         self.content_widget = QWidget()
@@ -234,12 +234,13 @@ class TeamView(QWidget):
         players_row.setSpacing(10)
         players_row.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        team = Session.my_team_data[0] if Session.my_team_data else None
-        players = team.get("players", []) if team else []
-
-        players = self.my_team_data[0].get("players", []) if self.my_team_data else []
-        players.sort(key=lambda p: (p["left_at"] is not None, 
-                                    -datetime.fromisoformat(p["left_at"]).timestamp() if p["left_at"] else 0))
+        players = self.my_team_standings.get("players", []) if self.my_team_standings else []
+        players.sort(
+            key=lambda p: (
+                p["left_at"] is not None, 
+                -datetime.fromisoformat(p["left_at"]).timestamp() if p["left_at"] else 0
+            )
+        )
 
         for i in range(5):
             if i < len(players):
@@ -333,9 +334,13 @@ class TeamView(QWidget):
         PLAYER_IMG_DIR = Path("app/client/assets/player_pictures")
         REGION_ICO_DIR = Path("app/client/assets/icons/flags")
 
-        players = self.my_team_data[0].get("players", []) if self.my_team_data else []
-        players.sort(key=lambda p: (p["left_at"] is not None, 
-                                    -datetime.fromisoformat(p["left_at"]).timestamp() if p["left_at"] else 0))
+        players = self.my_team_standings.get("players", []) if self.my_team_standings else []
+        players.sort(
+            key=lambda p: (
+                p["left_at"] is not None, 
+                -datetime.fromisoformat(p["left_at"]).timestamp() if p["left_at"] else 0
+            )
+        )
         for player in players:
             if not player:
                 continue

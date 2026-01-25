@@ -20,6 +20,7 @@ from app.client.views.home_view import HomeView
 from app.client.views.league_view import LeagueView
 from app.client.views.team_view import TeamView
 from app.client.views.player_view import PlayerView
+from app.client.views.leaderboard_view import LeaderboardView
 
 class FantasyApp(QMainWindow):
     '''
@@ -41,21 +42,9 @@ class FantasyApp(QMainWindow):
         self.setFixedSize(1000, 800)
 
         if self._try_restore_session():
-            self._try_restore_app_cache()
             self.show_home_view()
         else:
             self.show_login_view()
-
-    def _try_restore_app_cache(self):
-        cache = AppStore._load_all()
-
-        # favourites
-        favourites = cache.get("favourites")
-        try:
-            if isinstance(favourites[0], dict):
-                Session.favourite_players = favourites[0]
-        except Exception:
-            pass
 
     def _try_restore_session(self) -> bool:
         data = AuthStore.load()
@@ -125,7 +114,12 @@ class FantasyApp(QMainWindow):
             QApplication.restoreOverrideCursor()
 
     def show_leaderboards_view(self):
-        print("Leaderboards view requested")
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        try:
+            self.leaderboard_view = LeaderboardView(app=self)
+            self.setCentralWidget(self.leaderboard_view)
+        finally:
+            QApplication.restoreOverrideCursor()
 
 
     def open_help(self):
@@ -136,4 +130,5 @@ class FantasyApp(QMainWindow):
     def logout(self):
         Session.reset()
         AuthStore.clear()
+        AppStore.clear()
         self.show_login_view()
