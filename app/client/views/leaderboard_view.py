@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from functools import partial
+import uuid
 
 from PyQt6.QtWidgets import (
     QWidget, 
@@ -192,7 +193,7 @@ class LeaderboardView(QWidget):
         slot = QWidget()
         layout = QVBoxLayout(slot)
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.setSpacing(8)
+        layout.setSpacing(5)
 
         image = QLabel()
         image.setStyleSheet("border: 2px solid #333;")
@@ -233,7 +234,7 @@ class LeaderboardView(QWidget):
         slot = QWidget()
         layout = QVBoxLayout(slot)
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.setSpacing(8)
+        layout.setSpacing(5)
 
         image = QLabel()
         image.setFixedSize(140, 140)
@@ -287,7 +288,7 @@ class LeaderboardView(QWidget):
 
         # Player row
         player_row = QHBoxLayout()
-        player_row.setSpacing(8)
+        player_row.setSpacing(5)
         player_row.setAlignment(Qt.AlignmentFlag.AlignCenter)
         players = team.get("players", [])
 
@@ -335,7 +336,7 @@ class LeaderboardView(QWidget):
 
         # Player row
         player_row = QHBoxLayout()
-        player_row.setSpacing(8)
+        player_row.setSpacing(5)
         player_row.setAlignment(Qt.AlignmentFlag.AlignCenter)
         players = team.get("players", [])
         for i in range(5):
@@ -355,14 +356,21 @@ class LeaderboardView(QWidget):
         print("add_favourite: CLICK")
         fav = self.add_fav_input.text().strip()
 
+        try:
+            uuid.UUID(str(fav))
+        except ValueError:
+            self._set_status("Please enter a valid user ID", 2)
+            return
+
         if not fav:
             self._set_status("Please enter a user ID.", 2)
+            return
 
         try:
             AppStore.append("favourites", fav)
-            self._set_status("Favourite added!", 1)
             self.add_fav_input.setText("")
             self._refresh()
+            self._set_status("Favourite added!", 1)
 
         except Exception as e:
             self._set_status(f"Unable to add favourite: {e}", 2)
@@ -370,8 +378,8 @@ class LeaderboardView(QWidget):
     def remove_favourite(self, user_id):
         try:
             AppStore.remove("favourites", user_id)
-            self._set_status("Favourite removed!", 1)
             self._refresh()
+            self._set_status("Favourite removed!", 1)
         except Exception as e:
             self._set_status(f"Unable to remove favourite: {e}", 2)
 

@@ -247,6 +247,7 @@ class TeamView(QWidget):
         image = QLabel()
         image.setStyleSheet("border: 2px solid #333;")
         image.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        image.setCursor(Qt.CursorShape.PointingHandCursor)
 
         PLAYER_IMG_DIR = Path("app/client/assets/player_pictures")
 
@@ -442,7 +443,7 @@ class TeamView(QWidget):
 # -- LAYOUT STUFF --
 
     def _refresh(self):
-        Session.init_aesthetics()
+        Session.init_team_data()
 
         self.status_label.setText("")
 
@@ -450,8 +451,9 @@ class TeamView(QWidget):
         self.my_username = Session.user
         self.my_user_id = Session.user_id
         self.my_team_name = Session.current_team_name
-        self.my_next_pick = Session.next_pick
         self.my_team_standings = Session.my_team_standings
+        
+        self.my_next_pick = Session.next_pick
         self.is_draft_complete = Session.draft_complete
         self.is_league_locked = Session.is_league_locked
 

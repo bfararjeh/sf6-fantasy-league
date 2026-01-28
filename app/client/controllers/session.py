@@ -29,6 +29,7 @@ class Session:
     min_version = VERSION
 
     # cached league info
+    league_data_grabbed_at = None
     current_league_id = None
     current_league_name = None
     league_forfeit = None
@@ -40,14 +41,17 @@ class Session:
     draft_complete = False
 
     # cached team info
+    team_data_grabbed_at = None
     current_team_id = None
     current_team_name = None
     my_team_standings = []
 
     # cached leaderboard info
-    favourite_players = []
     player_scores = []
+    leaguemate_data_grabbed_at = None
     leaguemate_standings = []
+    favourite_data_grabbed_at = None
+    favourite_players = []
     favourite_standings = []
 
     # services locked and loaded
@@ -95,10 +99,7 @@ class Session:
         cls.leaderboard_service = LeaderboardService(cls.auth_base)
     
     @classmethod
-    def init_aesthetics(cls):
-        if cls.init_system_state():
-            return
-
+    def init_league_data(cls):
         # league data
         try:
             league_data = cls.league_service.get_full_league_info() or None
@@ -129,6 +130,8 @@ class Session:
             cls.next_pick = None
             cls.draft_complete = False
 
+    @classmethod
+    def init_team_data(cls):
         # team data
         try:
             team_data = cls.team_service.get_full_team_info() or None
@@ -136,7 +139,7 @@ class Session:
             cls.current_team_name = team_data["team_name"] or None
             cls.my_team_standings = {k: team_data[k] for k in ("players", "total_points")} or None
 
-        except Exception as e:
+        except Exception:
             cls.current_team_id = None
             cls.current_team_name = None
             cls.my_team_standings = None
@@ -152,10 +155,8 @@ class Session:
     def init_leaderboards(cls):
         try:
             cls.leaguemate_standings = cls.leaderboard_service.get_leaguemate_standings()
-            cls.favourite_standings = cls.leaderboard_service.get_favourite_standings(cls.favourite_players) if cls.favourite_players else []
         except Exception:
             cls.leaguemate_standings = []
-            cls.favourite_standings = []
 
     @classmethod
     def init_favourites(cls):
@@ -164,12 +165,9 @@ class Session:
             favourites = AppStore._load_all().get("favourites")
             if isinstance(favourites, list):
                 cls.favourite_players = favourites
-        except Exception as e:
-            pass
-
-        try:
             cls.favourite_standings = cls.leaderboard_service.get_favourite_standings(cls.favourite_players) if cls.favourite_players else None
-        except Exception as e:
+        except Exception:
+            cls.favourite_players = None
             cls.favourite_standings = None
 
     @classmethod

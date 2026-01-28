@@ -171,7 +171,6 @@ class LoginView(QWidget):
             Session.user = base.get_my_username()
             Session.init_services()
             Session.init_system_state()
-            Session.init_aesthetics()
 
             AuthStore.save({
                 "access_token": base.access_token,

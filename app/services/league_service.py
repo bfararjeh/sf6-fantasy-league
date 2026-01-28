@@ -54,24 +54,41 @@ class LeagueService():
         if not league_id:
             raise Exception("You are not currently in a league.")
 
-        # fetch basic league info
-        league = self.verify_query(
+        # grab all columns in league table, then all managers in that league
+        data = self.verify_query(
             self.supabase
             .table("leagues")
-            .select("league_owner, forfeit, league_name, locked, draft_order, pick_turn, pick_direction, draft_complete")
+            .select("""
+                league_owner,
+                forfeit,
+                league_name,
+                locked,
+                draft_order,
+                pick_turn,
+                pick_direction,
+                draft_complete,
+                managers:managers!managers_league_id_fkey(
+                    user_id,
+                    manager_name
+                )
+            """)
             .eq("league_id", league_id)
             .single()
         ).data
 
-        # fetch league members
-        mates = self.verify_query(
-            self.supabase
-            .table("managers")
-            .select("user_id, manager_name")
-            .eq("league_id", league_id)
-        ).data
+        league = {
+            "league_owner": data["league_owner"],
+            "forfeit": data["forfeit"],
+            "league_name": data["league_name"],
+            "locked": data["locked"],
+            "draft_order": data["draft_order"],
+            "pick_turn": data["pick_turn"],
+            "pick_direction": data["pick_direction"],
+            "draft_complete": data["draft_complete"],
+        }
 
         # build user_id -> manager_name map
+        mates = data["managers"]  # list of {user_id, manager_name}
         manager_map = {m["user_id"]: m["manager_name"] for m in mates}
 
         # build the base dict

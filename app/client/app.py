@@ -68,7 +68,6 @@ class FantasyApp(QMainWindow):
             Session.auth_base = base
             Session.init_services()
             Session.init_system_state()
-            Session.init_aesthetics()
             return True
         
         except Exception as e:

@@ -32,40 +32,41 @@ class LeaderboardService():
         if not my_league:
             raise Exception("You're not in a league!")
 
-        # grabbing all teams and owners (knowing the draft is done)
-        teams = self.verify_query(
+        data = self.verify_query(
             self.supabase
             .table("teams")
-            .select("team_id, team_name")
+            .select("""
+                team_id,
+                team_name,
+                owner:managers!teams_team_owner_fkey(
+                    manager_name
+                ),
+                roster:team_players(
+                    team_id,
+                    player_name,
+                    points
+                )
+            """)
             .eq("league_id", my_league)
         ).data
 
-        team_name_map = {t["team_id"]: t["team_name"] for t in teams}
-
-        owners = self.verify_query(
-            self.supabase
-            .table("teams")
-            .select("team_id, team_owner, managers(manager_name)")
-            .eq("league_id", my_league)
-        ).data
+        team_name_map = {t["team_id"]: t["team_name"] for t in data}
 
         owner_map = {
-            row["team_id"]: row["managers"]["manager_name"]
-            for row in owners
+            t["team_id"]: (t["owner"]["manager_name"] if t["owner"] else None)
+            for t in data
         }
-        
-        # grabbing all elements in team_players
-        rosters = self.verify_query(
-            self.supabase
-            .table("team_players")
-            .select("team_id, player_name, points")
-            .eq("league_id", my_league)
-        )
+
+        rosters = [
+            player
+            for t in data
+            for player in (t["roster"] or [])
+        ]
 
         standings = {}
 
         # formatting stuff
-        for row in rosters.data:
+        for row in rosters:
             team_id = row["team_id"]
 
             if team_id not in standings:
@@ -110,81 +111,87 @@ class LeaderboardService():
                     f")"
                 )
 
-        # validating passed favourites list
-        if not all(isinstance(f, str) and type(f) != uuid.UUID for f in favourites):
-            raise Exception("Favourites must be of type list[UUID: str].")
+        safe_favourites = []
+        for f in favourites or []:
+            try:
+                safe_favourites.append(str(uuid.UUID(str(f))))
+            except ValueError:
+                pass  # skip invalid entries
 
-        if not favourites:
-            raise Exception("Favourites is empty.")
+        if safe_favourites:
+            # grabbing data of all favourites and creating class objects
+            rows = self.verify_query(
+                self.supabase
+                .table("teams")
+                .select("""
+                    team_id,
+                    team_name,
+                    owner:managers!teams_team_owner_fkey(
+                        user_id,
+                        manager_name
+                    ),
+                    roster:team_players(
+                        team_id,
+                        player_name,
+                        points
+                    )
+                """)
+                .in_("team_owner", safe_favourites)   # filter teams by owner user_id
+            ).data
 
-        # grabbing data of all favourites and creating class objects
-        owners = self.verify_query(
-            self.supabase
-            .table("teams")
-            .select(
-                "team_id, team_owner, team_name, managers!inner(manager_name, user_id)"
+            fav_list = [
+                Favourite(
+                    uid=row["owner"]["user_id"],
+                    username=row["owner"]["manager_name"],
+                    team_id=row["team_id"],
+                    team_name=row["team_name"]
+                )
+                for row in rows
+                if row.get("owner") is not None
+            ]
+
+            rosters = [
+                p
+                for row in rows
+                for p in (row.get("roster") or [])
+            ]
+
+            # formatting stuff
+            from collections import defaultdict
+
+            # aggregate players by team_id
+            standings = defaultdict(
+                lambda: {
+                    "team_name": "",
+                    "owner": "",
+                    "owner_id": None,
+                    "players": []
+                }
             )
-            .in_("managers.user_id", favourites)
-        ).data
 
-        fav_list = []
+            for f in fav_list:
+                standings[f.team_id]["team_name"] = f.team_name
+                standings[f.team_id]["owner"] = f.username
+                standings[f.team_id]["owner_id"] = f.id
 
-        for row in owners:
-            fav_list.append(Favourite(
-                uid = row["managers"]["user_id"],
-                username = row["managers"]["manager_name"],
-                team_id= row["team_id"],
-                team_name = row["team_name"]
-            ))
+            for row in rosters:
+                team_id = row["team_id"]
+                standings[team_id]["players"].append({
+                    "player_name": row["player_name"],
+                    "points": row["points"]
+                })
 
-        team_id_list = {
-            f.team_id for f in fav_list
-        }
-
-        # grabbing all elements in team_players
-        rosters = self.verify_query(
-            self.supabase
-            .table("team_players")
-            .select("team_id, player_name, points")
-            .in_("team_id", team_id_list)
-        ).data
-
-        # formatting stuff
-        from collections import defaultdict
-
-        # aggregate players by team_id
-        standings = defaultdict(
-            lambda: {
-                "team_name": "",
-                "owner": "",
-                "owner_id": None,
-                "players": []
-            }
-        )
-
-        for f in fav_list:
-            standings[f.team_id]["team_name"] = f.team_name
-            standings[f.team_id]["owner"] = f.username
-            standings[f.team_id]["owner_id"] = f.id
-
-        for row in rosters:
-            team_id = row["team_id"]
-            standings[team_id]["players"].append({
-                "player_name": row["player_name"],
-                "points": row["points"]
-            })
-
-        # convert to list with total points
-        return [
-            {
-                "team_name": data["team_name"],
-                "user_name": data["owner"],
-                "user_id": data["owner_id"],
-                "players": data["players"],
-                "total_points": sum(p["points"] for p in data["players"])
-            }
-            for data in standings.values()
-        ]
+            # convert to list with total points
+            return [
+                {
+                    "team_name": data["team_name"],
+                    "user_name": data["owner"],
+                    "user_id": data["owner_id"],
+                    "players": data["players"],
+                    "total_points": sum(p["points"] for p in data["players"])
+                }
+                for data in standings.values()
+            ]
 
     def get_players(self):  
         players = self.verify_query(

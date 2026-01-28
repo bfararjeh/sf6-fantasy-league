@@ -504,7 +504,6 @@ class LeagueView(QWidget):
         def _success(success):
             if success:  
                 self._refresh()
-
                 self._set_status("Draft order assigned successfully!", code=1)
 
         def _error(error):
@@ -568,7 +567,7 @@ class LeagueView(QWidget):
 # -- LAYOUT STUFF
 
     def _refresh(self):
-        Session.init_aesthetics()
+        Session.init_league_data()
 
         self.status_label.setText("")
 
