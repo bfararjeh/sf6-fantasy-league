@@ -549,7 +549,9 @@ class LeagueView(QWidget):
 
         def _success(success):
             if success:  
-                self._refresh()
+                self.forfeit_label.setText(
+                            f'<span style="font-weight:bold; color:#bf0000;">Forfeit:</span> {self.my_league_forfeit}'
+                            )
                 self._set_status("Forfeit set!", code=1)
 
         def _error(error):
