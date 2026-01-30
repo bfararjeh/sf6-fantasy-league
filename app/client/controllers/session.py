@@ -120,11 +120,12 @@ class Session:
         if cls.init_system_state():
             return
         
-        # refresh timer logic
-        minutes = 1440 if cls.draft_complete else 1
-        if not cls._should_refresh(cls.league_data_grabbed_at, minutes, force=force):
+        if not cls._should_refresh(cls.league_data_grabbed_at, force=force):
+            print("Time delta not sufficient enough to refresh.")
             return
+        
         print("REFRESH: league_data")
+
         # league data
         try:
             league_data = cls.league_service.get_full_league_info() or None
@@ -163,11 +164,12 @@ class Session:
         if cls.init_system_state():
             return
         
-        # refresh timer logic
-        minutes = 1440 if cls.draft_complete else 1
-        if not cls._should_refresh(cls.team_data_grabbed_at, minutes, force=force):
+        if not cls._should_refresh(cls.team_data_grabbed_at, force=force):
+            print("Time delta not sufficient enough to refresh.")
             return
+        
         print("REFRESH: team_data")
+
         # team data
         try:
             team_data = cls.team_service.get_full_team_info() or None
@@ -194,11 +196,12 @@ class Session:
         if cls.init_system_state():
             return
 
-        # refresh timer logic
-        minutes = 1440 if cls.draft_complete else 1
-        if not cls._should_refresh(cls.leaguemate_data_grabbed_at, minutes, force=force):
+        if not cls._should_refresh(cls.leaguemate_data_grabbed_at, force=force):
+            print("Time delta not sufficient enough to refresh.")
             return
+        
         print("REFRESH: leaderboards")
+
         try:
             cls.leaguemate_standings = cls.leaderboard_service.get_leaguemate_standings()
             cls.leaguemate_data_grabbed_at = datetime.now()
@@ -211,10 +214,12 @@ class Session:
         if cls.init_system_state():
             return
         
-        # refresh timer logic
-        if not cls._should_refresh(cls.favourite_data_grabbed_at, 1440, force=force):
+        if not cls._should_refresh(cls.favourite_data_grabbed_at, 10, force=force):
+            print("Time delta not sufficient enough to refresh.")
             return
+        
         print("REFRESH: favourites")
+
         # favourites
         try:
             favourites = AppStore._load_all().get("favourites")
@@ -228,16 +233,21 @@ class Session:
             cls.favourite_standings = None
 
     @classmethod
-    def _should_refresh(cls, grabbed_at, minutes, force=False):
+    def _should_refresh(cls, grabbed_at, force=False):
         now = datetime.now()
 
-        if force:
+        if force or grabbed_at is None:
             return True
+        
+        if not cls.is_league_locked and cls.current_league_id:
+            seconds = 30
+        elif cls.is_league_locked and not cls.draft_complete:
+            seconds = 10
+        else:
+            seconds = 900
+        print(seconds)
 
-        if grabbed_at is None:
-            return True
-
-        return grabbed_at <= now - timedelta(minutes=minutes)
+        return grabbed_at <= now - timedelta(seconds=seconds)
 
     @classmethod
     def reset(cls):

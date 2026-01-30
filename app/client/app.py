@@ -4,7 +4,7 @@ from PyQt6.QtWidgets import QMainWindow, QApplication, QStackedWidget
 
 from PyQt6.QtGui import QKeySequence, QShortcut
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QTimer
 
 from app.services.auth_store import AuthStore
 from app.services.app_store import AppStore
@@ -52,6 +52,11 @@ class FantasyApp(QMainWindow):
         self.team_view = None
         self.player_view = None
         self.leaderboard_view = None
+
+        self.refresh_timer = QTimer()
+        self.refresh_timer.setInterval(10 * 1000)
+        self.refresh_timer.timeout.connect(self._refresh_current_view)
+        self.refresh_timer.start()
 
         if self._try_restore_session():
             self.show_home_view()
@@ -114,6 +119,8 @@ class FantasyApp(QMainWindow):
                 self.league_view = LeagueView(app=self)
                 self.stack.addWidget(self.league_view)
             self.stack.setCurrentWidget(self.league_view)
+            self.refresh_timer.stop()
+            self.refresh_timer.start()
         finally:
             QApplication.restoreOverrideCursor()
 
@@ -124,6 +131,8 @@ class FantasyApp(QMainWindow):
                 self.team_view = TeamView(app=self)
                 self.stack.addWidget(self.team_view)
             self.stack.setCurrentWidget(self.team_view)
+            self.refresh_timer.stop()
+            self.refresh_timer.start()
         finally:
             QApplication.restoreOverrideCursor()
 
@@ -144,6 +153,8 @@ class FantasyApp(QMainWindow):
                 self.leaderboard_view = LeaderboardView(app=self)
                 self.stack.addWidget(self.leaderboard_view)
             self.stack.setCurrentWidget(self.leaderboard_view)
+            self.refresh_timer.stop()
+            self.refresh_timer.start()
         finally:
             QApplication.restoreOverrideCursor()
 
@@ -171,3 +182,11 @@ class FantasyApp(QMainWindow):
         self.leaderboard_view = None
 
         self.show_login_view()
+    
+    def _refresh_current_view(self):
+        try:
+            current_view = self.stack.currentWidget()
+            print(f"ATTEMPTING REFRESH ON {type(current_view).__name__}")
+            current_view._refresh()
+        except Exception as e:
+            print(e)

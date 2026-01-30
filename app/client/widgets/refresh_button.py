@@ -4,7 +4,7 @@ from PyQt6.QtWidgets import QPushButton, QApplication
 class RefreshButton(QPushButton):
     refresh_requested = pyqtSignal()
 
-    def __init__(self, cooldown: int = 10, parent=None):
+    def __init__(self, cooldown: int = 5, parent=None):
         super().__init__(parent)
         self.cooldown = cooldown  # seconds
         self._last_clicked = None
