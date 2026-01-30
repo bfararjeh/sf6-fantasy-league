@@ -120,7 +120,7 @@ class TeamView(QWidget):
             color: #333; 
         """)
 
-        create_btn = QPushButton("Pick")
+        create_btn = QPushButton("Create")
         create_btn.setFixedWidth(100)
         create_btn.setFixedHeight(30)
         create_btn.setCursor(Qt.CursorShape.PointingHandCursor)
