@@ -10,12 +10,13 @@ from app.client.app import FantasyApp
 from app.client.theme import *
 from app.client.controllers.resource_path import ResourcePath
 
-APP_NAME = "SF6FantasyLeague"
+from app.common import *
 
-appdata_dir = Path.home() / "AppData" / "Roaming" / APP_NAME
-appdata_dir.mkdir(parents=True, exist_ok=True)
 
 def main():
+    appdata_dir = get_app_data_dir()
+    appdata_dir.mkdir(parents=True, exist_ok=True)
+
     # creating lock file to prevent multiple applications
     lock_file_path = appdata_dir / "app.lock"
     lock = QLockFile(str(lock_file_path))

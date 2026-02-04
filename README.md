@@ -47,3 +47,21 @@ The cumulative points collected by players over the season can also be viewed at
 ### **I found a bug, or want to request a feature!**
 
 If you believe to have found a bug or would simply like to request a feature, head on over to `https://github.com/bfararjeh/sf6-fantasy-league/issues` and open a request. I'm only one man, but I'll get on it as soon as possible!
+
+### Nerd Stuff - running from source
+1. To avoid polluting your system libraries, create a new python virtual environment with your preferred method. For example, with venv, in the checkout root, do:
+
+```
+python3 -m venv ./venv
+. ./venv/bin/activate
+```
+
+2. Install required dependencies:
+```
+python3 -m pip install -r requirements.txt
+```
+
+3. In the root of the checkout, run the app:
+```
+python3 -m app
+```

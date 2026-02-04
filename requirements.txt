@@ -1,0 +1,6 @@
+PyQt6==6.10.2
+PyQt6-Qt6==6.10.2
+PyQt6_sip==13.11.0
+supabase==2.27.3
+supabase-auth==2.27.3
+supabase-functions==2.27.3
