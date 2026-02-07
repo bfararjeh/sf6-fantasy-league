@@ -10,7 +10,6 @@ from PyQt6.QtWidgets import (
     QPushButton, 
     QVBoxLayout, 
     QHBoxLayout, 
-    QComboBox,
     QLineEdit,
     QGroupBox,
     QFrame,
@@ -22,7 +21,6 @@ from PyQt6.QtCore import Qt
 
 from PyQt6.QtGui import QPixmap
 
-from app.client.controllers.async_runner import run_async
 from app.client.controllers.session import Session
 
 from app.client.widgets.header_bar import HeaderBar

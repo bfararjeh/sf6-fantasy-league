@@ -2,7 +2,7 @@ import webbrowser
 
 from PyQt6.QtWidgets import QMainWindow, QApplication, QStackedWidget
 
-from PyQt6.QtGui import QKeySequence, QShortcut
+from PyQt6.QtGui import QKeySequence, QShortcut, QPalette
 
 from PyQt6.QtCore import Qt, QTimer
 
@@ -39,7 +39,7 @@ class FantasyApp(QMainWindow):
         close_shortcut.activated.connect(self.close)
 
         self.setWindowTitle("SF6 Fantasy League")
-        self.setFixedSize(1000, 800)
+        self.setFixedSize(1200, 800)
 
         self.stack = QStackedWidget()
         self.setCentralWidget(self.stack)

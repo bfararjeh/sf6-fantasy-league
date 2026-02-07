@@ -30,6 +30,9 @@ class Session:
     blocking_state                          = True
     min_version                             = VERSION
 
+    # cached avatars
+    avatar_cache                            = {}
+
     # cached league info
     current_league_id                       = None
     current_league_name                     = None
@@ -233,6 +236,23 @@ class Session:
             cls.favourite_standings = None
 
     @classmethod
+    def init_avatar(cls, user_id):
+        try:
+            if user_id in cls.avatar_cache:
+                return cls.avatar_cache[user_id]
+            
+            # fetch if not in cache
+            avatar_bytes = cls.auth_base.get_avatar(user_id)
+
+            cls.avatar_cache[user_id] = avatar_bytes
+            return avatar_bytes
+
+        except Exception:
+            # on any error, cache None
+            cls.avatar_cache[user_id] = None
+            return None
+
+    @classmethod
     def _should_refresh(cls, grabbed_at, force=False):
         now = datetime.now()
 
@@ -267,6 +287,9 @@ class Session:
         cls.banner_message = None
         cls.last_live_scores = None
         cls.min_version = cls.VERSION
+
+        # cached avatars
+        cls.avatar_cache = {}
 
         # cached league info
         cls.current_league_id = None
