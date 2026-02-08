@@ -30,13 +30,46 @@ def main():
 
     app = QApplication(sys.argv)
 
+    # custom theme stuff (font + colors)
+    _setup_theme(app=app)
+
+    # custom excepthook for bluescreening and error logging
+    sys.excepthook = _excepthook
+
+    window = FantasyApp()
+    window.show()
+
+    app.setWindowIcon(
+        QIcon(
+            str(_resource_path("app/client/assets/icons/logo.ico"))
+        )
+    )
+
+    window.setWindowIcon(
+        QIcon(
+            str(_resource_path("app/client/assets/icons/logo.ico"))
+        )
+    )
+
+    sys.exit(app.exec())
+
+def _excepthook(exc_type, exc, tb):
+    error_text = "".join(traceback.format_exception(exc_type, exc, tb))
+
+    app = QApplication.instance()
+    for widget in app.topLevelWidgets():
+        if isinstance(widget, FantasyApp):
+            widget.blue_screen.show_error(error_text)
+            break
+
+def _setup_theme(app):
+
     try:
         # apply global palette
         palette = app.palette()
         palette.setColor(QPalette.ColorRole.Window, PRIMARY_BG_COLOR)
         palette.setColor(QPalette.ColorRole.WindowText, PRIMARY_FG_COLOR)
         palette.setColor(QPalette.ColorRole.Base, BASE_COLOR)
-        palette.setColor(QPalette.ColorRole.AlternateBase, BASE_COLOR.lighter(110))
         palette.setColor(QPalette.ColorRole.ToolTipBase, TOOLTIP_BG_COLOR)
         palette.setColor(QPalette.ColorRole.ToolTipText, TOOLTIP_TEXT_COLOR)
         palette.setColor(QPalette.ColorRole.PlaceholderText, PLACEHOLDER_TEXT_COLOR)
@@ -53,10 +86,10 @@ def main():
 
     try:
         regular_id = QFontDatabase.addApplicationFont(
-            str(resource_path("app/client/assets/fonts/centurygothic.ttf"))
+            str(_resource_path("app/client/assets/fonts/centurygothic.ttf"))
         )
         bold_id = QFontDatabase.addApplicationFont(
-            str(resource_path("app/client/assets/fonts/centurygothic_bold.ttf"))
+            str(_resource_path("app/client/assets/fonts/centurygothic_bold.ttf"))
         )
 
         if regular_id == -1 or bold_id == -1:
@@ -76,37 +109,7 @@ def main():
     except Exception as e:
         print("Failed to load font:", e)
 
-    # custom excepthook for bluescreening and error logging
-    sys.excepthook = excepthook
-
-    window = FantasyApp()
-    window.show()
-
-    app.setWindowIcon(
-        QIcon(
-            str(resource_path("app/client/assets/icons/logo.ico"))
-        )
-    )
-
-    window.setWindowIcon(
-        QIcon(
-            str(resource_path("app/client/assets/icons/logo.ico"))
-        )
-    )
-
-    sys.exit(app.exec())
-
-
-def excepthook(exc_type, exc, tb):
-    error_text = "".join(traceback.format_exception(exc_type, exc, tb))
-
-    app = QApplication.instance()
-    for widget in app.topLevelWidgets():
-        if isinstance(widget, FantasyApp):
-            widget.blue_screen.show_error(error_text)
-            break
-
-def resource_path(relative_path: str) -> str:
+def _resource_path(relative_path: str) -> str:
     if hasattr(sys, "_MEIPASS"):
         return str(Path(sys._MEIPASS) / relative_path)
     return str(Path(relative_path).resolve())

@@ -63,7 +63,6 @@ class Session:
     # refresh timers
     system_state_grabbed_at                 = None
     league_data_grabbed_at                  = None
-    team_data_grabbed_at                    = None
     leaguemate_data_grabbed_at              = None
     favourite_data_grabbed_at               = None
 
@@ -140,6 +139,7 @@ class Session:
             cls.is_league_owner = True if league_data["league_owner"] == cls.user_id else False
             cls.leaguemates = league_data["leaguemates"]
             cls.is_league_locked = league_data["locked"]
+
             try:
                 cls.draft_order = league_data["draft_order"]
                 cls.next_pick = league_data["next_pick"]
@@ -158,21 +158,11 @@ class Session:
             cls.is_league_owner = False
             cls.leaguemates = None
             cls.is_league_locked = False
+
             cls.draft_order = None
             cls.next_pick = None
             cls.draft_complete = False
-
-    @classmethod
-    def init_team_data(cls, force=False):
-        if cls.init_system_state():
-            return
         
-        if not cls._should_refresh(cls.team_data_grabbed_at, force=force):
-            print("Time delta not sufficient enough to refresh.")
-            return
-        
-        print("REFRESH: team_data")
-
         # team data
         try:
             team_data = cls.team_service.get_full_team_info() or None
@@ -182,14 +172,7 @@ class Session:
             cls.current_team_name = team_data["team_name"] or None
             cls.my_team_standings = {k: team_data[k] for k in ("players", "total_points")} or None
 
-            draft_data = team_data["league"]
-            cls.next_pick = draft_data["pick_turn"]["manager_name"]
-            cls.draft_complete = draft_data["draft_complete"]
-            cls.is_league_locked = draft_data["locked"]
-
         except Exception:
-            cls.team_data_grabbed_at = None
-
             cls.current_team_id = None
             cls.current_team_name = None
             cls.my_team_standings = None
@@ -265,7 +248,6 @@ class Session:
             seconds = 10
         else:
             seconds = 900
-        print(seconds)
 
         return grabbed_at <= now - timedelta(seconds=seconds)
 
@@ -321,6 +303,5 @@ class Session:
         # refresh timers
         cls.system_state_grabbed_at = None
         cls.league_data_grabbed_at = None
-        cls.team_data_grabbed_at = None
         cls.leaguemate_data_grabbed_at = None
         cls.favourite_data_grabbed_at = None

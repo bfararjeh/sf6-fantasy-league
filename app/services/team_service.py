@@ -34,11 +34,6 @@ class TeamService():
             .table("teams")
             .select("""
                 team_name,
-                league:leagues(
-                    pick_turn:managers!pick_turn(manager_name),
-                    draft_complete,
-                    locked
-                ),
                 team_players(
                     player_name,
                     points,
@@ -52,13 +47,11 @@ class TeamService():
         ).data
 
         team_name = data["team_name"]
-        league_info = data.get("league", {})
         rows = data["team_players"]
 
         return {
             "team_name": team_name,
             "team_id": team_id,
-            "league": league_info,
             "players": [
                 {
                     "id": r["player_name"],

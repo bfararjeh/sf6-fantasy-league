@@ -51,10 +51,11 @@ class HomeView(QWidget):
         self.root_layout.addStretch()
         self.root_layout.addWidget(FooterNav(self.app))
 
-        self._build_dynamic()
+        self._build_sections()
     
-    def _build_dynamic(self):
+    def _build_sections(self):
         self.content_layout.addWidget(self._build_welcome())
+        self.content_layout.addWidget(self._build_home_yap())
 
 
 # -- BUILDERS --
@@ -69,15 +70,17 @@ class HomeView(QWidget):
         avatar_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
         
         self.avatar_label = self._build_avatar()
-        self.avatar_label.setStyleSheet("border: 5px solid #FFFFFF;")
+        self.avatar_label.setStyleSheet("border: 5px solid #FFFFFF; border-radius: 5px;")
         self.avatar_label.setFixedSize(250, 250)
 
         change_btn = QPushButton("Change Avatar")
-        change_btn.setStyleSheet(BUTTON_STYLESHEET)
+        change_btn.setStyleSheet(BUTTON_STYLESHEET_A)
         change_btn.clicked.connect(self.update_avatar)
 
+        avatar_layout.addStretch()
         avatar_layout.addWidget(self.avatar_label)
         avatar_layout.addWidget(change_btn, alignment= Qt.AlignmentFlag.AlignHCenter)
+        avatar_layout.addStretch()
 
         info = QVBoxLayout()
         info.setAlignment(Qt.AlignmentFlag.AlignVCenter)
@@ -86,7 +89,7 @@ class HomeView(QWidget):
         label = QLabel(f"Welcome back, {self.my_username}.")
         label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
         label.setStyleSheet("""
-            font-size: 54px; 
+            font-size: 60px; 
             font-weight: bold;
         """)
 
@@ -107,6 +110,30 @@ class HomeView(QWidget):
 
         return tr_cont
 
+    def _build_home_yap(self):
+        cont = QWidget()
+        layout = QVBoxLayout(cont)
+        layout.setContentsMargins(25,0,25,0)
+
+        main = QLabel("""
+Welcome to the first ever Street Fighter 6 Fantasy League! Create leagues with you and up to 5 friends, draft your dream teams of 5 players, and keep an eye out throughout the season and see who comes out on top!
+
+The app works simply. Firstly, head on over to the "League" page where you can create a league or join one using a League ID. Once you're in your league, wait for all your friends to join then the league owner can set the draft order and begin the draft. This fantasy league uses a snake draft; with an order like "Alice, Bob, Charlie", the draft will go "Alice, Bob, Charlie, Charlie, Bob, Alice".
+
+Once the draft is over and you and all your leaguemates have created your dream teams, it's time to wait! You can check out the list of scoring events on the "Events" page, and after each event the scores will be updated for you and your league! You can check out your own standings in the "League" page, or your league's standings in the "Leaderboards" page, where you can view the global player pool and their scores as well as add favourite users for those of you with too many friends for a single league. Thank you for downloading this app, and I hope you win!
+               
+This app was developed soley by Fararjeh. You can learn more about the developer here: https://fararjeh-fgc.com/.
+""")
+        main.setWordWrap(True)
+        main.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        main.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+
+        layout.addStretch()
+        layout.addWidget(main)
+        layout.addStretch()
+
+        return cont
+
 
 # -- BUTTON METHODS --
 
@@ -115,28 +142,19 @@ class HomeView(QWidget):
         Opens a file dialog to select an image and updates the user's avatar.
         """
 
-        # ----------------------
-        # Create file dialog manually to apply stylesheet
-        # ----------------------
+        # create file dialog manually
         file_dialog = QFileDialog(parent=self)
         file_dialog.setWindowTitle("Select Avatar Image")
         file_dialog.setNameFilter("Images (*.png *.jpg *.jpeg *.webp *.bmp)")
         file_dialog.setFileMode(QFileDialog.FileMode.ExistingFile)
-
-        # Use non-native dialog to allow styling
-        file_dialog.setOption(QFileDialog.Option.DontUseNativeDialog, True)
         file_dialog.setOption(QFileDialog.Option.ReadOnly, True)
-
-        # ----------------------
-        # Apply your stylesheet
-        # ----------------------
-        file_dialog.setStyleSheet(FILE_DIALOG_STYLESHEET)
 
         if file_dialog.exec() == QFileDialog.DialogCode.Accepted:
             file_path = file_dialog.selectedFiles()[0]
         else:
             return
 
+        # assign avatar
         try:
             Session.auth_base.assign_avatar(file_path)
             Session.avatar_cache.pop(self.my_user_id, None)
@@ -162,9 +180,9 @@ class HomeView(QWidget):
 
     def _build_avatar(self):
         image = QLabel()
+        avatar = QPixmap()
 
         try:
-            avatar = QPixmap()
             avatar.loadFromData(Session.init_avatar(self.my_user_id))
             if avatar.isNull():
                 avatar = QPixmap(str(self.AVATAR_IMG_PATH / "placeholder.png"))

@@ -3,7 +3,6 @@ import uuid
 from PIL import Image
 import requests
 
-
 class BaseService:
     """
     Base service class for all authenticated Supabase-backed services.
