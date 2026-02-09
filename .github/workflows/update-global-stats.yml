@@ -3,7 +3,7 @@ name: Update Global Stats
 # Triggers: hourly schedule + manual dispatch
 on:
   schedule:
-    - cron: "0 * * * *"  # every hour at minute 0
+    - cron: "15 */2 * * *"
   workflow_dispatch:      # allows manual triggering
 
 jobs:
