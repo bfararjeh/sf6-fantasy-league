@@ -12,6 +12,10 @@ jobs:
     steps:
       - name: Call Supabase Edge Function
         run: |
+          echo "Calling Supabase Edge Function..."
           curl -L -X POST "https://idnmrntzyljrppeocbpa.supabase.co/functions/v1/update-global-stats" \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
-            -H "Content-Type: application/json"
+            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "Content-Type: application/json" \
+            --data '{}'
+        env:
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
