@@ -1,0 +1,18 @@
+name: Update Global Stats
+
+# Triggers: hourly schedule + manual dispatch
+on:
+  schedule:
+    - cron: "0 * * * *"  # every hour at minute 0
+  workflow_dispatch:      # allows manual triggering
+
+jobs:
+  update-global-stats:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call Supabase Edge Function
+        run: |
+          curl -L -X POST "https://idnmrntzyljrppeocbpa.supabase.co/functions/v1/update-global-stats" \
+            -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlkbm1ybnR6eWxqcnBwZW9jYnBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYyMjE0MjIsImV4cCI6MjA4MTc5NzQyMn0.Xn6cxMPS8iwEqg44jOa4xiXX8KdxKHYYTQtlUo1EGiU" \
+            -H "Content-Type: application/json" \
+            --data '{}'
