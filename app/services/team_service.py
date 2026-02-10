@@ -34,11 +34,6 @@ class TeamService():
             .table("teams")
             .select("""
                 team_name,
-                league:leagues(
-                    pick_turn:managers!pick_turn(manager_name),
-                    draft_complete,
-                    locked
-                ),
                 team_players(
                     player_name,
                     points,
@@ -52,13 +47,11 @@ class TeamService():
         ).data
 
         team_name = data["team_name"]
-        league_info = data.get("league", {})
         rows = data["team_players"]
 
         return {
             "team_name": team_name,
             "team_id": team_id,
-            "league": league_info,
             "players": [
                 {
                     "id": r["player_name"],
@@ -81,9 +74,9 @@ class TeamService():
             raise Exception("You already have a team!")
 
         # verify attributes
-        if len(team_name) < 4 or len(team_name) > 16:
-            raise Exception("Team name must be inbetween 4 and 16 characters.")
-        if not re.fullmatch(r'^\w+$', team_name):
+        if len(team_name) < 4 or len(team_name) > 24:
+            raise Exception("Team name must be inbetween 4 and 24 characters.")
+        if not re.fullmatch(r"^[\w']+$", team_name):
             raise Exception("Team name must only include letters, numbers, and underscores.")
     
         # insert new team into table

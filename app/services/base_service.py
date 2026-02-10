@@ -1,3 +1,7 @@
+import io
+import uuid
+from PIL import Image
+import requests
 
 class BaseService:
     """
@@ -59,7 +63,104 @@ class BaseService:
             return None
 
         return result
-    
+
+    def assign_avatar(self, image):
+        """
+        Processes and uploads a user's avatar.
+        """
+
+        MAX_OUTPUT_BYTES = 200 * 1024
+        BUCKET = "avatars"
+
+        # load image, convert to rgb check aspect ratio 
+        try:
+            img = Image.open(image)
+            if img.mode not in ("RGB", "L"):
+                img = img.convert("RGB")
+
+            width, height = img.size
+            ratio = width / height
+
+            if abs(ratio - 1.0) > 0.01:
+                raise Exception("Avatar must be square (1:1 aspect ratio).")
+
+        except Exception as e:
+            raise Exception(f"Invalid image file: {e}")
+
+
+        # compress image
+        try:
+            buffer = io.BytesIO()
+            quality = 90
+
+            while quality >= 40:
+                buffer.seek(0)
+                buffer.truncate()
+
+                img.save(
+                    buffer,
+                    format="WEBP",
+                    quality=quality,
+                    method=6
+                )
+
+                if buffer.tell() <= MAX_OUTPUT_BYTES:
+                    break
+
+                quality -= 5
+
+            if buffer.tell() > MAX_OUTPUT_BYTES:
+                raise Exception("Could not compress avatar under 200KB")
+
+            buffer.seek(0)
+
+        except Exception as e:
+            raise Exception(f"Could not compress avatar: {e}")
+
+        # upload
+        try:
+            file_name = f"{self.user_id}.webp"
+            self.supabase.storage.from_(BUCKET).upload(
+                file_name,
+                buffer.getvalue(),
+                file_options={
+                    "content-type": "image/webp",
+                    "upsert": "true"
+                }
+            )
+        except Exception as e:
+            raise Exception(f"Avatar upload failed: {e}")
+
+    def get_avatar(self, user_id):
+        """
+        Retrieves a user's avatar as an object to be put into a QPixmap
+        """
+
+        BUCKET = "avatars"
+
+        # make sure user id is valid uuid
+        try:
+            uuid.UUID(str(user_id))
+        except ValueError as e:
+            raise Exception(f"User ID is not a valid UUID: {e}")
+
+        try:
+            avatar_path = str(user_id) + ".webp"
+
+            # get url
+            avatar_url = self.supabase.storage.from_(BUCKET).get_public_url(avatar_path)
+
+            if not avatar_url:
+                return None
+
+            # fetch image bytes
+            response = requests.get(avatar_url)
+            response.raise_for_status()  # raise error if download failed
+            return response.content
+
+        except Exception as e:
+            raise Exception (f"Failed to get avatar for user {user_id}: {e}")
+
     def get_my_username(self):
         result = self.verify_query((
             self.supabase

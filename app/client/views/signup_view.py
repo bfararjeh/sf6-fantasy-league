@@ -1,18 +1,14 @@
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
-    QWidget,
-    QVBoxLayout,
+    QApplication,
     QLabel,
     QLineEdit,
     QPushButton,
-    QApplication,
-    QToolButton
+    QVBoxLayout,
+    QWidget,
 )
-from PyQt6.QtCore import Qt
-
-from PyQt6.QtGui import QIcon
 
 from app.services.signup_service import SignupService
-
 
 class SignupView(QWidget):
     def __init__(self, app=None):
@@ -49,12 +45,11 @@ class SignupView(QWidget):
 
         # help button
         help_label = QLabel()
-        help_label.setText("Username must be 2-16 characters, letters, numbers, underscores, and apostrophes only.\n\n"
+        help_label.setText("Username must be 2-16 characters, letters, numbers, and underscores only.\n\n"
             "Password must be at least 8 characters long.")
         help_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         help_label.setWordWrap(True)
-        help_label.setFixedHeight(65)
-        help_label.setStyleSheet("color: #333")
+        help_label.setFixedHeight(100)
 
         # email pass & username
         self.name_input = QLineEdit()
@@ -124,6 +119,8 @@ class SignupView(QWidget):
         # status label
         self.status_label = QLabel("")
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.status_label.setFixedHeight(100)
+        self.status_label.setWordWrap(True)
         self.status_label.setStyleSheet(
             """
             QLabel {
@@ -202,12 +199,12 @@ class SignupView(QWidget):
             if success == True:
                 QApplication.restoreOverrideCursor()
                 self.status_label.setText(f"Signup successful! You may return to the login page.")
-                self.status_label.setStyleSheet("color: #2e7d32;")
+                self.status_label.setStyleSheet("color: #4ade00;")
             else:
                 raise Exception("Unable to create user.")
 
         except Exception as e:
-            self.status_label.setText(f"Login failed: {e}")
-            self.status_label.setStyleSheet("color: #cc0000;")
+            self.status_label.setText(f"Signup failed: {e}")
+            self.status_label.setStyleSheet("color: #ffd500;")
             self._set_inputs_enabled(True)
             QApplication.restoreOverrideCursor()

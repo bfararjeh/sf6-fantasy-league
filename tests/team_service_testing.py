@@ -46,19 +46,23 @@ def draft_wave():
             .execute().data
 
         manager_name = manager_row["manager_name"]
-        owner_user = next(u for u in TEST_USERS if u["manager_name"] == manager_name)
-        email = owner_user["email"]
-        password = owner_user["password"]
+        owner_user = next(
+            (u for u in TEST_USERS if u["manager_name"] == manager_name),
+            None  # default if not found
+        )
+        if owner_user != None:
+            email = owner_user["email"]
+            password = owner_user["password"]
 
-        base = AuthService.login(email, password)
-        sv = TeamService(base)
+            base = AuthService.login(email, password)
+            sv = TeamService(base)
 
-        try:
-            sv.pick_player(choice(PLAYER_POOL))
-            print(f"Player picked for user {email}")
-        except Exception as e:
-            print(f"Failed to pick a player: {e}")
-            continue
+            try:
+                sv.pick_player(choice(PLAYER_POOL))
+                print(f"Player picked for user {email}")
+            except Exception as e:
+                print(f"Failed to pick a player: {e}")
+                continue
 
 def main():
     draft_wave()

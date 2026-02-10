@@ -120,10 +120,10 @@ class LeagueService():
             raise Exception("User is already in a league.")
         
         # naming format rules
-        if len(league_name) < 6 or len(league_name) > 24:
-            raise Exception("League name must be inbetween 6 and 24 characters.")
-        if not re.fullmatch(r"^[\w' ]+$", league_name):
-            raise Exception("League name must only include letters, numbers, underscores, apostrophes, and spaces.")
+        if len(league_name) < 4 or len(league_name) > 24:
+            raise Exception("League name must be inbetween 4 and 24 characters.")
+        if not re.fullmatch(r"^[\w']+$", league_name):
+            raise Exception("League name must only include letters, numbers, and underscores.")
 
         # create league
         result = self.verify_query(
@@ -365,10 +365,10 @@ class LeagueService():
             raise Exception("You are not currently in a league.")
         
         # naming format rules
-        if len(forfeit) < 12 or len(forfeit) > 128:
-            raise Exception("Forfeit must be inbetween 12 and 128 characters.")
-        if not re.fullmatch(r"^[\w' ]+$", forfeit):
-            raise Exception("Forfeit must only include letters, numbers, underscores, apostrophes, and spaces.")
+        if len(forfeit) < 4 or len(forfeit) > 64:
+            raise Exception("Forfeit must be inbetween 4 and 64 characters.")
+        if not re.fullmatch(r"^[\w']+$", forfeit):
+            raise Exception("Forfeit must only include letters, numbers, and underscores.")
     
         # validation
         league = self.verify_query(

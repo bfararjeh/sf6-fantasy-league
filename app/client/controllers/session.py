@@ -1,17 +1,15 @@
+from datetime import datetime, timedelta
 from packaging import version
 
-from datetime import datetime, timedelta
-
-from app.services.app_store import AppStore
+from app.services.league_service import LeagueService
 from app.services.leaderboard_service import LeaderboardService
 from app.services.team_service import TeamService
-from app.services.league_service import LeagueService
 
 class Session:
     '''
     Class responsible with storing all cached data for the application.
     '''
-    VERSION = "1.1.0"
+    VERSION = "1.2.0"
 
     # authenticated supabase session
     auth_base                               = None
@@ -29,6 +27,9 @@ class Session:
     last_live_scores                        = None
     blocking_state                          = True
     min_version                             = VERSION
+
+    # cached avatars
+    avatar_cache                            = {}
 
     # cached league info
     current_league_id                       = None
@@ -49,8 +50,7 @@ class Session:
     # cached leaderboard info
     player_scores                           = None
     leaguemate_standings                    = None
-    favourite_players                       = None
-    favourite_standings                     = None
+    global_stats                            = None
 
     # services locked and loaded
     team_service                            = None
@@ -60,9 +60,7 @@ class Session:
     # refresh timers
     system_state_grabbed_at                 = None
     league_data_grabbed_at                  = None
-    team_data_grabbed_at                    = None
     leaguemate_data_grabbed_at              = None
-    favourite_data_grabbed_at               = None
 
     @classmethod
     def init_services(cls):
@@ -87,7 +85,6 @@ class Session:
             or cls.system_state_grabbed_at <= current_time - timedelta(minutes=5)
         ):
             return cls.blocking_state
-        print("REFRESH: system_state")
         # system state info
         try:
             system_state = cls.auth_base.get_system_state()
@@ -106,6 +103,7 @@ class Session:
                 cls.warning_message = f"Unsupported Version, please download the latest version ({server_version}) from the GitHub page: https://github.com/bfararjeh/sf6-fantasy-league/releases"
 
             cls.player_scores = cls.leaderboard_service.get_players()
+            cls.global_stats = cls.leaderboard_service.get_global_stats()
 
             return cls.blocking_state
 
@@ -121,10 +119,7 @@ class Session:
             return
         
         if not cls._should_refresh(cls.league_data_grabbed_at, force=force):
-            print("Time delta not sufficient enough to refresh.")
             return
-        
-        print("REFRESH: league_data")
 
         # league data
         try:
@@ -137,6 +132,7 @@ class Session:
             cls.is_league_owner = True if league_data["league_owner"] == cls.user_id else False
             cls.leaguemates = league_data["leaguemates"]
             cls.is_league_locked = league_data["locked"]
+
             try:
                 cls.draft_order = league_data["draft_order"]
                 cls.next_pick = league_data["next_pick"]
@@ -155,38 +151,20 @@ class Session:
             cls.is_league_owner = False
             cls.leaguemates = None
             cls.is_league_locked = False
+
             cls.draft_order = None
             cls.next_pick = None
             cls.draft_complete = False
-
-    @classmethod
-    def init_team_data(cls, force=False):
-        if cls.init_system_state():
-            return
         
-        if not cls._should_refresh(cls.team_data_grabbed_at, force=force):
-            print("Time delta not sufficient enough to refresh.")
-            return
-        
-        print("REFRESH: team_data")
-
         # team data
         try:
             team_data = cls.team_service.get_full_team_info() or None
-            cls.team_data_grabbed_at = datetime.now()
 
             cls.current_team_id = team_data["team_id"] or None
             cls.current_team_name = team_data["team_name"] or None
             cls.my_team_standings = {k: team_data[k] for k in ("players", "total_points")} or None
 
-            draft_data = team_data["league"]
-            cls.next_pick = draft_data["pick_turn"]["manager_name"]
-            cls.draft_complete = draft_data["draft_complete"]
-            cls.is_league_locked = draft_data["locked"]
-
         except Exception:
-            cls.team_data_grabbed_at = None
-
             cls.current_team_id = None
             cls.current_team_name = None
             cls.my_team_standings = None
@@ -197,10 +175,7 @@ class Session:
             return
 
         if not cls._should_refresh(cls.leaguemate_data_grabbed_at, force=force):
-            print("Time delta not sufficient enough to refresh.")
             return
-        
-        print("REFRESH: leaderboards")
 
         try:
             cls.leaguemate_standings = cls.leaderboard_service.get_leaguemate_standings()
@@ -208,29 +183,36 @@ class Session:
         except Exception:
             cls.leaguemate_standings = None
             cls.leaguemate_data_grabbed_at = None
-
+    
     @classmethod
-    def init_favourites(cls, force=False):
+    def init_global_stats(cls, force=False):
         if cls.init_system_state():
             return
         
-        if not cls._should_refresh(cls.favourite_data_grabbed_at, force=force):
-            print("Time delta not sufficient enough to refresh.")
-            return
-        
-        print("REFRESH: favourites")
-
-        # favourites
         try:
-            favourites = AppStore._load_all().get("favourites")
-            if isinstance(favourites, list):
-                cls.favourite_players = favourites
-            cls.favourite_standings = cls.leaderboard_service.get_favourite_standings(cls.favourite_players) if cls.favourite_players else None
-            cls.favourite_data_grabbed_at = datetime.now()
+            if cls.global_stats == None or force == True:
+                cls.global_stats = cls.leaderboard_service.get_global_stats()
+
+        except:
+            cls.global_stats = None
+
+
+    @classmethod
+    def init_avatar(cls, user_id):
+        try:
+            if user_id in cls.avatar_cache:
+                return cls.avatar_cache[user_id]
+            
+            # fetch if not in cache
+            avatar_bytes = cls.auth_base.get_avatar(user_id)
+
+            cls.avatar_cache[user_id] = avatar_bytes
+            return avatar_bytes
+
         except Exception:
-            cls.favourite_data_grabbed_at = datetime.now()
-            cls.favourite_players = None
-            cls.favourite_standings = None
+            # on any error, cache None
+            cls.avatar_cache[user_id] = None
+            return None
 
     @classmethod
     def _should_refresh(cls, grabbed_at, force=False):
@@ -239,13 +221,12 @@ class Session:
         if force or grabbed_at is None:
             return True
         
-        if not cls.is_league_locked and cls.current_league_id:
+        if not bool(cls.is_league_locked) and bool(cls.current_league_id):
+            seconds = 90
+        elif bool(cls.is_league_locked) and not bool(cls.draft_complete):
             seconds = 30
-        elif cls.is_league_locked and not cls.draft_complete:
-            seconds = 10
         else:
             seconds = 900
-        print(seconds)
 
         return grabbed_at <= now - timedelta(seconds=seconds)
 
@@ -268,6 +249,9 @@ class Session:
         cls.last_live_scores = None
         cls.min_version = cls.VERSION
 
+        # cached avatars
+        cls.avatar_cache = {}
+
         # cached league info
         cls.current_league_id = None
         cls.current_league_name = None
@@ -285,10 +269,9 @@ class Session:
         cls.my_team_standings = None
 
         # cached leaderboard info
-        cls.favourite_players = None
         cls.player_scores = None
         cls.leaguemate_standings = None
-        cls.favourite_standings = None
+        cls.global_stats = None
 
         # services locked and loaded
         cls.team_service = None
@@ -298,6 +281,4 @@ class Session:
         # refresh timers
         cls.system_state_grabbed_at = None
         cls.league_data_grabbed_at = None
-        cls.team_data_grabbed_at = None
         cls.leaguemate_data_grabbed_at = None
-        cls.favourite_data_grabbed_at = None

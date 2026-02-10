@@ -1,29 +1,23 @@
-from pathlib import Path
-import sys
-
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import (
-    QWidget, 
-    QLabel,
-    QVBoxLayout, 
-    QHBoxLayout,
+    QApplication,
     QFrame,
-    QSizePolicy,
-    QScrollArea,
+    QHBoxLayout,
+    QLabel,
     QPushButton,
-    QApplication
+    QScrollArea,
+    QVBoxLayout,
+    QWidget,
 )
 
-from PyQt6.QtCore import Qt
-
-from PyQt6.QtGui import QPixmap
-
+from app.client.controllers.resource_path import ResourcePath
 from app.client.controllers.session import Session
-
-from app.client.widgets.header_bar import HeaderBar
+from app.client.theme import *
 from app.client.widgets.footer_nav import FooterNav
+from app.client.widgets.header_bar import HeaderBar
 
 class PlayerView(QWidget):
-
     def __init__(self, app):
         super().__init__()
         self.app = app
@@ -49,26 +43,20 @@ class PlayerView(QWidget):
             "points": "Sort: Points",
         }
 
-        self.PLAYER_IMG_DIR = Path(self.resource_path("app/client/assets/player_pictures"))
-        self.REGION_ICO_DIR = Path(self.resource_path("app/client/assets/icons/flags"))
-
         self._build_main()
-
 
     def _build_main(self):
         self.root_layout.addWidget(HeaderBar(self.app))
 
         # main content
         content_widget = QWidget()
-
         content_layout = QVBoxLayout(content_widget)
         content_layout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
         content_layout.setContentsMargins(50, 35, 50, 35)
-        content_layout.setSpacing(35)
+        content_layout.setSpacing(50)
 
         # player layout
         self.player_cont = QWidget()
-
         self.player_layout = QVBoxLayout(self.player_cont)
         self.player_layout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
         self.player_layout.setContentsMargins(0, 0, 0, 0)
@@ -82,12 +70,15 @@ class PlayerView(QWidget):
         content_layout.addWidget(self.player_cont)
 
         # scrollable if required
-        scrollable = QScrollArea()
-        scrollable.setWidgetResizable(True)
-        scrollable.setWidget(content_widget)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setStyleSheet(SCROLL_STYLESHEET)
+
+        scroll.setWidget(content_widget)
 
         # composing root
-        self.root_layout.addWidget(scrollable, stretch=1)
+        self.root_layout.addWidget(scroll, stretch=1)
         self.root_layout.addWidget(FooterNav(self.app))
 
     def _build_title(self):
@@ -95,36 +86,61 @@ class PlayerView(QWidget):
         info_cont.setObjectName("persistent")
         info_layout = QVBoxLayout(info_cont)
         info_layout.setSpacing(15)
+        info_layout.setContentsMargins(0,0,0,0)
         info_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        team_label = QLabel("Player Pool")
-        team_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        team_label.setStyleSheet("""
+        container = QWidget()
+        layout = QHBoxLayout(container)
+        layout.setSpacing(20)
+
+        title = QLabel("Player Pool")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title.setStyleSheet("""
             font-size: 64px; 
-            font-weight: bold; 
-            color: #333; 
+            font-weight: bold;
         """)
 
-        separator = QFrame()
-        separator.setFrameShape(QFrame.Shape.HLine)
-        separator.setFrameShadow(QFrame.Shadow.Sunken)
-        separator.setStyleSheet("color: #7a7a7a;")
-        separator.setFixedHeight(2)
-        separator.setSizePolicy(
-            QSizePolicy.Policy.Expanding,
-            QSizePolicy.Policy.Fixed
-        )
+        players = QPushButton("Leaderboards")
+        players.setCursor(Qt.CursorShape.PointingHandCursor)
+        players.clicked.connect(self.app.show_leaderboards_view)
+        players.setStyleSheet(BUTTON_STYLESHEET_A)
 
+        globals_btn = QPushButton("Global Stats")
+        globals_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        globals_btn.clicked.connect(self.app.show_globals_view)
+        globals_btn.setStyleSheet(BUTTON_STYLESHEET_A)
+
+        left = QWidget()
+        center = QWidget()
+        right = QWidget()
+
+        center_layout = QHBoxLayout(center)
+        center_layout.setContentsMargins(0, 0, 0, 0)
+        center_layout.addWidget(title, alignment=Qt.AlignmentFlag.AlignCenter)
+
+        right_layout = QHBoxLayout(right)
+        right_layout.setContentsMargins(0, 0, 0, 0)
+        right_layout.addStretch()
+        right_layout.addWidget(players, alignment=Qt.AlignmentFlag.AlignTop)
+
+        left_layout = QHBoxLayout(left)
+        left_layout.setContentsMargins(0, 0, 0, 0)
+        left_layout.addWidget(globals_btn, alignment=Qt.AlignmentFlag.AlignTop)
+        left_layout.addStretch()
+
+        layout.addWidget(left, 1)
+        layout.addWidget(center)
+        layout.addWidget(right, 1)
+    
         self.current_sort_index = 0
         self.current_sort = list(self.SORT_KEYS.keys())[self.current_sort_index]
 
         self.sort_btn = QPushButton(self.SORT_LABELS[self.current_sort])
-        self.sort_btn.setFixedWidth(80)
+        self.sort_btn.setStyleSheet(BUTTON_STYLESHEET_A)
         self.sort_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.sort_btn.clicked.connect(self._cycle_sort_mode)
 
-        info_layout.addWidget(team_label)
-        info_layout.addWidget(separator)
+        info_layout.addWidget(container)
         info_layout.addWidget(self.sort_btn, alignment=Qt.AlignmentFlag.AlignHCenter)
 
         return info_cont
@@ -145,18 +161,18 @@ class PlayerView(QWidget):
             player_cont = QWidget()
             player_layout = QVBoxLayout(player_cont)
             player_layout.setContentsMargins(0, 0, 0, 0)
-            player_layout.setSpacing(0)
+            player_layout.setSpacing(10)
 
             image = QLabel()
             image.setFixedSize(160, 160)
-            image.setStyleSheet("border: 3px solid #333;")
+            image.setStyleSheet("border: 3px solid #BBBBBB;")
             image.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-            img_path = self.PLAYER_IMG_DIR / f"{player["name"]}.jpg"
+            img_path = ResourcePath.PLAYERS / f"{player['name']}.jpg"
 
             pixmap = QPixmap(str(img_path))
             if pixmap.isNull():
-                pixmap = QPixmap(str(self.PLAYER_IMG_DIR / "placeholder.png"))
+                pixmap = QPixmap(str(ResourcePath.PLAYERS / "placeholder.png"))
 
             image.setPixmap(
                 pixmap.scaled(
@@ -166,19 +182,19 @@ class PlayerView(QWidget):
                 )
             )
 
-            img_path = self.REGION_ICO_DIR / f"{player["region"]}.png"
+            img_path = ResourcePath.FLAGS / f"{player["region"]}.png"
             if not img_path.exists():
-                img_path = self.REGION_ICO_DIR / "placeholder.png"
+                img_path = ResourcePath.FLAGS / "placeholder.png"
 
             info_label = QLabel()
             info_label.setTextFormat(Qt.TextFormat.RichText)
             info_label.setText(
                 "<div style='line-height: 1;'>"
-                f"<span style='font-size:20px; font-weight: bold; color:#333;'>{name}</span><br/>"
-                f"<span style='font-size:16px; color:#888;'>{region}  </span>"
+                f"<span style='font-size:20px; font-weight: bold;;'>{name}</span><br/>"
+                f"<span style='font-size:16px; color:#BBBBBB;'>{region}  </span>"
                 f"<img src='{img_path}' width='18' height='12'><br/><br/>"
-                f"<span style='font-size:16px; font-weight:bold; color:#333;'>{points}  </span>"
-                "</div"
+                f"<span style='font-size:16px; font-weight:bold;;'>{points}  </span>"
+                "</div>"
             )
             info_label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
 
@@ -220,8 +236,3 @@ class PlayerView(QWidget):
         self._rebuild_players_view(sort_by=self.current_sort)
 
         QApplication.restoreOverrideCursor()
-
-    def resource_path(self, relative_path: str) -> str:
-        if hasattr(sys, "_MEIPASS"):
-            return str(Path(sys._MEIPASS) / relative_path)
-        return str(Path(relative_path).resolve())

@@ -70,25 +70,29 @@ def assign_draft_orders_for_all_leagues():
             .execute().data
 
         manager_name = manager_row["manager_name"]
-        owner_user = next(u for u in TEST_USERS if u["manager_name"] == manager_name)
-        email = owner_user["email"]
-        password = owner_user["password"]
+        owner_user = next(
+            (u for u in TEST_USERS if u["manager_name"] == manager_name),
+            None  # default if not found
+        )
+        if owner_user != None:
+            email = owner_user["email"]
+            password = owner_user["password"]
 
-        base = AuthService.login(email, password)
-        sv = LeagueService(base)
+            base = AuthService.login(email, password)
+            sv = LeagueService(base)
 
-        managers_in_league = admin_client.table("managers") \
-            .select("manager_name") \
-            .eq("league_id", league["league_id"]) \
-            .execute().data
+            managers_in_league = admin_client.table("managers") \
+                .select("manager_name") \
+                .eq("league_id", league["league_id"]) \
+                .execute().data
 
-        usernames = [m["manager_name"] for m in managers_in_league]
+            usernames = [m["manager_name"] for m in managers_in_league]
 
-        try:
-            sv.assign_draft_order(usernames)
-        except Exception as e:
-            print(f"Failed to assign draft order: {e}")
-            continue
+            try:
+                sv.assign_draft_order(usernames)
+            except Exception as e:
+                print(f"Failed to assign draft order: {e}")
+                continue
 
 def start_drafts():
     admin_client = supabase.create_client(SUPABASE_URL, SUPABASE_SECRET_KEY)
@@ -104,18 +108,22 @@ def start_drafts():
             .execute().data
 
         manager_name = manager_row["manager_name"]
-        owner_user = next(u for u in TEST_USERS if u["manager_name"] == manager_name)
-        email = owner_user["email"]
-        password = owner_user["password"]
+        owner_user = next(
+            (u for u in TEST_USERS if u["manager_name"] == manager_name),
+            None  # default if not found
+        )
+        if owner_user != None:
+            email = owner_user["email"]
+            password = owner_user["password"]
 
-        base = AuthService.login(email, password)
-        sv = LeagueService(base)
+            base = AuthService.login(email, password)
+            sv = LeagueService(base)
 
-        try:
-            sv.begin_draft()
-        except Exception as e:
-            print(f"Failed to begin draft: {e}")
-            continue
+            try:
+                sv.begin_draft()
+            except Exception as e:
+                print(f"Failed to begin draft: {e}")
+                continue
 
 def set_a_random_leagues_forfeit():
     admin_client = supabase.create_client(SUPABASE_URL, SUPABASE_SECRET_KEY)
@@ -142,9 +150,8 @@ def set_a_random_leagues_forfeit():
         break
 
 def main():
-    create_dummy_leagues()
-    join_dummy_leagues()
     assign_draft_orders_for_all_leagues()
+    start_drafts()
 
 if __name__ == "__main__":
     main()
