@@ -32,6 +32,16 @@ After any scoring event (displayed in the events tab), points are awarded to the
 | 33 (tied)      | 4      | 2      |
 | 49 (tied)      | 1      | 1      |
 
+Furthermore, bonus points will be handed out to competitors for the following accomplishments:
+
+| Achievement       | Bonus |
+|----------------|--------|
+| Capcom Cup Qualified              | 25    |
+| SFL Worlds Win              | 35     |
+| SFL Regionals Win              | 15     |
+
+These bonus points will be handed out around the date of the events.
+
 The top 4 placing active players within your team will receive points. So, should all 5 players of your team place within the top 64, only the best 4 placings will be considered. In the event of a tie, for example:
 
 - Player 1: 1st
