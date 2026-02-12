@@ -15,22 +15,22 @@ Once each team has 5 players, the draft is complete and the league begins! From 
 
 *This information is not final*
 
-After any scoring event (displayed in the events tab), points are awarded to the top 64 players of that event as shown below:
+After any scoring event (displayed in the events tab), points are awarded to the top 64 players of that event according to the event tier. Tier 1 events are the big ones: almost exclusviely CPT circuit tournaments with the exception of some big ones (think 1000+ entrants). You can take a look at the distribution tables below:
 
-| Final Placement | Points Awarded  |
-| -------------   | -------------   |
-| 1st    | 50    |
-| 2nd    | 40    |
-| 3rd    | 35    |
-| 4th    | 30    |
-| 5th tied    | 25    |
-| 7th tied    | 20    |
-| 9th tied    | 15    |
-| 13th tied    | 10    |
-| 17th tied    | 5    |
-| 25th tied    | 3    |
-| 33rd tied    | 2    |
-| 49th tied    | 1    |
+| Position       | Tier 1 | Tier 2 |
+|----------------|--------|--------|
+| 1              | 100    | 50     |
+| 2              | 80     | 40     |
+| 3              | 70     | 35     |
+| 4              | 60     | 30     |
+| 5 (tied)       | 50     | 25     |
+| 7 (tied)       | 40     | 20     |
+| 9 (tied)       | 30     | 15     |
+| 13 (tied)      | 20     | 10     |
+| 17 (tied)      | 10     | 5      |
+| 25 (tied)      | 6      | 3      |
+| 33 (tied)      | 4      | 2      |
+| 49 (tied)      | 1      | 1      |
 
 The top 4 placing active players within your team will receive points. So, should all 5 players of your team place within the top 64, only the best 4 placings will be considered. In the event of a tie, for example:
 
