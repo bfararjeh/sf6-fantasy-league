@@ -1,4 +1,5 @@
 import io
+import os
 import uuid
 from PIL import Image
 import requests
@@ -63,7 +64,7 @@ class BaseService:
             return None
 
         return result
-
+    
     def assign_avatar(self, image):
         """
         Processes and uploads a user's avatar.

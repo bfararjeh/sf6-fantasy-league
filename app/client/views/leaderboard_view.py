@@ -61,18 +61,8 @@ class LeaderboardView(QWidget):
 
         scroll.setWidget(self.content_widget)
 
-        self.status_label = QLabel("")
-        self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.status_label.setFixedHeight(25)
-        self.status_label.setStyleSheet("""
-            QLabel {
-                font-size: 12px;
-            }
-        """)
-
         self.root_layout.addWidget(self.header)
         self.root_layout.addWidget(scroll, stretch=1)
-        self.root_layout.addWidget(self.status_label)
         self.root_layout.addWidget(self.footer)
 
         self._build_sections()
@@ -80,11 +70,9 @@ class LeaderboardView(QWidget):
         self.setLayout(self.root_layout)
 
     def _build_sections(self):
-        self.info = self._build_info()
         self.leaguemate_container = self._build_leaguemates()
 
-
-        self.content_layout.addWidget(self.info)
+        self.content_layout.addWidget(self._build_info())
         self.content_layout.addWidget(self.leaguemate_container)
 
 
@@ -320,8 +308,6 @@ class LeaderboardView(QWidget):
     def _refresh(self, force=0):
         Session.init_leaderboards(force)
 
-        self.status_label.setText("")
-
         self.my_username = Session.user
         self.my_user_id = Session.user_id
         self.leaguemate_data = Session.leaguemate_standings
@@ -357,18 +343,6 @@ class LeaderboardView(QWidget):
             label = QLabel("It's quiet. Too quiet...\n\nMaybe join a league?")
             self.leaguemate_layout.addSpacerItem(QSpacerItem(10,100))
             self.leaguemate_layout.addWidget(label, alignment= Qt.AlignmentFlag.AlignVCenter)
-
-    def _create_separator(self):
-        separator = QFrame()
-        separator.setFrameShape(QFrame.Shape.HLine)
-        separator.setFrameShadow(QFrame.Shadow.Sunken)
-        separator.setStyleSheet("color: #7a7a7a;")
-        separator.setFixedHeight(2)
-        separator.setSizePolicy(
-            QSizePolicy.Policy.Expanding,
-            QSizePolicy.Policy.Fixed
-        )
-        return separator
 
     def _apply_ranks(self, teams):
         ranked = []

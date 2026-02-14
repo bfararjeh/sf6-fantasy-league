@@ -41,7 +41,7 @@ class GlobalView(QWidget):
         content_layout = QVBoxLayout(content_widget)
         content_layout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
         content_layout.setContentsMargins(50, 35, 50, 35)
-        content_layout.setSpacing(10)
+        content_layout.setSpacing(0)
 
         # scrollable if required
         scroll = QScrollArea()
@@ -53,6 +53,13 @@ class GlobalView(QWidget):
 
         # composing content
         content_layout.addWidget(self._build_title())
+
+        subtitle = QLabel("Global stats are updated every 2 hours.")
+        subtitle.setStyleSheet("color: #666666; font-style: italic;")
+
+        content_layout.addWidget(subtitle, alignment= Qt.AlignmentFlag.AlignCenter)
+
+
         if bool(self.global_stats):
             content_layout.addWidget(self._build_stats(self.global_stats[0]))
         else:

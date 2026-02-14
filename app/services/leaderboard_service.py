@@ -1,5 +1,3 @@
-import uuid
-
 from app.services.base_service import BaseService
 
 class LeaderboardService():

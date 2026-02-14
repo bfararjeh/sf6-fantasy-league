@@ -4,6 +4,7 @@ from packaging import version
 from app.services.league_service import LeagueService
 from app.services.leaderboard_service import LeaderboardService
 from app.services.team_service import TeamService
+from app.services.event_service import EventService
 
 class Session:
     '''
@@ -52,10 +53,15 @@ class Session:
     leaguemate_standings                    = None
     global_stats                            = None
 
+    # cached event info
+    event_data                              = None
+    dist_data                               = None
+
     # services locked and loaded
     team_service                            = None
     league_service                          = None
     leaderboard_service                     = None
+    event_service                           = None
 
     # refresh timers
     system_state_grabbed_at                 = None
@@ -74,6 +80,7 @@ class Session:
         cls.team_service = TeamService(cls.auth_base)
         cls.league_service = LeagueService(cls.auth_base)
         cls.leaderboard_service = LeaderboardService(cls.auth_base)
+        cls.event_service = EventService(cls.auth_base)
 
     @classmethod
     def init_system_state(cls):
@@ -104,6 +111,8 @@ class Session:
 
             cls.player_scores = cls.leaderboard_service.get_players()
             cls.global_stats = cls.leaderboard_service.get_global_stats()
+            cls.event_data = cls.event_service.get_events()
+            cls.dist_data = cls.event_service.get_distributions()
 
             return cls.blocking_state
 
@@ -185,19 +194,6 @@ class Session:
             cls.leaguemate_data_grabbed_at = None
     
     @classmethod
-    def init_global_stats(cls, force=False):
-        if cls.init_system_state():
-            return
-        
-        try:
-            if cls.global_stats == None or force == True:
-                cls.global_stats = cls.leaderboard_service.get_global_stats()
-
-        except:
-            cls.global_stats = None
-
-
-    @classmethod
     def init_avatar(cls, user_id):
         try:
             if user_id in cls.avatar_cache:
@@ -273,10 +269,15 @@ class Session:
         cls.leaguemate_standings = None
         cls.global_stats = None
 
+        # cached event info
+        cls.event_data = None
+        cls.dist_data = None
+
         # services locked and loaded
         cls.team_service = None
         cls.league_service = None
         cls.leaderboard_service = None
+        cls.event_service = None
 
         # refresh timers
         cls.system_state_grabbed_at = None
