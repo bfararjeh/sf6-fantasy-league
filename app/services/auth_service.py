@@ -15,7 +15,7 @@ class AuthService:
     
     login_with_token(token_data: dict) -> BaseService
         Logs in a user using their cached access token and refresh token, saved
-        into AppData.Roaming.SF6FantasyLeague on login, before returning a
+        into AppData.Roaming.SF6FantasyLeague or similar on login, before returning a
         authenticated "BaseService" object
     '''
     @staticmethod
