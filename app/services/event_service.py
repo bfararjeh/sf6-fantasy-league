@@ -1,4 +1,6 @@
-from datetime import datetime
+from datetime import datetime, timezone
+
+import requests
 from app.services.base_service import BaseService
 
 class EventService():
@@ -18,6 +20,35 @@ class EventService():
             .select("*")
         ).data
 
+        BUCKET = "events"
+
+        for event in events:
+            image_name = event.get("image")
+            if not image_name:
+                event["image_bytes"] = None
+                continue
+
+            try:
+                # validate image_name looks like a filename
+                if not isinstance(image_name, str) or not image_name.endswith(".webp"):
+                    event["image_bytes"] = None
+                    continue
+
+                # get public URL from storage
+                image_url = self.supabase.storage.from_(BUCKET).get_public_url(image_name)
+                if not image_url:
+                    event["image_bytes"] = None
+                    continue
+
+                # fetch raw bytes
+                response = requests.get(image_url)
+                response.raise_for_status()
+                event["image_bytes"] = response.content
+
+            except Exception as e:
+                # fail gracefully, store None if fetching fails
+                event["image_bytes"] = None
+
         return events
 
     def get_distributions(self):  
@@ -29,7 +60,17 @@ class EventService():
 
         return distributions
 
-    def get_player_score_history(self, player, joined_at, left_at=None):
+    def get_event_score_history(self, event_id):  
+        score_history = self.verify_query(
+            self.supabase
+            .table("score_history")
+            .select("*")
+            .eq("event", event_id)
+        ).data
+
+        return score_history
+
+    def get_player_score_history(self, player, joined_at=None, left_at=None):
         score_history = self.verify_query(
             self.supabase
             .table("score_history")
@@ -41,47 +82,71 @@ class EventService():
             .eq("player", player)
         ).data
 
-        # only points when active
-        filtered_history = [
-            sh for sh in score_history
-            if joined_at <= sh["events"]["start_weekend"] <= (left_at or datetime.max)
-        ]
-
-        return filtered_history
-
-    def get_global_player_score_history(self, player):  
-        score_history = self.verify_query(
-            self.supabase
-            .table("score_history")
-            .select("""
-                events(name),
-                rank,
-                points
-            """)
-            .eq("player", player)
-        ).data
+        if joined_at:
+            filtered_history = [
+                sh for sh in score_history
+                if joined_at <= sh["events"]["start_weekend"] <= (left_at or datetime.max)
+            ]
+            return filtered_history
 
         return score_history
+
+    def get_player_points_timeline(self, player, joined_at=None, left_at=None):
+        history = self.get_player_score_history(player, joined_at, left_at)
+
+        history.sort(key=lambda x: x["events"]["start_weekend"])
+
+        running = 0
+        timeline = []
+
+        for h in history:
+            before = running
+            running += h["points"]
+
+            timeline.append({
+                "event_name": h["events"]["name"],
+                "event_date": h["events"]["start_weekend"],
+                "points_gained": h["points"],
+                "points_before": before,
+                "points_after": running
+            })
+
+        return timeline
 
     def get_team_score_history(self, team_id):  
         score_history = self.verify_query(
             self.supabase
             .table("team_score_history")
-            .select("*")
+            .select("""
+                points,
+                events(name, start_weekend)
+            """)
             .eq("team", team_id)
         ).data
 
         return score_history
 
-    def get_event_score_history(self, event_id):  
-        score_history = self.verify_query(
-            self.supabase
-            .table("score_history")
-            .select("*")
-            .eq("event", event_id)
-        ).data
+    def get_team_points_timeline(self, team_id):
+        history = self.get_team_score_history(team_id)
 
-        return score_history
+        history.sort(key=lambda x: x["events"]["start_weekend"])
+
+        running = 0
+        timeline = []
+
+        for h in history:
+            before = running
+            running += h["points"]
+
+            timeline.append({
+                "event_name": h["events"]["name"],
+                "event_date": h["events"]["start_weekend"],
+                "points_gained": h["points"],
+                "points_before": before,
+                "points_after": running
+            })
+
+        return timeline
 
 '''
  -- maybe in the future --

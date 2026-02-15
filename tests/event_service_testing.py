@@ -37,7 +37,7 @@ def get_local_player_history():
 
 
 def main():
-    pass
+    get_basics()
 
 if __name__ == "__main__":
     main()

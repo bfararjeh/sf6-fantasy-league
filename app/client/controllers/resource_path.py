@@ -15,3 +15,4 @@ class ResourcePath:
     FLAGS = resource_path.__func__("app/client/assets/icons/flags")
     ICONS = resource_path.__func__("app/client/assets/icons")
     FONTS = resource_path.__func__("app/client/assets/fonts")
+    EVENTS = resource_path.__func__("app/client/assets/events")

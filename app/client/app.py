@@ -227,5 +227,5 @@ class FantasyApp(QMainWindow):
         try:
             current_view = self.stack.currentWidget()
             current_view._refresh()
-        finally:
+        except Exception:
             pass
