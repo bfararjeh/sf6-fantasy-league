@@ -48,8 +48,14 @@ class EventService():
             except Exception as e:
                 # fail gracefully, store None if fetching fails
                 event["image_bytes"] = None
+        
+        
+        sorted_events = sorted(
+            events,
+            key=lambda x: datetime.fromisoformat(x["start_weekend"])
+        )
 
-        return events
+        return sorted_events
 
     def get_distributions(self):  
         distributions = self.verify_query(

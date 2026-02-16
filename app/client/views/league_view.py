@@ -591,81 +591,6 @@ class LeagueView(QWidget):
 
         return container
 
-    def _update_player_stat(self, player: dict):
-        # prevent when pick a player visible
-
-        if self.draft_picker.isVisible():
-            print(self.draft_picker.isVisible())
-            return
-
-        # Clear previous stats
-        while self.player_detail_layout.count():
-            item = self.player_detail_layout.takeAt(0)
-            widget = item.widget()
-            if widget:
-                widget.setParent(None)
-
-        name = player["id"]
-        region = player.get("region", "Unknown")
-        points = player["points"]
-        joined_at = player["joined_at"]
-        left_at = player["left_at"]
-        active = left_at is None
-
-        # Row container
-        frame = QFrame()
-        frame.setFrameShape(QFrame.Shape.StyledPanel)
-        frame.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-
-        layout = QVBoxLayout(frame)
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(10)
-
-        # Player image
-        image = QLabel()
-        image.setStyleSheet("border: 2px solid #FFFFFF;")
-        image.setFixedSize(QSize(200, 200))
-        image.setAlignment(Qt.AlignmentFlag.AlignHCenter)
-        img_path = ResourcePath.PLAYERS / f"{name}.jpg"
-        if not img_path.exists():
-            img_path = ResourcePath.PLAYERS / "placeholder.png"
-        pixmap = QPixmap(str(img_path)).scaled(200, 200, Qt.AspectRatioMode.IgnoreAspectRatio, Qt.TransformationMode.SmoothTransformation)
-        image.setPixmap(pixmap)
-
-        region_img = ResourcePath.FLAGS / f"{region}.png"
-        if not region_img.exists():
-            region_img = ResourcePath.FLAGS / "placeholder.png"
-
-        info_label = QLabel()
-        info_label.setText(
-            "<div style='line-height: 1;'>"
-            f"<span style='font-size:20px; font-weight: bold;;'>{name}</span><br/>"
-            f"<span style='font-size:16px; color:#BBBBBB;'>{region}  </span>"
-            f"<img src='{region_img}' width='18' height='12'><br/>"
-            "</div>"
-        )
-        info_label.setTextFormat(Qt.TextFormat.RichText)
-        info_label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
-
-        points_label = QLabel(f"Points: {points}")
-        points_label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
-
-        joined_label = QLabel(f"Joined At: {joined_at.split('T')[0]}")
-        joined_label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
-
-        layout.addWidget(image, alignment=Qt.AlignmentFlag.AlignHCenter)
-        layout.addWidget(info_label)
-        layout.addStretch()
-        layout.addWidget(points_label)
-        layout.addWidget(joined_label)
-        if not active:
-            left_label = QLabel(f"Left At: {left_at.split('T')[0]}")
-            left_label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
-            layout.addWidget(QLabel("Transferred"))
-            layout.addWidget(left_label)
-
-        self.player_detail_layout.addWidget(frame)
-
 
 # -- BUTTON METHODS --
 
@@ -1010,6 +935,76 @@ class LeagueView(QWidget):
             else:
                 slot = self._build_player_slot({})
             self.team_bar_layout.addWidget(slot, stretch=1)
+
+    def _update_player_stat(self, player: dict):
+        # prevent when pick a player visible
+
+        if self.draft_picker.isVisible():
+            print(self.draft_picker.isVisible())
+            return
+
+        # Clear previous stats
+        while self.player_detail_layout.count():
+            item = self.player_detail_layout.takeAt(0)
+            widget = item.widget()
+            if widget:
+                widget.setParent(None)
+
+        name = player["id"]
+        region = player.get("region", "Unknown")
+        points = player["points"]
+        joined_at = player["joined_at"]
+        left_at = player["left_at"]
+        active = left_at is None
+
+        # Row container
+        frame = QFrame()
+        frame.setFrameShape(QFrame.Shape.StyledPanel)
+        frame.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+
+        layout = QVBoxLayout(frame)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(10)
+
+        # Player image
+        image = QLabel()
+        image.setStyleSheet("border: 2px solid #FFFFFF;")
+        image.setFixedSize(QSize(200, 200))
+        image.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        img_path = ResourcePath.PLAYERS / f"{name}.jpg"
+        if not img_path.exists():
+            img_path = ResourcePath.PLAYERS / "placeholder.png"
+        pixmap = QPixmap(str(img_path)).scaled(200, 200, Qt.AspectRatioMode.IgnoreAspectRatio, Qt.TransformationMode.SmoothTransformation)
+        image.setPixmap(pixmap)
+
+        region_img = ResourcePath.FLAGS / f"{region}.png"
+        if not region_img.exists():
+            region_img = ResourcePath.FLAGS / "placeholder.png"
+
+        info_label = QLabel()
+        info_label.setText(
+            "<div style='line-height: 1;'>"
+            f"<span style='font-size:20px; font-weight: bold;;'>{name}</span><br/>"
+            f"<span style='font-size:16px; color:#BBBBBB;'>{region}  </span>"
+            f"<img src='{region_img}' width='18' height='12'><br/>"
+            "</div>"
+        )
+        info_label.setTextFormat(Qt.TextFormat.RichText)
+        info_label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+
+        points_label = QLabel(f"Points: {points}")
+        points_label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+
+        joined_label = QLabel(f"Joined At: {joined_at.split('T')[0]}")
+        joined_label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+
+        layout.addWidget(image, alignment=Qt.AlignmentFlag.AlignHCenter)
+        layout.addWidget(info_label)
+        layout.addStretch()
+        layout.addWidget(points_label)
+        layout.addWidget(joined_label)
+
+        self.player_detail_layout.addWidget(frame)
 
     def _set_status(self, msg, code=0):
         colors = {0: "#FFFFFF", 1: "#00ff0d", 2: "#FFD700"}
