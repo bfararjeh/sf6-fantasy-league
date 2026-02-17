@@ -917,7 +917,6 @@ class LeagueView(QWidget):
 
     def _update_player_slots(self):
         players = self.my_team_standings.get("players", []) if self.my_team_standings else []
-        players.sort(key=lambda p: (p["left_at"] is not None, -datetime.fromisoformat(p["left_at"]).timestamp() if p["left_at"] else 0))
 
         # clear old slots
         for i in reversed(range(self.team_bar_layout.count())):
@@ -954,8 +953,6 @@ class LeagueView(QWidget):
         region = player.get("region", "Unknown")
         points = player["points"]
         joined_at = player["joined_at"]
-        left_at = player["left_at"]
-        active = left_at is None
 
         # Row container
         frame = QFrame()
@@ -1029,20 +1026,19 @@ class LeagueView(QWidget):
     def _fit_text_to_width(self, label: QLabel, text: str, max_width: int,
                         min_font_size=2, max_font_size=40):
         """
-        Adjust the font size of a QLabel so that `text` fits within `max_width`.
-        This version is stable against repeated calls and shrinking.
+        Adjusts the font size of a label to fit within a specific width 
+        restriction.
         """
         if not text or max_width <= 0:
             return
 
-        # Start with min font size
         font = label.font()
-        font.setBold(True)  # preserve bold if needed
+        font.setBold(True)
         font_size = min_font_size
         font.setPointSize(font_size)
         metrics = QFontMetrics(font)
 
-        # Binary search to find the largest font that fits
+        # binary search to find the largest font that fits
         low, high = min_font_size, max_font_size
         best_size = min_font_size
 

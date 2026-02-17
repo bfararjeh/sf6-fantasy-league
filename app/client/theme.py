@@ -48,6 +48,24 @@ QPushButton:disabled {{
 }}
 """
 
+BUTTON_STYLESHEET_A_ACTIVE = f"""
+QPushButton {{
+    background-color: {QColor("#7A4AFF").name()};
+    color: {QColor("#ffffff").name()};
+    border-radius: 6px;
+    padding: 8px 8px;
+    font-size: 14px;
+    font-weight: bold;
+}}
+QPushButton:pressed {{
+    background-color: {QColor("#7A4AFF").darker(120).name()};
+}}
+QPushButton:disabled {{
+    background-color: {QColor("#444F9C").name()};
+    color: #888888;
+}}
+"""
+
 # theme col for icon
 BUTTON_STYLESHEET_B = f"""
 QPushButton {{

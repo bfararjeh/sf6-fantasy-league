@@ -27,6 +27,7 @@ class Session:
     banner_message                          = None
     last_live_scores                        = None
     blocking_state                          = True
+    updated_at                              = None
     min_version                             = VERSION
 
     # cached avatars
@@ -101,6 +102,7 @@ class Session:
             cls.banner_message = system_state["banner_message"]
             cls.warning_message = system_state["warning_message"]
             cls.min_version = system_state["version"]
+            cls.updated_at = system_state["updated_at"]
 
             client_version = version.parse(cls.VERSION.strip('"'))
             server_version = version.parse(cls.min_version.strip('"'))
@@ -173,7 +175,8 @@ class Session:
             cls.current_team_name = team_data["team_name"] or None
             cls.my_team_standings = {k: team_data[k] for k in ("players", "total_points")} or None
 
-        except Exception:
+        except Exception as e:
+            print(e)
             cls.current_team_id = None
             cls.current_team_name = None
             cls.my_team_standings = None
@@ -244,6 +247,7 @@ class Session:
         cls.banner_message = None
         cls.last_live_scores = None
         cls.min_version = cls.VERSION
+        cls.updated_at = None
 
         # cached avatars
         cls.avatar_cache = {}
