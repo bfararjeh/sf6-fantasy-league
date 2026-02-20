@@ -36,6 +36,7 @@ def run_async(
     parent_widget,
     fn,
     args=(),
+    block_cursor = True,
     kwargs=None,
     on_success=None,
     on_error=None,
@@ -57,7 +58,8 @@ def run_async(
 
     # block the parent ui
     parent_widget.setEnabled(False)
-    QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+    if block_cursor == True:
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
 
     thread = QThread(parent_widget)
     worker = _Worker(fn, args, kwargs)
@@ -74,7 +76,9 @@ def run_async(
 
     def _cleanup():
         parent_widget.setEnabled(True)
-        QApplication.restoreOverrideCursor()
+
+        if block_cursor == True:
+            QApplication.restoreOverrideCursor()
 
         if on_finished:
             on_finished()

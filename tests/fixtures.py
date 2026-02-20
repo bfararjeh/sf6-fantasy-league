@@ -85,5 +85,5 @@ TEAM_NAMES = [
 ]
 
 DUMMY_LEAGUE_NAMES = [
-    "Test League 1", "Test League 2", "Test League 3", "Test League 4", "Test League 5"
+    "Test_League_1", "Test_League_2", "Test_League_3", "Test_League_4", "Test_League_5"
 ]

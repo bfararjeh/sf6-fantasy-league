@@ -140,3 +140,14 @@ QScrollBar::sub-page:vertical {{
     background: transparent;
 }}
 """
+
+TOOLTIP_STYLESHEET_A = f"""
+QToolTip {{ 
+    background-color: {QColor("#10194D").darker(130).name()}; 
+    color: {QColor("#FFFFFF").name()}; 
+    border: 1px solid #FFFFFF;
+    border-radius: 6px;
+    font-size: 18px;
+    font-weight: bold;
+}}
+"""

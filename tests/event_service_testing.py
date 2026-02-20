@@ -21,23 +21,16 @@ def get_basics():
     print(sv.get_distributions())
     print(sv.get_events())
 
-def get_player_history():
-    user = choice(TEST_USERS)
+def get_my_scores():
+    user = TEST_USERS[0]
 
     base = AuthService.login(user["email"], user["password"])
     sv = EventService(base)
-    print(sv.get_global_player_score_history("Blaz"))
-
-def get_local_player_history():
-    user = choice(TEST_USERS)
-
-    base = AuthService.login(user["email"], user["password"])
-    sv = EventService(base)
-    print(sv.get_player_score_history(player="Blaz", joined_at=datetime.now()))
+    print(sv.get_my_standings(team_id=(sv.get_my_team()), event_id="c1b51b69-f8c7-4b61-b6e3-d6ae0aa92d01"))
 
 
 def main():
-    get_basics()
+    get_my_scores()
 
 if __name__ == "__main__":
     main()

@@ -28,7 +28,7 @@ class LeaderboardView(QWidget):
             1: "#FFD700",
             2: "#C0C0C0",
             3: "#CD7F32",
-            4: "#888888",
+            4: "#FF4D4D",
             5: "#FF4D4D",
         }
         
@@ -154,9 +154,16 @@ class LeaderboardView(QWidget):
             font-weight: bold;
         """)
 
+        points = QLabel()
+        points.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        points.setStyleSheet("""
+            font-size: 14px; 
+            font-weight: bold;
+        """)
+
         if player:
-            # --- Player present ---
             player_name = player.get("player_name", "-")
+            player_points = str(player.get("points", "-"))
             img_path = ResourcePath.PLAYERS / f"{player_name}.jpg"
 
             pixmap = QPixmap(str(img_path))
@@ -172,10 +179,10 @@ class LeaderboardView(QWidget):
             )
 
             name.setText(player_name)
+            points.setText(player_points)
             image.setStyleSheet("border: 2px solid #BBBBBB;")
 
         else:
-            # --- Empty slot ---
             image.setStyleSheet("""
                 border: 2px dashed #555;
                 background-color: #333;
@@ -191,8 +198,16 @@ class LeaderboardView(QWidget):
                 color: #999; 
             """)
 
+            points.setText("-")
+            points.setStyleSheet("""
+                font-size: 14px; 
+                font-weight: bold; 
+                color: #999; 
+            """)
+
         layout.addWidget(image)
         layout.addWidget(name)
+        layout.addWidget(points)
 
         return slot
 
@@ -201,7 +216,8 @@ class LeaderboardView(QWidget):
         team_frame.setObjectName("teamFrame")
         team_frame.setStyleSheet("""
             QFrame#teamFrame {
-                border: 2px solid #555555;
+                background-color: #090E2B;
+                border: 2px solid #444444;
                 border-radius: 4px;
             }
         """)
@@ -302,6 +318,7 @@ class LeaderboardView(QWidget):
         )
         
         return image
+
 
 # -- LAYOUT STUFF --
 
