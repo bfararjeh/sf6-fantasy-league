@@ -470,7 +470,7 @@ class EventView(QWidget):
         outer_layout.setSpacing(30)
 
         if not data:
-            empty = QLabel("No data available")
+            empty = QLabel("No active team found for this event.")
             empty.setAlignment(Qt.AlignmentFlag.AlignCenter)
             outer_layout.addWidget(empty)
             return outer
@@ -516,7 +516,7 @@ class EventView(QWidget):
 
     def create_league_score_data(self, data):
         if not data:
-            empty = QLabel("No data available")
+            empty = QLabel("No active teams found for this event.")
             empty.setAlignment(Qt.AlignmentFlag.AlignCenter)
             return empty
 

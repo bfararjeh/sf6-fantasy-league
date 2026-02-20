@@ -91,6 +91,19 @@ class EventService():
         Returns a players active team at the time of the tournament and how
         they placed
         '''
+        if team_id == None:
+            raise Exception("You don't have a team!")
+
+        event = self.verify_query(
+            self.supabase
+            .table("events")
+            .select("start_weekend, complete")
+            .eq("id", event_id)
+            .single()
+        ).data
+
+        if event["complete"] == False:
+            raise Exception("This tournament is not complete yet!")
 
         # grab players of team and event date
         players = self.verify_query(
@@ -103,17 +116,6 @@ class EventService():
             """)
             .eq("team_id", team_id)
         ).data
-
-        event = self.verify_query(
-            self.supabase
-            .table("events")
-            .select("start_weekend, complete")
-            .eq("id", event_id)
-            .single()
-        ).data
-
-        if event["complete"] == False:
-            raise Exception("This tournament is not complete yet!")
 
         # filter all players to active ones (at time of event)
         start_weekend = datetime.fromisoformat(event["start_weekend"].replace("Z", "+00:00"))
@@ -129,7 +131,7 @@ class EventService():
         # returns empty if no players were active at that point
         player_names = [p["player_name"] for p in filtered_players]
         if not player_names:
-            return []
+            return None
 
         # grab score history then assign score or 0 to each player.
         score_history = self.verify_query(
@@ -156,6 +158,9 @@ class EventService():
         Returns all users in a league's active teams (at the time of the event)
         and the scores of all players in those teams, keyed by username.
         """
+        if league_id == None:
+            raise Exception("You are not part of a league!")
+        
         # fetch event date and completion
         event = self.verify_query(
             self.supabase
@@ -184,7 +189,7 @@ class EventService():
         ).data
 
         if not teams:
-            return {}
+            return None
 
         # map team_id → username
         team_to_user = {t["team_id"]: t["owner"]["manager_name"] for t in teams}
@@ -212,7 +217,7 @@ class EventService():
         ]
 
         if not active_players:
-            return {team_to_user[tid]: {} for tid in leaguemate_ids}
+            return {}
 
         # fetch score history for active players
         player_names = [p["player_name"] for p in active_players]
@@ -227,17 +232,17 @@ class EventService():
         # build lookup for points + rank
         score_lookup = {sh["player"]: {"points": sh["points"], "rank": sh["rank"]} for sh in all_scores}
 
-        # build final dict keyed by username
         standings_by_user = {}
         for team_id, username in team_to_user.items():
             team_players = [p for p in active_players if p["team_id"] == team_id]
-            standings_by_user[username] = {
-                p["player_name"]: {
-                    "points": score_lookup.get(p["player_name"], {"points": 0, "rank": None})["points"],
-                    "rank": score_lookup.get(p["player_name"], {"points": 0, "rank": None})["rank"]
+            if team_players:
+                standings_by_user[username] = {
+                    p["player_name"]: {
+                        "points": score_lookup.get(p["player_name"], {"points": 0, "rank": None})["points"],
+                        "rank": score_lookup.get(p["player_name"], {"points": 0, "rank": None})["rank"]
+                    }
+                    for p in team_players
                 }
-                for p in team_players
-            }
 
         return standings_by_user
 
