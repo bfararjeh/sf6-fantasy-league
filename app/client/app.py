@@ -7,6 +7,7 @@ from PyQt6.QtGui import QKeySequence, QShortcut, QPalette
 from PyQt6.QtCore import Qt, QTimer
 
 from app.client.views.global_view import GlobalView
+from app.client.views.trade_view import TradeView
 from app.services.auth_store import AuthStore
 from app.services.auth_service import AuthService
 
@@ -181,7 +182,16 @@ class FantasyApp(QMainWindow):
             QApplication.restoreOverrideCursor()
 
     def show_trades_view(self):
-        print("Trades view requested.")
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        try:
+            if self.trades_view is None:
+                self.trades_view = TradeView(app=self)
+                self.stack.addWidget(self.trades_view)
+            self.stack.setCurrentWidget(self.trades_view)
+            self.refresh_timer.stop()
+            self.refresh_timer.start()
+        finally:
+            QApplication.restoreOverrideCursor()
 
 # -- HEADER HELPERS --
     def open_help(self):

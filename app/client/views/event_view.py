@@ -1,18 +1,16 @@
 from PyQt6.QtCore import Qt, QSize
 from PyQt6.QtGui import QColor, QPixmap, QIcon, QFontMetrics
 from PyQt6.QtWidgets import (
-    QFrame,
     QGraphicsColorizeEffect,
     QHBoxLayout,
     QLabel,
     QGraphicsDropShadowEffect,
     QPushButton,
     QScrollArea,
-    QSizePolicy,
-    QSpacerItem,
     QVBoxLayout,
     QWidget,
     QStackedWidget,
+    QSizePolicy
 )
 from PyQt6.QtWidgets import QToolTip
 from PyQt6.QtCore import QPoint
@@ -63,7 +61,6 @@ class EventView(QWidget):
             1: "#FFD700",
             2: "#C0C0C0",
             3: "#CD7F32",
-            4: "#E4E4E4",
         }
 
         # now = datetime.now(timezone.utc)
@@ -136,7 +133,7 @@ class EventView(QWidget):
     def _build_carousel(self):
         container = QWidget()
         layout = QHBoxLayout(container)
-        layout.setSpacing(50)
+        layout.setSpacing(10)
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         # Arrows
@@ -204,13 +201,14 @@ class EventView(QWidget):
 
         return container
 
-    def _make_arrow_button(self, icon_filename: str, callback) -> QPushButton:
-        btn = QPushButton()
+    def _make_arrow_button(self, icon_filename: str, callback) -> QLabel:
+        btn = QLabel()
+        btn.setPixmap(QIcon(str(ResourcePath.ICONS / icon_filename)).pixmap(32, 32))
+        btn.setAlignment(Qt.AlignmentFlag.AlignCenter)
         btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn.setStyleSheet(BUTTON_STYLESHEET_B)
-        btn.setIcon(QIcon(str(ResourcePath.ICONS / icon_filename)))
-        btn.setIconSize(QSize(32, 128))
-        btn.clicked.connect(callback)
+        btn.setFixedWidth(125)
+        btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding)
+        btn.mousePressEvent = lambda e: callback()
         return btn
 
     def _build_event_image(self, event, size=300):
@@ -414,9 +412,17 @@ class EventView(QWidget):
             players = ranks[rank]
 
             rank_block = QWidget()
+            rank_block.setObjectName("rankBlock")
+            rank_block.setStyleSheet("""
+                QWidget#rankBlock {
+                    background-color: #090E2B;
+                    border: 2px solid #444444;
+                    border-radius: 8px;
+                }
+            """)
             rank_block_layout = QVBoxLayout(rank_block)
             rank_block_layout.setSpacing(20)
-            rank_block_layout.setContentsMargins(0, 0, 0, 0)
+            rank_block_layout.setContentsMargins(0, 10, 0, 20)
 
             rank_label = QLabel(self._format_rank_text(rank, players[0].get("points", 0)))
             rank_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -425,15 +431,6 @@ class EventView(QWidget):
             font.setBold(True)
             font.setPointSize(self._rank_font_size(rank))
             rank_label.setFont(font)
-
-            if rank in self.RANK_STYLES:
-                color = self.RANK_STYLES[rank]
-                rank_label.setStyleSheet(f"color: {color};")
-                glow = QGraphicsDropShadowEffect()
-                glow.setBlurRadius(25)
-                glow.setOffset(0)
-                glow.setColor(QColor(color))
-                rank_label.setGraphicsEffect(glow)
 
             rank_block_layout.addWidget(rank_label)
 
@@ -447,9 +444,10 @@ class EventView(QWidget):
                 row_layout.setContentsMargins(0, 0, 0, 0)
                 row_layout.addStretch()
                 for player in chunk:
-                    row_layout.addWidget(self._build_player_tile(player, image_size, rank))
-                row_layout.addStretch()
+                    player_image = self._build_player_tile(player, image_size, rank)
+                    row_layout.addWidget(player_image)
 
+                row_layout.addStretch()
                 rank_block_layout.addWidget(row_widget)
 
             outer_layout.addWidget(rank_block)
@@ -477,9 +475,17 @@ class EventView(QWidget):
 
         IMAGE_SIZE = 125
         row_widget = QWidget()
+        row_widget.setObjectName("rowWidget")
+        row_widget.setStyleSheet("""
+            QWidget#rowWidget {
+                background-color: #090E2B;
+                border: 2px solid #444444;
+                border-radius: 4px;
+            }
+        """)
         row_layout = QHBoxLayout(row_widget)
         row_layout.setSpacing(30)
-        row_layout.setContentsMargins(0, 0, 0, 0)
+        row_layout.setContentsMargins(0, 20, 0, 20)
         row_layout.addStretch()
 
         for player in data:
@@ -539,7 +545,14 @@ class EventView(QWidget):
 
             # -- Member block --
             block = QWidget()
-            block.setStyleSheet("background-color: #090E2B; border-radius: 8px;")
+            block.setObjectName("block")
+            block.setStyleSheet("""
+                QWidget#block {
+                    background-color: #090E2B;
+                    border: 2px solid #444444;
+                    border-radius: 8px;
+                }
+            """)
             block_layout = QVBoxLayout(block)
             block_layout.setContentsMargins(15, 15, 15, 15)
             block_layout.setSpacing(10)
@@ -637,6 +650,7 @@ class EventView(QWidget):
             glow.setOffset(0)
             glow.setColor(QColor(color))
             image.setGraphicsEffect(glow)
+            layout.setContentsMargins(15, 15, 15, 15)
 
         def enterEvent(event):
             QToolTip.showText(

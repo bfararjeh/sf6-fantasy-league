@@ -151,6 +151,7 @@ class EventService():
             }
             for p in filtered_players
         ]
+        
         return standings
 
     def get_league_event_scores(self, league_id, event_id):
