@@ -1,5 +1,3 @@
-import uuid
-
 from app.services.base_service import BaseService
 
 class LeaderboardService():
@@ -46,6 +44,7 @@ class LeaderboardService():
                 )
             """)
             .eq("league_id", my_league)
+            .is_("team_players.left_at", None)
         ).data
 
         team_name_map = {t["team_id"]: t["team_name"] for t in data}

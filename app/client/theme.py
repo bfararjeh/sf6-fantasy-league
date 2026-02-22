@@ -48,6 +48,24 @@ QPushButton:disabled {{
 }}
 """
 
+BUTTON_STYLESHEET_A_ACTIVE = f"""
+QPushButton {{
+    background-color: {QColor("#7A4AFF").name()};
+    color: {QColor("#ffffff").name()};
+    border-radius: 6px;
+    padding: 8px 8px;
+    font-size: 14px;
+    font-weight: bold;
+}}
+QPushButton:pressed {{
+    background-color: {QColor("#7A4AFF").darker(120).name()};
+}}
+QPushButton:disabled {{
+    background-color: {QColor("#444F9C").name()};
+    color: #888888;
+}}
+"""
+
 # theme col for icon
 BUTTON_STYLESHEET_B = f"""
 QPushButton {{
@@ -120,5 +138,16 @@ QScrollBar::sub-line:vertical {{
 QScrollBar::add-page:vertical,
 QScrollBar::sub-page:vertical {{
     background: transparent;
+}}
+"""
+
+TOOLTIP_STYLESHEET_A = f"""
+QToolTip {{ 
+    background-color: {QColor("#10194D").darker(130).name()}; 
+    color: {QColor("#FFFFFF").name()}; 
+    border: 1px solid #FFFFFF;
+    border-radius: 6px;
+    font-size: 18px;
+    font-weight: bold;
 }}
 """

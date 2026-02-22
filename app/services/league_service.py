@@ -367,8 +367,8 @@ class LeagueService():
         # naming format rules
         if len(forfeit) < 4 or len(forfeit) > 64:
             raise Exception("Forfeit must be inbetween 4 and 64 characters.")
-        if not re.fullmatch(r"^[\w']+$", forfeit):
-            raise Exception("Forfeit must only include letters, numbers, and underscores.")
+        if not re.fullmatch(r"^[\w' ]+$", forfeit):
+            raise Exception("Forfeit must only include letters, numbers, spaces, and underscores.")
     
         # validation
         league = self.verify_query(

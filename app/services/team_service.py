@@ -43,6 +43,7 @@ class TeamService():
                 )
             """)
             .eq("team_id", team_id)
+            .is_("team_players.left_at", None)
             .single()
         ).data
 
@@ -57,8 +58,7 @@ class TeamService():
                     "id": r["player_name"],
                     "points": r["points"],
                     "region": r["players"]["region"],
-                    "joined_at": r["joined_at"],
-                    "left_at": r["left_at"]
+                    "joined_at": r["joined_at"]
                 }
                 for r in rows
             ],

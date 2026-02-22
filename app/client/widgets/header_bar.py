@@ -12,6 +12,8 @@ from PyQt6.QtCore import Qt, QSize
 
 from PyQt6.QtGui import QIcon
 
+from datetime import datetime, timedelta, timezone
+
 from app.client.controllers.session import Session
 from app.client.controllers.resource_path import ResourcePath
 from app.client.widgets.refresh_button import RefreshButton
@@ -36,13 +38,12 @@ class HeaderBar(QWidget):
         layout.setSpacing(10)
 
         # banner created when there's a message to display
-        if Session.banner_message != None:
+        if Session.banner_message != None and (datetime.now(timezone.utc) - datetime.fromisoformat(Session.updated_at) < timedelta(days=7)):
             self.banner_label = QLabel(Session.banner_message)
             self.banner_label.setWordWrap(True)
             self.banner_label.setStyleSheet(BANNER_LABEL_STYLESHEET)
             self.banner_label.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
             self.banner_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-
             layout.addWidget(self.banner_label, stretch=1)
 
         else:

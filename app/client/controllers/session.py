@@ -4,6 +4,7 @@ from packaging import version
 from app.services.league_service import LeagueService
 from app.services.leaderboard_service import LeaderboardService
 from app.services.team_service import TeamService
+from app.services.event_service import EventService
 
 class Session:
     '''
@@ -26,6 +27,7 @@ class Session:
     banner_message                          = None
     last_live_scores                        = None
     blocking_state                          = True
+    updated_at                              = None
     min_version                             = VERSION
 
     # cached avatars
@@ -52,10 +54,15 @@ class Session:
     leaguemate_standings                    = None
     global_stats                            = None
 
+    # cached event info
+    event_data                              = None
+    dist_data                               = None
+
     # services locked and loaded
     team_service                            = None
     league_service                          = None
     leaderboard_service                     = None
+    event_service                           = None
 
     # refresh timers
     system_state_grabbed_at                 = None
@@ -74,6 +81,7 @@ class Session:
         cls.team_service = TeamService(cls.auth_base)
         cls.league_service = LeagueService(cls.auth_base)
         cls.leaderboard_service = LeaderboardService(cls.auth_base)
+        cls.event_service = EventService(cls.auth_base)
 
     @classmethod
     def init_system_state(cls):
@@ -94,6 +102,7 @@ class Session:
             cls.banner_message = system_state["banner_message"]
             cls.warning_message = system_state["warning_message"]
             cls.min_version = system_state["version"]
+            cls.updated_at = system_state["updated_at"]
 
             client_version = version.parse(cls.VERSION.strip('"'))
             server_version = version.parse(cls.min_version.strip('"'))
@@ -104,6 +113,8 @@ class Session:
 
             cls.player_scores = cls.leaderboard_service.get_players()
             cls.global_stats = cls.leaderboard_service.get_global_stats()
+            cls.event_data = cls.event_service.get_events()
+            cls.dist_data = cls.event_service.get_distributions()
 
             return cls.blocking_state
 
@@ -164,7 +175,8 @@ class Session:
             cls.current_team_name = team_data["team_name"] or None
             cls.my_team_standings = {k: team_data[k] for k in ("players", "total_points")} or None
 
-        except Exception:
+        except Exception as e:
+            print(e)
             cls.current_team_id = None
             cls.current_team_name = None
             cls.my_team_standings = None
@@ -184,19 +196,6 @@ class Session:
             cls.leaguemate_standings = None
             cls.leaguemate_data_grabbed_at = None
     
-    @classmethod
-    def init_global_stats(cls, force=False):
-        if cls.init_system_state():
-            return
-        
-        try:
-            if cls.global_stats == None or force == True:
-                cls.global_stats = cls.leaderboard_service.get_global_stats()
-
-        except:
-            cls.global_stats = None
-
-
     @classmethod
     def init_avatar(cls, user_id):
         try:
@@ -248,6 +247,7 @@ class Session:
         cls.banner_message = None
         cls.last_live_scores = None
         cls.min_version = cls.VERSION
+        cls.updated_at = None
 
         # cached avatars
         cls.avatar_cache = {}
@@ -273,10 +273,15 @@ class Session:
         cls.leaguemate_standings = None
         cls.global_stats = None
 
+        # cached event info
+        cls.event_data = None
+        cls.dist_data = None
+
         # services locked and loaded
         cls.team_service = None
         cls.league_service = None
         cls.leaderboard_service = None
+        cls.event_service = None
 
         # refresh timers
         cls.system_state_grabbed_at = None

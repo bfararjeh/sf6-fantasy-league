@@ -28,7 +28,7 @@ class LeaderboardView(QWidget):
             1: "#FFD700",
             2: "#C0C0C0",
             3: "#CD7F32",
-            4: "#888888",
+            4: "#FF4D4D",
             5: "#FF4D4D",
         }
         
@@ -61,18 +61,8 @@ class LeaderboardView(QWidget):
 
         scroll.setWidget(self.content_widget)
 
-        self.status_label = QLabel("")
-        self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.status_label.setFixedHeight(25)
-        self.status_label.setStyleSheet("""
-            QLabel {
-                font-size: 12px;
-            }
-        """)
-
         self.root_layout.addWidget(self.header)
         self.root_layout.addWidget(scroll, stretch=1)
-        self.root_layout.addWidget(self.status_label)
         self.root_layout.addWidget(self.footer)
 
         self._build_sections()
@@ -80,11 +70,9 @@ class LeaderboardView(QWidget):
         self.setLayout(self.root_layout)
 
     def _build_sections(self):
-        self.info = self._build_info()
         self.leaguemate_container = self._build_leaguemates()
 
-
-        self.content_layout.addWidget(self.info)
+        self.content_layout.addWidget(self._build_info())
         self.content_layout.addWidget(self.leaguemate_container)
 
 
@@ -166,9 +154,16 @@ class LeaderboardView(QWidget):
             font-weight: bold;
         """)
 
+        points = QLabel()
+        points.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        points.setStyleSheet("""
+            font-size: 14px; 
+            font-weight: bold;
+        """)
+
         if player:
-            # --- Player present ---
             player_name = player.get("player_name", "-")
+            player_points = str(player.get("points", "-"))
             img_path = ResourcePath.PLAYERS / f"{player_name}.jpg"
 
             pixmap = QPixmap(str(img_path))
@@ -184,10 +179,10 @@ class LeaderboardView(QWidget):
             )
 
             name.setText(player_name)
+            points.setText(player_points)
             image.setStyleSheet("border: 2px solid #BBBBBB;")
 
         else:
-            # --- Empty slot ---
             image.setStyleSheet("""
                 border: 2px dashed #555;
                 background-color: #333;
@@ -203,8 +198,16 @@ class LeaderboardView(QWidget):
                 color: #999; 
             """)
 
+            points.setText("-")
+            points.setStyleSheet("""
+                font-size: 14px; 
+                font-weight: bold; 
+                color: #999; 
+            """)
+
         layout.addWidget(image)
         layout.addWidget(name)
+        layout.addWidget(points)
 
         return slot
 
@@ -213,7 +216,8 @@ class LeaderboardView(QWidget):
         team_frame.setObjectName("teamFrame")
         team_frame.setStyleSheet("""
             QFrame#teamFrame {
-                border: 2px solid #555555;
+                background-color: #090E2B;
+                border: 2px solid #444444;
                 border-radius: 4px;
             }
         """)
@@ -315,12 +319,11 @@ class LeaderboardView(QWidget):
         
         return image
 
+
 # -- LAYOUT STUFF --
 
     def _refresh(self, force=0):
         Session.init_leaderboards(force)
-
-        self.status_label.setText("")
 
         self.my_username = Session.user
         self.my_user_id = Session.user_id
@@ -357,18 +360,6 @@ class LeaderboardView(QWidget):
             label = QLabel("It's quiet. Too quiet...\n\nMaybe join a league?")
             self.leaguemate_layout.addSpacerItem(QSpacerItem(10,100))
             self.leaguemate_layout.addWidget(label, alignment= Qt.AlignmentFlag.AlignVCenter)
-
-    def _create_separator(self):
-        separator = QFrame()
-        separator.setFrameShape(QFrame.Shape.HLine)
-        separator.setFrameShadow(QFrame.Shadow.Sunken)
-        separator.setStyleSheet("color: #7a7a7a;")
-        separator.setFixedHeight(2)
-        separator.setSizePolicy(
-            QSizePolicy.Policy.Expanding,
-            QSizePolicy.Policy.Fixed
-        )
-        return separator
 
     def _apply_ranks(self, teams):
         ranked = []

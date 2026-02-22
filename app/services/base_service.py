@@ -1,4 +1,5 @@
 import io
+import os
 import uuid
 from PIL import Image
 import requests
@@ -63,7 +64,7 @@ class BaseService:
             return None
 
         return result
-
+    
     def assign_avatar(self, image):
         """
         Processes and uploads a user's avatar.
@@ -201,7 +202,7 @@ class BaseService:
         result = self.verify_query((
             self.supabase
             .table("system_state")
-            .select("blocking, warning_message, banner_message, version")
+            .select("blocking, warning_message, banner_message, version, updated_at")
             .order("updated_at", desc=True)
             .limit(1)
         ))
