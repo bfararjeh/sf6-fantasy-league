@@ -66,7 +66,7 @@ class ScoreHandler:
             raise Exception(f"Failed to insert score_history: {e}")
 
         try:
-            self.admin_client.rpc(fn="master_update", params=[{"p_event": event_id}]).execute()
+            self.admin_client.rpc(fn="master_update").execute()
             self.admin_client.table("events").update({"complete": True}).eq("id", event_id).execute()
             print("Updated cum points, team player points, and team score history for all teams.")
         except Exception as e:
