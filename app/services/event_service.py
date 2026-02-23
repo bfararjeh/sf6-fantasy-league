@@ -247,73 +247,42 @@ class EventService():
 
         return standings_by_user
 
-'''
- -- maybe in the future --
-    def get_attendance(self, event_id=None):
-
-        players = self.verify_query(
+    def get_player_points_timeline(self, player, joined_at=None, left_at=None):
+        score_history = self.verify_query(
             self.supabase
-            .table("players")
-            .select("name")
+            .table("score_history")
+            .select("""
+                events(name, start_weekend),
+                rank,
+                points
+            """)
+            .eq("player", player)
         ).data
 
-        tracked_set = set(p["name"] for p in players)
-        attendance = []
+        def parse_dt(dt_str):
+            if dt_str is None:
+                return None
+            dt = datetime.fromisoformat(dt_str)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            return dt
 
-        event_id = "1329192"
-        page = 1
-        per_page = 512
-        total_pages = 1
+        joined_dt = parse_dt(joined_at)
+        left_dt = parse_dt(left_at) or datetime.max.replace(tzinfo=timezone.utc)
 
-        while page <= total_pages:
-            result = self.base.graphql_request(
-                """
-                query EventPlayers($eventId: ID!, $page: Int!, $perPage: Int!) {
-                    event(id: $eventId) {
-                        entrants(query: { page: $page, perPage: $perPage }) {
-                            pageInfo {
-                                totalPages
-                            }
-                            nodes {
-                                participants {
-                                    gamerTag
-                                }
-                            }
-                        }
-                    }
-                }
-                """,
-                variables={
-                    "eventId": event_id,
-                    "page": page,
-                    "perPage": per_page
-                }
-            )
-
-            entrants = result["data"]["event"]["entrants"]["nodes"]
-            total_pages = result["data"]["event"]["entrants"]["pageInfo"]["totalPages"]
-
-            for entrant in entrants:
-                for participant in entrant["participants"]:
-                    tag = participant["gamerTag"]
-                    if tag in tracked_set:
-                        attendance.append(tag)
-
-            page += 1
-
-        return attendance
-
- -- and in base service --
-    def graphql_request(self, query: str, variables: dict = None):
-        self.startgg_token = os.environ["STARTGG_API_KEY"]
-        url = "https://api.start.gg/gql/alpha"
-        headers = {
-            "Authorization": f"Bearer {self.startgg_token}",
-            "Content-Type": "application/json",
-        }
-        payload = {"query": query, "variables": variables or {}}
-
-        resp = requests.post(url, json=payload, headers=headers)
-        resp.raise_for_status()
-        return resp.json()
-'''
+        history = [
+            sh for sh in score_history
+            if joined_dt <= parse_dt(sh["events"]["start_weekend"]) <= left_dt
+        ]
+        history.sort(key=lambda x: x["events"]["start_weekend"])
+        running = 0
+        timeline = []
+        for h in history:
+            running += h["points"]
+            timeline.append({
+                "event_name": h["events"]["name"],
+                "event_date": h["events"]["start_weekend"],
+                "points_gained": h["points"],
+                "points_after": running
+            })
+        return timeline

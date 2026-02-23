@@ -7,7 +7,6 @@ from PyQt6.QtWidgets import (
     QGraphicsDropShadowEffect,
     QPushButton,
     QScrollArea,
-    QSizePolicy,
     QSpacerItem,
     QVBoxLayout,
     QWidget,

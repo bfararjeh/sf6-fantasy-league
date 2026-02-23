@@ -33,7 +33,6 @@ class FantasyApp(QMainWindow):
     def __init__(self):
         super().__init__()
         try:
-
             # instantiating blue screen, just in case ;)
             self.blue_screen = BlueScreen(self)
 
