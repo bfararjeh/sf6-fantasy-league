@@ -3,7 +3,7 @@ from PyQt6.QtGui import QColor
 # main theme
 PRIMARY_BG_COLOR = QColor("#10194D")
 PRIMARY_FG_COLOR = QColor("#FFFFFF")
-TEXT_COLOR = QColor("#000000")
+TEXT_COLOR = QColor("#FFFFFF")
 BASE_COLOR = QColor("#1E2466")
 PLACEHOLDER_TEXT_COLOR = QColor("#AAAAAA")
 TOOLTIP_BG_COLOR = QColor("#282E7A")

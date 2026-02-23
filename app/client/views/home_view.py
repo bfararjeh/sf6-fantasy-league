@@ -115,7 +115,7 @@ The app works simply. Firstly, head on over to the "League" page where you can c
 
 Once the draft is over and you and all your leaguemates have created your dream teams, it's time to wait! You can check out the list of scoring events on the "Events" page, and after each event the scores will be updated for you and your league! You can check out your own standings in the "League" page, or your league's standings in the "Leaderboards" page, where you can also view the global player pool and global stats. Thank you for downloading this app, and I hope you win!
                
-This app was developed soley by Fararjeh. You can learn more about the developer here: https://fararjeh-fgc.com/.
+This app was developed solely by Fararjeh. You can learn more about the developer here: https://fararjeh-fgc.com/.
 """)
         main.setWordWrap(True)
         main.setAlignment(Qt.AlignmentFlag.AlignCenter)

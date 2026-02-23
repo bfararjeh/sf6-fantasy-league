@@ -43,26 +43,28 @@ class TeamService():
                 )
             """)
             .eq("team_id", team_id)
-            .is_("team_players.left_at", None)
             .single()
         ).data
-
         team_name = data["team_name"]
         rows = data["team_players"]
+
+        active = [r for r in rows if r["left_at"] is None]
+        inactive = [r for r in rows if r["left_at"] is not None]
+
+        def format_player(r):
+            return {
+                "id": r["player_name"],
+                "points": r["points"],
+                "region": r["players"]["region"],
+                "joined_at": r["joined_at"]
+            }
 
         return {
             "team_name": team_name,
             "team_id": team_id,
-            "players": [
-                {
-                    "id": r["player_name"],
-                    "points": r["points"],
-                    "region": r["players"]["region"],
-                    "joined_at": r["joined_at"]
-                }
-                for r in rows
-            ],
-            "total_points": sum(r["points"] for r in rows)
+            "players": [format_player(r) for r in active],
+            "inactive_players": [format_player(r) for r in inactive],
+            "total_points": sum(r["points"] for r in active)
         }
  
     def create_team(self, team_name: str):

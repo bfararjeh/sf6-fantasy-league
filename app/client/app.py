@@ -2,9 +2,20 @@ import webbrowser
 
 from PyQt6.QtWidgets import QMainWindow, QApplication, QStackedWidget
 
-from PyQt6.QtGui import QKeySequence, QShortcut, QPalette
+from PyQt6.QtGui import QKeySequence, QShortcut
 
 from PyQt6.QtCore import Qt, QTimer
+
+from PyQt6.QtCore import QEvent
+from PyQt6.QtWidgets import QApplication
+from PyQt6.QtWidgets import (
+    QApplication,
+    QLineEdit,
+    QTextEdit,
+    QPlainTextEdit,
+    QComboBox,
+    QAbstractSpinBox
+)
 
 from app.client.views.global_view import GlobalView
 from app.client.views.trade_view import TradeView
@@ -23,6 +34,7 @@ from app.client.views.leaderboard_view import LeaderboardView
 from app.client.views.player_view import PlayerView
 from app.client.views.event_view import EventView
 
+
 class FantasyApp(QMainWindow):
     '''
     Main app file for the application. Has functions for displaying all views.
@@ -32,8 +44,9 @@ class FantasyApp(QMainWindow):
     '''
     def __init__(self):
         super().__init__()
-        try:
+        QApplication.instance().installEventFilter(self)
 
+        try:
             # instantiating blue screen, just in case ;)
             self.blue_screen = BlueScreen(self)
 
@@ -86,6 +99,21 @@ class FantasyApp(QMainWindow):
             # clears cached session if failed to login
             AuthStore.clear()
             return False
+
+    def eventFilter(self, obj, event):
+        # focus clearer
+
+        if event.type() == QEvent.Type.MouseButtonPress:
+            focused = QApplication.focusWidget()
+
+            if focused:
+                if not isinstance(
+                    obj,
+                    (QLineEdit, QTextEdit, QPlainTextEdit, QComboBox, QAbstractSpinBox)
+                ):
+                    focused.clearFocus()
+
+        return super().eventFilter(obj, event)
     
 
 # -- LOGIN/SIGNUP VIEWS --
@@ -193,6 +221,7 @@ class FantasyApp(QMainWindow):
         finally:
             QApplication.restoreOverrideCursor()
 
+
 # -- HEADER HELPERS --
     def open_help(self):
         webbrowser.open(
@@ -231,7 +260,8 @@ class FantasyApp(QMainWindow):
         self.trades_view = None
 
         self.show_login_view()
-    
+
+
 # -- AUTO REFRESH CONTROL --
     def _refresh_current_view(self):
         try:

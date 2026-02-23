@@ -1,4 +1,4 @@
-from PyQt6.QtCore import Qt, QSize
+from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor, QPixmap, QIcon, QFontMetrics
 from PyQt6.QtWidgets import (
     QGraphicsColorizeEffect,
@@ -63,8 +63,7 @@ class EventView(QWidget):
             3: "#CD7F32",
         }
 
-        # now = datetime.now(timezone.utc)
-        now = datetime(2026, 12, 12, tzinfo=timezone.utc)
+        now = datetime.now(timezone.utc)
         self.now_year, self.now_month = now.year, now.month
 
         self.current_event_idx = next(
@@ -177,6 +176,11 @@ class EventView(QWidget):
         self.event_tier_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.event_tier_label.setStyleSheet("font-size: 20px;")
 
+        hint_label = QLabel("Click to view details")
+        hint_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        hint_label.setStyleSheet("font-size: 11px; color: #666666;")
+        
+        center_layout.addWidget(hint_label)
         center_layout.addWidget(self.event_name_label)
         center_layout.addWidget(self.center_display)
         center_layout.addWidget(self.event_date_label)
@@ -249,49 +253,62 @@ class EventView(QWidget):
     def _build_timeline(self):
         container = QWidget()
         layout = QVBoxLayout(container)
-        layout.setSpacing(6)
-        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.setSpacing(4)
+        layout.setContentsMargins(0, 0, 0, 0)
 
-        dots_widget = QWidget()
-        dots_layout = QHBoxLayout(dots_widget)
-        dots_layout.setSpacing(18)
-        dots_layout.setContentsMargins(0, 0, 0, 0)
-        dots_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        month_names = ["Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar"]
 
         self.timeline_dots = []
         self.timeline_labels = []
 
-        month_names = ["M", "A", "M", "J", "J", "A", "S", "O", "N", "D", "J", "F", "M"]
+        dots_row = QWidget()
+        dots_layout = QHBoxLayout(dots_row)
+        dots_layout.setContentsMargins(0, 0, 0, 0)
+        dots_layout.setSpacing(0)
+        dots_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         for i, month in enumerate(month_names):
-            dot_container = QWidget()
-            dot_layout = QVBoxLayout(dot_container)
-            dot_layout.setContentsMargins(0, 0, 0, 0)
-            dot_layout.setSpacing(4)
-            dot_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
             dot = QLabel()
-            dot.setFixedSize(14, 14)
-            dot.setStyleSheet("background-color: #444; border-radius: 7px;")
+            dot.setFixedSize(12, 12)
+            dot.setStyleSheet("background-color: #444; border-radius: 2px;")
             self.timeline_dots.append(dot)
 
-            label = QLabel(month)
-            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            label.setStyleSheet("font-size: 14px; color: #AAAAAA; font-weight: bold;")
-            self.timeline_labels.append(label)
-
-            dot_layout.addWidget(dot)
-            dot_layout.addWidget(label)
-            dot_container.setLayout(dot_layout)
-            dots_layout.addWidget(dot_container)
+            dot_wrapper = QWidget()
+            dot_wrapper.setFixedWidth(40)
+            dot_wrapper_layout = QHBoxLayout(dot_wrapper)
+            dot_wrapper_layout.setContentsMargins(0, 0, 0, 0)
+            dot_wrapper_layout.setSpacing(0)
+            dot_wrapper_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            dot_wrapper_layout.addWidget(dot)
+            dots_layout.addWidget(dot_wrapper)
 
             if i < len(month_names) - 1:
                 line = QWidget()
-                line.setFixedSize(20, 2)
+                line.setFixedSize(40, 2)
                 line.setStyleSheet("background-color: #333;")
-                dots_layout.addWidget(line, alignment=Qt.AlignmentFlag.AlignCenter)
+                dots_layout.addWidget(line, alignment=Qt.AlignmentFlag.AlignVCenter)
 
-        layout.addWidget(dots_widget)
+        labels_row = QWidget()
+        labels_layout = QHBoxLayout(labels_row)
+        labels_layout.setContentsMargins(0, 0, 0, 0)
+        labels_layout.setSpacing(0)
+        labels_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        for i, month in enumerate(month_names):
+            label = QLabel(month)
+            label.setFixedWidth(40)
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            label.setStyleSheet("font-size: 12px; color: #AAAAAA; font-weight: bold;")
+            self.timeline_labels.append(label)
+            labels_layout.addWidget(label)
+
+            if i < len(month_names) - 1:
+                spacer = QWidget()
+                spacer.setFixedWidth(40)
+                labels_layout.addWidget(spacer)
+
+        layout.addWidget(dots_row)
+        layout.addWidget(labels_row)
         return container
 
     def _build_next_up(self):
@@ -702,6 +719,7 @@ class EventView(QWidget):
         label.setFont(font)
         return label
 
+
 # -- BUTTON METHODS --
 
     def _on_event_clicked(self, event):
@@ -785,7 +803,7 @@ class EventView(QWidget):
         )
 
 
-# LAYOUT STUFF
+# -- LAYOUT STUFF --
 
     def _change_event(self, delta: int):
         if not self.event_images:
@@ -837,7 +855,7 @@ class EventView(QWidget):
             if dot_year == sel_year and dot_month == sel_month:
                 color = "#008CFF"
             elif dot_year == self.now_year and dot_month == self.now_month:
-                color = "#DA68C1"
+                color = "#f24949"
             elif (dot_year < self.now_year) or (dot_year == self.now_year and dot_month < self.now_month):
                 color = "#272727"
             else:

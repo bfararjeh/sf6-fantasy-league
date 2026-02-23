@@ -16,3 +16,4 @@ class ResourcePath:
     ICONS = resource_path.__func__("app/client/assets/icons")
     FONTS = resource_path.__func__("app/client/assets/fonts")
     EVENTS = resource_path.__func__("app/client/assets/events")
+    MAP = resource_path.__func__("app/client/assets/map")

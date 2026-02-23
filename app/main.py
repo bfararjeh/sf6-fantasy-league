@@ -9,6 +9,7 @@ from PyQt6.QtWidgets import QApplication
 from app.client.app import FantasyApp
 from app.client.theme import *
 from app.client.controllers.resource_path import ResourcePath
+from PyQt6.QtWidgets import QStyleFactory
 
 APP_NAME = "SF6FantasyLeague"
 
@@ -55,6 +56,8 @@ def _excepthook(exc_type, exc, tb):
 def _setup_theme(app):
     try:
         # apply global palette
+        app.setStyle(QStyleFactory.create("Fusion"))
+        
         palette = app.palette()
         palette.setColor(QPalette.ColorRole.Window, PRIMARY_BG_COLOR)
         palette.setColor(QPalette.ColorRole.WindowText, PRIMARY_FG_COLOR)
