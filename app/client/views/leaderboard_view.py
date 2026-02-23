@@ -357,7 +357,7 @@ class LeaderboardView(QWidget):
                 self.leaguemate_layout.addWidget(team_widget)
 
         else:
-            label = QLabel("It's quiet. Too quiet...\n\nMaybe join a league?")
+            label = QLabel("It's quiet. Too quiet...")
             self.leaguemate_layout.addSpacerItem(QSpacerItem(10,100))
             self.leaguemate_layout.addWidget(label, alignment= Qt.AlignmentFlag.AlignVCenter)
 
