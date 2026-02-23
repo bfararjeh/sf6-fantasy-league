@@ -109,11 +109,11 @@ class HomeView(QWidget):
         layout.setContentsMargins(25,0,25,0)
 
         main = QLabel("""
-Welcome to the first ever Street Fighter 6 Fantasy League! Create leagues with you and up to 5 friends, draft your dream teams of 5 players, and keep an eye out throughout the season and see who comes out on top!
+Welcome to the first ever Street Fighter 6 Fantasy League! Create leagues with you and up to 5 friends, draft your dream teams of 5 players, and keep an eye out throughout the season to see who comes out on top!
 
 The app works simply. Firstly, head on over to the "League" page where you can create a league or join one using a League ID. Once you're in your league, wait for all your friends to join then the league owner can set the draft order and begin the draft. This fantasy league uses a snake draft; with an order like "Alice, Bob, Charlie", the draft will go "Alice, Bob, Charlie, Charlie, Bob, Alice".
 
-Once the draft is over and you and all your leaguemates have created your dream teams, it's time to wait! You can check out the list of scoring events on the "Events" page, and after each event the scores will be updated for you and your league! You can check out your own standings in the "League" page, or your league's standings in the "Leaderboards" page, where you can view the global player pool as well as some global stats. Thank you for downloading this app, and I hope you win!
+Once the draft is over and you and all your leaguemates have created your dream teams, it's time to wait! You can check out the list of scoring events on the "Events" page, and after each event the scores will be updated for you and your league! You can check out your own standings in the "League" page, or your league's standings in the "Leaderboards" page, where you can also view the global player pool and global stats. Thank you for downloading this app, and I hope you win!
                
 This app was developed solely by Fararjeh. You can learn more about the developer here: https://fararjeh-fgc.com/.
 """)
