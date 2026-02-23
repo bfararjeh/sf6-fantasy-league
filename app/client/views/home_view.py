@@ -1,5 +1,5 @@
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QPixmap
+from PyQt6.QtGui import QFontMetrics, QPixmap
 from PyQt6.QtWidgets import (
     QApplication,
     QFileDialog,
@@ -81,12 +81,12 @@ class HomeView(QWidget):
         info.setAlignment(Qt.AlignmentFlag.AlignVCenter)
         info.setSpacing(20)
 
-        label = QLabel(f"Welcome back, {self.my_username}.")
+        label = QLabel("")
         label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
         label.setStyleSheet("""
-            font-size: 60px; 
             font-weight: bold;
         """)
+        self._fit_text_to_width(label, f"Welcome back, {self.my_username}.", 850, 2, 60)
 
         subtitle = QLabel(f"User ID: {self.my_user_id}")
         subtitle.setAlignment(Qt.AlignmentFlag.AlignHCenter)
@@ -99,9 +99,7 @@ class HomeView(QWidget):
         info.addWidget(subtitle)
 
         top_row.addLayout(avatar_layout)
-        top_row.addStretch()
-        top_row.addLayout(info)
-        top_row.addStretch()
+        top_row.addLayout(info, stretch=1)
 
         return tr_cont
 
@@ -181,6 +179,7 @@ It's quiet. Too quiet...
             msg.exec()
 
         except Exception as e:
+            QApplication.restoreOverrideCursor()
             msg = QMessageBox(self)
             msg.setWindowTitle("Change Avatar")
             msg.setText(f"Avatar updated failed: {e}")
@@ -230,3 +229,26 @@ It's quiet. Too quiet...
                 Qt.TransformationMode.SmoothTransformation
             )
         )
+
+    def _fit_text_to_width(self, label: QLabel, text: str, max_width: int,
+                           min_font_size=2, max_font_size=40):
+        """Binary-search the largest font size that fits text within max_width."""
+        if not text or max_width <= 0:
+            return
+
+        font = label.font()
+        font.setBold(True)
+        low, high, best_size = min_font_size, max_font_size, min_font_size
+
+        while low <= high:
+            mid = (low + high) // 2
+            font.setPointSize(mid)
+            if QFontMetrics(font).boundingRect(text).width() <= max_width:
+                best_size = mid
+                low = mid + 1
+            else:
+                high = mid - 1
+
+        font.setPointSize(best_size)
+        label.setFont(font)
+        label.setText(text)

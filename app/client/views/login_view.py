@@ -96,6 +96,7 @@ class LoginView(QWidget):
         # status label
         self.status_label = QLabel("")
         self.status_label.setWordWrap(True)
+        self.status_label.setMinimumHeight(50)
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.status_label.setStyleSheet("""
             QLabel {

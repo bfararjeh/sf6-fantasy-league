@@ -3,6 +3,7 @@ from datetime import datetime
 from PyQt6.QtCore import Qt, QTimer, QSize
 from PyQt6.QtGui import QFontMetrics, QPixmap
 from PyQt6.QtWidgets import (
+    QGridLayout,
     QWidget,
     QLabel,
     QPushButton,
@@ -212,44 +213,27 @@ class LeagueView(QWidget):
         """)
 
         self.forfeit_label = QLabel("")
-        self.forfeit_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         self.forfeit_label.setStyleSheet("font-weight:bold; color:#ff8168;")
 
-        self.league_capacity = QLabel("")
-        self.league_capacity.setAlignment(Qt.AlignmentFlag.AlignRight)
-        self.league_capacity.setStyleSheet("font-size: 16px; font-weight: bold;")
-
         self.leaguemates = QLabel("")
-        self.leaguemates.setAlignment(Qt.AlignmentFlag.AlignRight)
-        self.leaguemates.setStyleSheet("font-size: 16px;")
+        self.leaguemates.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        self.leaguemates.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        self.leaguemates.setFixedWidth(400)
 
-        league_id = QLabel("League ID:")
-        forfeit = QLabel("Forfeit:")
-        capacity = QLabel("Capacity:")
-        leaguemates = QLabel("Leaguemates:")
+        grid = QGridLayout()
+        grid.setColumnStretch(1, 1)
+        grid.setColumnMinimumWidth(1, 400)
 
-        stat_layout = QVBoxLayout()
-        stat_layout.setAlignment(Qt.AlignmentFlag.AlignRight)
-        label_layout = QVBoxLayout()
-        label_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
-        row = QHBoxLayout()
+        grid.addWidget(QLabel("League ID:"), 0, 0, Qt.AlignmentFlag.AlignLeft)
+        grid.addWidget(self.league_id_label,  0, 1, Qt.AlignmentFlag.AlignRight)
 
-        stat_layout.addWidget(self.league_id_label)
-        stat_layout.addWidget(self.leaguemates)
-        stat_layout.addWidget(self.league_capacity)
-        stat_layout.addWidget(self.forfeit_label)
+        grid.addWidget(QLabel("Members:"),    1, 0, Qt.AlignmentFlag.AlignLeft)
+        grid.addWidget(self.leaguemates,      1, 1, Qt.AlignmentFlag.AlignRight)
 
-        label_layout.addWidget(league_id)
-        label_layout.addWidget(capacity)
-        label_layout.addWidget(leaguemates)
-        label_layout.addWidget(forfeit)
+        grid.addWidget(QLabel("Forfeit:"),    2, 0, Qt.AlignmentFlag.AlignLeft)
+        grid.addWidget(self.forfeit_label,    2, 1, Qt.AlignmentFlag.AlignRight)
 
-        row.addLayout(label_layout)
-        row.addStretch()
-        row.addLayout(stat_layout)
-
-        layout.addLayout(row)
-
+        layout.addLayout(grid)
         return container
 
     def _build_draft_info(self):
@@ -258,38 +242,24 @@ class LeagueView(QWidget):
         layout.setSpacing(10)
 
         self.draft_order_label = QLabel("N/A")
-        self.draft_order_label.setAlignment(Qt.AlignmentFlag.AlignRight)
-        self.draft_order_label.setStyleSheet(
-            "font-size: 16px;"
-        )
+        self.draft_order_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        self.draft_order_label.setFixedWidth(400)
 
         self.next_pick_label = QLabel("N/A")
-        self.next_pick_label.setAlignment(Qt.AlignmentFlag.AlignRight)
-        self.next_pick_label.setStyleSheet(
-            "font-size: 16px; font-weight: bold; color: #88ff87;"
-        )
+        self.next_pick_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        self.next_pick_label.setStyleSheet("font-size: 16px; font-weight: bold; color: #88ff87;")
 
-        draft_order = QLabel("Draft Order:")
-        next_pick = QLabel("Next Pick:")
+        grid = QGridLayout()
+        grid.setColumnStretch(0, 1)
+        grid.setColumnStretch(1, 3)
 
-        stat_layout = QVBoxLayout()
-        stat_layout.setAlignment(Qt.AlignmentFlag.AlignRight)
-        label_layout = QVBoxLayout()
-        label_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
-        row = QHBoxLayout()
+        grid.addWidget(QLabel("Draft Order:"), 0, 0, Qt.AlignmentFlag.AlignLeft)
+        grid.addWidget(self.draft_order_label, 0, 1, Qt.AlignmentFlag.AlignRight)
 
-        stat_layout.addWidget(self.draft_order_label)
-        stat_layout.addWidget(self.next_pick_label)
+        grid.addWidget(QLabel("Next Pick:"),   1, 0, Qt.AlignmentFlag.AlignLeft)
+        grid.addWidget(self.next_pick_label,   1, 1, Qt.AlignmentFlag.AlignRight)
 
-        label_layout.addWidget(draft_order)
-        label_layout.addWidget(next_pick)
-
-        row.addLayout(label_layout)
-        row.addStretch()
-        row.addLayout(stat_layout)
-
-        layout.addLayout(row)
-
+        layout.addLayout(grid)
         container.setVisible(False)
         return container
 
@@ -681,7 +651,6 @@ class LeagueView(QWidget):
 
     def assign_draft_order(self):
         usernames = self.draft_input.text().strip()
-        self.draft_input.setText("")
 
         if not usernames:
             self._set_status("Please enter a list of usernames.", code=2)
@@ -769,6 +738,7 @@ class LeagueView(QWidget):
 
     def pick_player(self):
         player = self.pick_input.currentText()
+        self.pick_input.setCurrentIndex(-1)
         print("pick_player: CLICK")
 
         if not player:
@@ -857,10 +827,9 @@ class LeagueView(QWidget):
         else:
             self.league_owner.setVisible(False)
             
-        self._fit_text_to_width(label=self.league_name_label, text=self.my_league_name, max_width=400)
         self.league_id_label.setText(f"{self.my_league_id}" or "")
-        self.league_capacity.setText(f"{len(self.my_leaguemates)}/5" or "")
-        self.leaguemates.setText(", ".join(self.my_leaguemates) or "")
+        self._fit_text_to_width(label=self.league_name_label, text=self.my_league_name, max_width=400)
+        self._fit_text_to_width(label=self.leaguemates, text=(", ".join(self.my_leaguemates)), max_width=400, max_font_size=14, bold=False)
 
         # forfeit info
         if self.my_league_forfeit:
@@ -874,7 +843,7 @@ class LeagueView(QWidget):
         self.draft_info_container.setVisible(True)
 
         if bool(self.my_draft_order):
-            self.draft_order_label.setText(", ".join(self.my_draft_order))
+            self._fit_text_to_width(label=self.draft_order_label, text=(", ".join(self.my_draft_order)), max_width=400, max_font_size=14, bold=False)
         if bool(self.is_league_locked):
             self.next_pick_label.setText(f"{self.my_next_pick}")
         if bool(self.is_draft_complete):
@@ -1024,7 +993,7 @@ class LeagueView(QWidget):
         self._status_timer.start(8000)
 
     def _fit_text_to_width(self, label: QLabel, text: str, max_width: int,
-                        min_font_size=2, max_font_size=40):
+                        min_font_size=2, max_font_size=40, bold=True):
         """
         Adjusts the font size of a label to fit within a specific width 
         restriction.
@@ -1033,7 +1002,7 @@ class LeagueView(QWidget):
             return
 
         font = label.font()
-        font.setBold(True)
+        font.setBold(bold)
         font_size = min_font_size
         font.setPointSize(font_size)
         metrics = QFontMetrics(font)

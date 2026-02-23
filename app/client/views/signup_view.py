@@ -70,7 +70,6 @@ class SignupView(QWidget):
         self.password_verify_input.setEchoMode(QLineEdit.EchoMode.Password)
         self.password_verify_input.setFixedHeight(30)
 
-
         self.name_input.returnPressed.connect(self._attempt_signup)
         self.email_input.returnPressed.connect(self._attempt_signup)
         self.password_input.returnPressed.connect(self._attempt_signup)

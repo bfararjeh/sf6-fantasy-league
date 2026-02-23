@@ -1,5 +1,5 @@
 from PyQt6.QtCore import Qt, QSize
-from PyQt6.QtGui import QColor, QPixmap
+from PyQt6.QtGui import QColor, QFontMetrics, QPixmap
 from PyQt6.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -235,7 +235,7 @@ class LeaderboardView(QWidget):
         avatar.setFixedSize(250, 250)
 
         info_cont = QWidget()
-        info_cont.setFixedWidth(300)
+        info_cont.setFixedWidth(500)
         info_layout = QVBoxLayout(info_cont)
         info_layout.setSpacing(5)
         info_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
@@ -243,12 +243,13 @@ class LeaderboardView(QWidget):
         rank = team.get("rank", 999)
         rank_color = self.RANK_STYLES.get(rank, "#FFFFFF")
 
-        owner_label = QLabel(f"#{rank} {team['user_name']}")
+        owner_label = QLabel()
         owner_label.setStyleSheet(f"""
             font-weight: bold;
             font-size: 50px;
             color: {rank_color};
         """)
+        self._fit_text_to_width(owner_label, f"#{rank} {team['user_name']}", 500, max_font_size=50)
 
         if rank <= 3:
             glow = QGraphicsDropShadowEffect()
@@ -274,7 +275,7 @@ class LeaderboardView(QWidget):
         user.addStretch()
         user.addWidget(avatar)
         user.addStretch()
-        user.addWidget(info_cont)
+        user.addWidget(info_cont, stretch=1)
         user.addStretch()
 
         player_row = QHBoxLayout()
@@ -382,6 +383,39 @@ class LeaderboardView(QWidget):
             ranked.append(team)
 
         return ranked
+
+    def _fit_text_to_width(self, label: QLabel, text: str, max_width: int,
+                        min_font_size=2, max_font_size=40, bold=True):
+        """
+        Adjusts the font size of a label to fit within a specific width 
+        restriction.
+        """
+        if not text or max_width <= 0:
+            return
+
+        font = label.font()
+        font.setBold(bold)
+        font_size = min_font_size
+        font.setPointSize(font_size)
+        metrics = QFontMetrics(font)
+
+        # binary search to find the largest font that fits
+        low, high = min_font_size, max_font_size
+        best_size = min_font_size
+
+        while low <= high:
+            mid = (low + high) // 2
+            font.setPointSize(mid)
+            metrics = QFontMetrics(font)
+            if metrics.boundingRect(text).width() <= max_width:
+                best_size = mid  # fits, try bigger
+                low = mid + 1
+            else:
+                high = mid - 1  # too big, try smaller
+                
+        font.setPointSize(best_size)
+        label.setFont(font)
+        label.setText(text)
 
     def showEvent(self, event):
         super().showEvent(event)

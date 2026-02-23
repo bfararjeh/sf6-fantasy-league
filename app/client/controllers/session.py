@@ -126,12 +126,12 @@ class Session:
     
     @classmethod
     def init_league_data(cls, force=False):
+        if not cls._should_refresh(cls.league_data_grabbed_at, force=force):
+            return
+        
         if cls.init_system_state():
             return
         
-        if not cls._should_refresh(cls.league_data_grabbed_at, force=force):
-            return
-
         # league data
         try:
             league_data = cls.league_service.get_full_league_info() or None
@@ -183,10 +183,10 @@ class Session:
 
     @classmethod
     def init_leaderboards(cls, force=False):
-        if cls.init_system_state():
-            return
-
         if not cls._should_refresh(cls.leaguemate_data_grabbed_at, force=force):
+            return
+        
+        if cls.init_system_state():
             return
 
         try:

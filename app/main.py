@@ -83,7 +83,7 @@ def _setup_theme(app):
         bold_font = QFont(QFontDatabase.applicationFontFamilies(bold_id)[0], 12)
         bold_font.setBold(True)
         app.setFont(QFont(regular_family, 12))
-    except Exception:
+    except Exception as e:
         print(f"Failed to load font: {e}")
 
 if __name__ == "__main__":
