@@ -16,8 +16,6 @@ from PyQt6.QtWidgets import (
 from app.client.controllers.resource_path import ResourcePath
 from app.client.controllers.session import Session
 from app.client.theme import *
-from app.client.widgets.footer_nav import FooterNav
-from app.client.widgets.header_bar import HeaderBar
 
 class GlobalView(QWidget):
     def __init__(self, app):
@@ -34,8 +32,6 @@ class GlobalView(QWidget):
         self._build_main()
 
     def _build_main(self):
-        self.root_layout.addWidget(HeaderBar(self.app))
-
         # main content
         content_widget = QWidget()
         content_layout = QVBoxLayout(content_widget)
@@ -81,53 +77,6 @@ class GlobalView(QWidget):
 
         # composing root
         self.root_layout.addWidget(scroll, stretch=1)
-        self.root_layout.addWidget(FooterNav(self.app))
-
-    def _build_title(self):
-        container = QWidget()
-        layout = QHBoxLayout(container)
-        layout.setSpacing(20)
-
-        players = QPushButton("Player Pool")
-        players.setCursor(Qt.CursorShape.PointingHandCursor)
-        players.clicked.connect(self.app.show_players_view)
-        players.setStyleSheet(BUTTON_STYLESHEET_A)
-
-        leaderboards = QPushButton("Leaderboards")
-        leaderboards.setCursor(Qt.CursorShape.PointingHandCursor)
-        leaderboards.clicked.connect(self.app.show_leaderboards_view)
-        leaderboards.setStyleSheet(BUTTON_STYLESHEET_A)
-
-        global_stats = QLabel("Global Stats")
-        global_stats.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        global_stats.setStyleSheet("""
-            font-size: 64px; 
-            font-weight: bold;
-        """)
-
-        left = QWidget()
-        center = QWidget()
-        right = QWidget()
-
-        center_layout = QHBoxLayout(center)
-        center_layout.setContentsMargins(0, 0, 0, 0)
-        center_layout.addWidget(global_stats, alignment=Qt.AlignmentFlag.AlignCenter)
-
-        right_layout = QHBoxLayout(right)
-        right_layout.setContentsMargins(0, 0, 0, 0)
-        right_layout.addStretch()
-        right_layout.addWidget(players, alignment=Qt.AlignmentFlag.AlignTop)
-
-        left_layout = QHBoxLayout(left)
-        left_layout.setContentsMargins(0, 0, 0, 0)
-        left_layout.addWidget(leaderboards, alignment=Qt.AlignmentFlag.AlignTop)
-        left_layout.addStretch()
-
-        layout.addWidget(left, 1)
-        layout.addWidget(center)
-        layout.addWidget(right, 1)
-
-        return container
 
     def _build_stats(self, stats: dict):
         container = QWidget()
@@ -174,27 +123,51 @@ class GlobalView(QWidget):
 
         return container
 
-    def _build_avatar(self, user_id, size):
-        image = QLabel()
-        avatar = QPixmap()
+    def _build_title(self):
+        container = QWidget()
+        layout = QHBoxLayout(container)
+        layout.setSpacing(20)
 
-        try:
-            avatar.loadFromData(Session.init_avatar(user_id))
-            if avatar.isNull():
-                avatar = QPixmap(str(ResourcePath.AVATAR / "placeholder.png"))
+        players = QPushButton("Player Pool")
+        players.setCursor(Qt.CursorShape.PointingHandCursor)
+        players.clicked.connect(self.app.show_players_view)
+        players.setStyleSheet(BUTTON_STYLESHEET_A)
 
-        except Exception:
-            avatar = QPixmap(str(ResourcePath.AVATAR / "placeholder.png"))
+        leaderboards = QPushButton("Leaderboards")
+        leaderboards.setCursor(Qt.CursorShape.PointingHandCursor)
+        leaderboards.clicked.connect(self.app.show_leaderboards_view)
+        leaderboards.setStyleSheet(BUTTON_STYLESHEET_A)
 
-        image.setPixmap(
-            avatar.scaled(
-                size, size,
-                Qt.AspectRatioMode.KeepAspectRatio,
-                Qt.TransformationMode.SmoothTransformation
-            )
-        )
-        
-        return image
+        global_stats = QLabel("Global Stats")
+        global_stats.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        global_stats.setStyleSheet("""
+            font-size: 64px; 
+            font-weight: bold;
+        """)
+
+        left = QWidget()
+        center = QWidget()
+        right = QWidget()
+
+        center_layout = QHBoxLayout(center)
+        center_layout.setContentsMargins(0, 0, 0, 0)
+        center_layout.addWidget(global_stats, alignment=Qt.AlignmentFlag.AlignCenter)
+
+        right_layout = QHBoxLayout(right)
+        right_layout.setContentsMargins(0, 0, 0, 0)
+        right_layout.addStretch()
+        right_layout.addWidget(players, alignment=Qt.AlignmentFlag.AlignTop)
+
+        left_layout = QHBoxLayout(left)
+        left_layout.setContentsMargins(0, 0, 0, 0)
+        left_layout.addWidget(leaderboards, alignment=Qt.AlignmentFlag.AlignTop)
+        left_layout.addStretch()
+
+        layout.addWidget(left, 1)
+        layout.addWidget(center)
+        layout.addWidget(right, 1)
+
+        return container
 
     def _build_best_team(self, best_team):
         team_frame = QFrame()
@@ -370,30 +343,33 @@ class GlobalView(QWidget):
         wrapper_layout.addWidget(content)
 
         return wrapper
-    
+        
+    def _build_avatar(self, user_id, size):
+        image = QLabel()
+        pixmap = Session.get_pixmap("avatars", str(user_id))
+        image.setPixmap(
+            pixmap.scaled(
+                size, size,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation
+            )
+        )
+        return image
+
     def _build_frequency_picked(self, title: str, players: list):
-        """
-        Build a collapsible section showing most or least picked players.
-        Each player is a widget with avatar, name, and region/flag.
-        """
-        # Toggle button (acts like section header)
         toggle = QPushButton(title)
         toggle.setStyleSheet(BUTTON_STYLESHEET_A)
         toggle.setCheckable(True)
         toggle.setChecked(False)
         toggle.setCursor(Qt.CursorShape.PointingHandCursor)
 
-        # Content container
         content = QWidget()
         content_layout = QVBoxLayout(content)
         content_layout.setContentsMargins(10, 5, 10, 5)
         content_layout.setSpacing(15)
 
-        # Batch players into rows of 5
-        batch_size = 5
-        for i in range(0, len(players), batch_size):
-            batch = players[i:i + batch_size]
-
+        for i in range(0, len(players), 5):
+            batch = players[i:i + 5]
             row = QWidget()
             row_layout = QHBoxLayout(row)
             row_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -404,25 +380,17 @@ class GlobalView(QWidget):
                 name = player["player_name"]
                 picked_count = player["pick_count"]
 
-                # Player container
                 player_cont = QWidget()
                 player_layout = QVBoxLayout(player_cont)
                 player_layout.setContentsMargins(0, 0, 0, 0)
                 player_layout.setSpacing(5)
 
-                # Avatar
                 image = QLabel()
                 image.setFixedSize(160, 160)
                 image.setStyleSheet("border: 3px solid #BBBBBB;")
                 image.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-                img_path = ResourcePath.PLAYERS / f"{name}.jpg"
-                pixmap = QPixmap(str(img_path))
-                if pixmap.isNull():
-                    pixmap = QPixmap(str(ResourcePath.PLAYERS / "placeholder.png"))
-
                 image.setPixmap(
-                    pixmap.scaled(
+                    Session.get_pixmap("players", name).scaled(
                         160, 160,
                         Qt.AspectRatioMode.IgnoreAspectRatio,
                         Qt.TransformationMode.SmoothTransformation
@@ -439,7 +407,6 @@ class GlobalView(QWidget):
                 )
                 info_label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
 
-                # Assemble player widget
                 player_layout.addWidget(image)
                 player_layout.addWidget(info_label)
                 row_layout.addWidget(player_cont)
@@ -449,12 +416,26 @@ class GlobalView(QWidget):
         content.setVisible(False)
         toggle.toggled.connect(content.setVisible)
 
-        # Wrap in a container layout
         container = QWidget()
         container_layout = QVBoxLayout(container)
         container_layout.setContentsMargins(0, 0, 0, 0)
         container_layout.setSpacing(25)
         container_layout.addWidget(toggle)
         container_layout.addWidget(content)
-
         return container
+
+    @staticmethod
+    def preload():
+        stats = Session.global_stats
+        if not stats:
+            return
+
+        best_team = stats[0].get("best_scoring_team", {})
+        if best_team:
+            user_id = best_team.get("user_id")
+            if user_id:
+                Session.init_avatar(str(user_id))
+
+        for key in ("most_picked_players", "least_picked_players"):
+            for player in stats[0].get(key, []):
+                Session.get_image("players", player["player_name"])

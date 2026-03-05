@@ -5,16 +5,22 @@ from pathlib import Path
 from PyQt6.QtCore import QLockFile
 from PyQt6.QtGui import QFont, QFontDatabase, QIcon, QPalette
 from PyQt6.QtWidgets import QApplication
+from PyQt6.QtWidgets import QSplashScreen
+from PyQt6.QtGui import QPixmap
+from PyQt6.QtCore import Qt
 
 from app.client.app import FantasyApp
+from app.client.controllers.image_cache import ImageCache
 from app.client.theme import *
 from app.client.controllers.resource_path import ResourcePath
 from PyQt6.QtWidgets import QStyleFactory
 
-APP_NAME = "SF6FantasyLeague"
+APP_NAME = "FantasySF6"
 
 appdata_dir = Path.home() / "AppData" / "Roaming" / APP_NAME
 appdata_dir.mkdir(parents=True, exist_ok=True)
+
+ImageCache.init(appdata_dir / "cache")
 
 def main():
     # creating lock file to prevent multiple applications
@@ -27,6 +33,16 @@ def main():
 
     app = QApplication(sys.argv)
 
+    splash_pixmap = QPixmap(str(ResourcePath.IMAGES / "splash.png"))
+    scaled_pixmap = splash_pixmap.scaled(
+        500, 1000,
+        Qt.AspectRatioMode.KeepAspectRatio,
+        Qt.TransformationMode.SmoothTransformation
+    )    
+    splash = QSplashScreen(scaled_pixmap, Qt.WindowType.WindowStaysOnTopHint)
+    splash.show()
+    app.processEvents()
+
     # custom theme stuff (font + colors)
     _setup_theme(app=app)
 
@@ -35,6 +51,7 @@ def main():
 
     window = FantasyApp()
     window.show()
+    splash.finish(window)
 
     app.setWindowIcon(QIcon(str(ResourcePath.ICONS / "logo.ico")))
     window.setWindowIcon(QIcon(str(ResourcePath.ICONS / "logo.ico")))

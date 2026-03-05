@@ -19,12 +19,13 @@ from app.client.controllers.async_runner import run_async
 from app.client.controllers.resource_path import ResourcePath
 from app.client.controllers.session import Session
 from app.client.theme import *
-from app.client.widgets.footer_nav import FooterNav
-from app.client.widgets.header_bar import HeaderBar
 
 from datetime import datetime, timezone
 from dataclasses import dataclass, field
 from typing import Optional
+
+from PyQt6.QtCore import QPropertyAnimation, QEasingCurve
+from PyQt6.QtWidgets import QGraphicsOpacityEffect, QApplication
 
 
 # dedicated class and widget for event detail view
@@ -50,10 +51,7 @@ class EventView(QWidget):
         super().__init__()
         self.app = app
 
-        Session.init_league_data()
-
         self.event_data = Session.event_data
-        self.dist_data = Session.dist_data
         self.event_detail_cache = {}
         self.current_detail_event_id = None
 
@@ -82,9 +80,6 @@ class EventView(QWidget):
         self.root_layout.setContentsMargins(0, 0, 0, 0)
         self.root_layout.setSpacing(0)
 
-        self.header = HeaderBar(self.app)
-        self.footer = FooterNav(self.app)
-
         self.view_stack = QStackedWidget()
 
         self.main_page = QWidget()
@@ -95,9 +90,7 @@ class EventView(QWidget):
 
         self.view_stack.addWidget(self.main_page)
 
-        self.root_layout.addWidget(self.header)
         self.root_layout.addWidget(self.view_stack, stretch=1)
-        self.root_layout.addWidget(self.footer)
 
         self._build_sections()
 
@@ -115,14 +108,14 @@ class EventView(QWidget):
         self.content_layout.addWidget(self.timeline_widget)
 
 
-# -- BUILDERS --
+# -- MAIN BUILDERS --
 
     def _build_info(self):
         container = QWidget()
         layout = QVBoxLayout(container)
         layout.setSpacing(20)
 
-        events = QLabel("Events")
+        events = QLabel("CPT Season XIII")
         events.setAlignment(Qt.AlignmentFlag.AlignCenter)
         events.setStyleSheet("font-size: 64px; font-weight: bold;")
 
@@ -216,12 +209,8 @@ class EventView(QWidget):
         return btn
 
     def _build_event_image(self, event, size=300):
-        """Load an event image from bytes, falling back to a placeholder."""
         image = QLabel()
-        pixmap = self._load_pixmap_from_bytes(
-            event.get("image_bytes"),
-            str(ResourcePath.EVENTS / "placeholder.png"),
-        )
+        pixmap = Session.get_pixmap("events", event.get("name", ""))
         image.setPixmap(
             pixmap.scaled(
                 size, size,
@@ -467,15 +456,17 @@ class EventView(QWidget):
                 row_layout.addStretch()
                 rank_block_layout.addWidget(row_widget)
 
+            QApplication.processEvents()
             outer_layout.addWidget(rank_block)
 
         outer_layout.addStretch()
-
+        
         scroll = QScrollArea()
         scroll.setStyleSheet(SCROLL_STYLESHEET)
         scroll.setWidgetResizable(True)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         scroll.setWidget(outer)
+        
         return scroll
 
     def create_me_score_data(self, data):
@@ -636,6 +627,7 @@ class EventView(QWidget):
         scroll.setWidgetResizable(True)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         scroll.setWidget(outer)
+        
         return scroll
 
     def _build_player_tile(self, player, image_size, rank, enable_tooltip=True, enable_glow=True):
@@ -648,10 +640,7 @@ class EventView(QWidget):
         image.setFixedSize(image_size, image_size)
         image.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        pixmap = self._load_pixmap_from_file(
-            str(ResourcePath.PLAYERS / f"{player['player']}.jpg"),
-            str(ResourcePath.PLAYERS / "placeholder.png"),
-        )
+        pixmap = Session.get_pixmap("players", player["player"])
         image.setPixmap(
             pixmap.scaled(
                 image_size, image_size,
@@ -660,7 +649,7 @@ class EventView(QWidget):
             )
         )
 
-        if rank in self.RANK_STYLES and enable_glow == True:
+        if rank in self.RANK_STYLES and enable_glow:
             color = self.RANK_STYLES[rank]
             glow = QGraphicsDropShadowEffect()
             glow.setBlurRadius(30)
@@ -688,7 +677,7 @@ class EventView(QWidget):
 
         layout.addWidget(image)
         return widget
-
+    
     def _format_rank_text(self, rank: int | None, points: int) -> str:
         if rank is None:
             return "Did not score"
@@ -767,8 +756,8 @@ class EventView(QWidget):
 
         tab_config = {
             "all":    (Session.event_service.get_event_standings,       (event_id,)),
-            "me":     (Session.event_service.get_user_event_scores,     (Session.current_team_id, event_id)),
-            "league": (Session.event_service.get_league_event_scores,   (Session.current_league_id, event_id)),
+            "me":     (Session.event_service.get_user_event_scores,     (Session.team_data.get("team_id"), event_id)),
+            "league": (Session.event_service.get_league_event_scores,   (Session.league_data.get("league_id"), event_id)),
         }
         builder_config = {
             "all":    self.create_all_score_data,
@@ -808,8 +797,32 @@ class EventView(QWidget):
     def _change_event(self, delta: int):
         if not self.event_images:
             return
-        self.current_event_idx = (self.current_event_idx + delta) % len(self.event_images)
+
+        self._delta = delta
+
+        # fade out
+        effect = QGraphicsOpacityEffect(self.center_display)
+        self.center_display.setGraphicsEffect(effect)
+        self._fade_out = QPropertyAnimation(effect, b"opacity")
+        self._fade_out.setDuration(120)
+        self._fade_out.setStartValue(1.0)
+        self._fade_out.setEndValue(0.0)
+        self._fade_out.setEasingCurve(QEasingCurve.Type.OutQuad)
+        self._fade_out.finished.connect(self._swap_and_fade_in)
+        self._fade_out.start()
+
+    def _swap_and_fade_in(self):
+        self.current_event_idx = (self.current_event_idx + self._delta) % len(self.event_images)
         self._update_event_display()
+
+        effect = self.center_display.graphicsEffect()
+        self._fade_in = QPropertyAnimation(effect, b"opacity")
+        self._fade_in.setDuration(120)
+        self._fade_in.setStartValue(0.0)
+        self._fade_in.setEndValue(1.0)
+        self._fade_in.setEasingCurve(QEasingCurve.Type.InQuad)
+        self._fade_in.finished.connect(lambda: self.center_display.setGraphicsEffect(None))
+        self._fade_in.start()
 
     def _update_event_display(self):
         total = len(self.event_images)

@@ -151,3 +151,26 @@ QToolTip {{
     font-weight: bold;
 }}
 """
+
+FOOTER_BUTTON_STYLE = """
+    QPushButton {
+        font-size: 14px;
+        font-weight: bold;
+        background-color: #4200ff;
+        color: white;
+        border: none;
+    }
+    QPushButton:hover { background-color: #642bff; }
+    QPushButton:pressed { background-color: #3900d5; }
+"""
+
+FOOTER_WARNING_STYLE = """
+    QLabel {
+        font-size: 16px;
+        font-weight: bold;
+        background-color: #700000;
+        color: #ffffff;
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+"""

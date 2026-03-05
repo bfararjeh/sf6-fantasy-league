@@ -9,10 +9,9 @@ from app.client.theme import *
 class RefreshButton(QPushButton):
     refresh_requested = pyqtSignal()
 
-    def __init__(self, cooldown: int = 5, parent=None):
+    def __init__(self, parent=None):
         super().__init__(parent)
 
-        self.cooldown = cooldown  # seconds
         self._last_clicked = None
 
         self.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -29,7 +28,7 @@ class RefreshButton(QPushButton):
         QApplication.processEvents()
         self.refresh_requested.emit()
 
-        QTimer.singleShot(self.cooldown * 1000, self._enable_button)
+        QTimer.singleShot(5000, self._enable_button)
 
     def _enable_button(self):
         self.setDisabled(False)

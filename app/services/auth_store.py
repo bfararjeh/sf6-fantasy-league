@@ -4,7 +4,7 @@ from pathlib import Path
 
 def get_app_data_dir() -> Path:
     if os.name == "nt":
-        return Path(os.environ["APPDATA"]) / "SF6FantasyLeague"
+        return Path(os.environ["APPDATA"]) / "FantasySF6"
 
 class AuthStore:
     '''

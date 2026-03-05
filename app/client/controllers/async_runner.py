@@ -30,7 +30,6 @@ class _Worker(QObject):
         finally:
             self.finished.emit()
 
-
 def run_async(
     *,
     parent_widget,

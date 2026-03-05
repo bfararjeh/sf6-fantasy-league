@@ -11,11 +11,9 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from app.client.controllers.resource_path import ResourcePath
+from app.client.controllers.image_cache import ImageCache
 from app.client.controllers.session import Session
 from app.client.theme import *
-from app.client.widgets.footer_nav import FooterNav
-from app.client.widgets.header_bar import HeaderBar
 
 class HomeView(QWidget):
     def __init__(self, app):
@@ -38,10 +36,7 @@ class HomeView(QWidget):
         self.content_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
         self.content_layout.setContentsMargins(0,0,0,0)
 
-        self.root_layout.addWidget(HeaderBar(self.app))
         self.root_layout.addWidget(self.content_widget)
-        self.root_layout.addStretch()
-        self.root_layout.addWidget(FooterNav(self.app))
 
         self._build_sections()
     
@@ -106,10 +101,9 @@ class HomeView(QWidget):
     def _build_home_yap(self):
         cont = QWidget()
         layout = QVBoxLayout(cont)
-        layout.setContentsMargins(25,0,25,0)
+        layout.setContentsMargins(50,0,50,0)
 
-        main = QLabel("""
-Welcome to the first ever Street Fighter 6 Fantasy League! Create leagues with you and up to 5 friends, draft your dream teams of 5 players, and keep an eye out throughout the season to see who comes out on top!
+        main = QLabel("""Welcome to the first ever Street Fighter 6 Fantasy League! Create leagues with you and up to 5 friends, draft your dream teams of 5 players, and keep an eye out throughout the season to see who comes out on top!
 
 The app works simply. Firstly, head on over to the "League" page where you can create a league or join one using a League ID. Once you're in your league, wait for all your friends to join then the league owner can set the draft order and begin the draft. This fantasy league uses a snake draft; with an order like "Alice, Bob, Charlie", the draft will go "Alice, Bob, Charlie, Charlie, Bob, Alice".
 
@@ -140,6 +134,7 @@ It's quiet. Too quiet...
 
         layout.addStretch()
         layout.addWidget(main)
+        layout.addStretch()
 
         return cont
 
@@ -166,8 +161,9 @@ It's quiet. Too quiet...
         # assign avatar
         try:
             QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
-            Session.auth_base.assign_avatar(file_path)
             Session.avatar_cache.pop(self.my_user_id, None)
+            ImageCache.invalidate("avatars", str(self.my_user_id))
+            self._refresh_avatar()
             self._refresh_avatar()
             QApplication.restoreOverrideCursor()
 
@@ -192,38 +188,18 @@ It's quiet. Too quiet...
 
     def _build_avatar(self):
         image = QLabel()
-        avatar = QPixmap()
-
-        try:
-            avatar.loadFromData(Session.init_avatar(self.my_user_id))
-            if avatar.isNull():
-                avatar = QPixmap(str(ResourcePath.AVATAR / "placeholder.png"))
-
-        except Exception:
-            avatar = QPixmap(str(ResourcePath.AVATAR / "placeholder.png"))
-
         image.setPixmap(
-            avatar.scaled(
+            Session.get_pixmap("avatars", self.my_user_id).scaled(
                 250, 250,
                 Qt.AspectRatioMode.KeepAspectRatio,
                 Qt.TransformationMode.SmoothTransformation
             )
         )
-        
         return image
 
     def _refresh_avatar(self):
-        try:
-            pixmap = QPixmap()
-            pixmap.loadFromData(Session.init_avatar(self.my_user_id))
-            if pixmap.isNull():
-                pixmap = QPixmap(str(ResourcePath.AVATAR / "placeholder.png"))
-
-        except Exception as e:
-            pixmap = QPixmap(str(ResourcePath.AVATAR / "placeholder.png"))
-
         self.avatar_label.setPixmap(
-            pixmap.scaled(
+            Session.get_pixmap("avatars", self.my_user_id).scaled(
                 250, 250,
                 Qt.AspectRatioMode.KeepAspectRatio,
                 Qt.TransformationMode.SmoothTransformation

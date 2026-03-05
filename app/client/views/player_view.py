@@ -14,8 +14,6 @@ from PyQt6.QtWidgets import (
 from app.client.controllers.resource_path import ResourcePath
 from app.client.controllers.session import Session
 from app.client.theme import *
-from app.client.widgets.footer_nav import FooterNav
-from app.client.widgets.header_bar import HeaderBar
 
 class PlayerView(QWidget):
     def __init__(self, app):
@@ -44,10 +42,9 @@ class PlayerView(QWidget):
         }
 
         self._build_main()
+        self._rebuild_players_view()
 
     def _build_main(self):
-        self.root_layout.addWidget(HeaderBar(self.app))
-
         # main content
         content_widget = QWidget()
         content_layout = QVBoxLayout(content_widget)
@@ -65,8 +62,6 @@ class PlayerView(QWidget):
         # adding widgets to main content wiget
         content_layout.addWidget(self._build_title())
 
-        self._rebuild_players_view()
-
         content_layout.addWidget(self.player_cont)
 
         # scrollable if required
@@ -79,7 +74,6 @@ class PlayerView(QWidget):
 
         # composing root
         self.root_layout.addWidget(scroll, stretch=1)
-        self.root_layout.addWidget(FooterNav(self.app))
 
     def _build_title(self):
         info_cont = QWidget()
@@ -168,14 +162,8 @@ class PlayerView(QWidget):
             image.setStyleSheet("border: 3px solid #BBBBBB;")
             image.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-            img_path = ResourcePath.PLAYERS / f"{player['name']}.jpg"
-
-            pixmap = QPixmap(str(img_path))
-            if pixmap.isNull():
-                pixmap = QPixmap(str(ResourcePath.PLAYERS / "placeholder.png"))
-
             image.setPixmap(
-                pixmap.scaled(
+                Session.get_pixmap("players", player["name"]).scaled(
                     160, 160,
                     Qt.AspectRatioMode.IgnoreAspectRatio,
                     Qt.TransformationMode.SmoothTransformation
@@ -236,3 +224,8 @@ class PlayerView(QWidget):
         self._rebuild_players_view(sort_by=self.current_sort)
 
         QApplication.restoreOverrideCursor()
+
+    @staticmethod
+    def preload():
+        for player in Session.player_scores or []:
+            Session.get_image("players", player["name"])

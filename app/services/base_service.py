@@ -162,6 +162,42 @@ class BaseService:
         except Exception as e:
             raise Exception (f"Failed to get avatar for user {user_id}: {e}")
 
+    def _fetch_image(self, bucket: str, filename: str) -> tuple[bytes, str] | tuple[None, None]:
+        """
+        Fetches image bytes and ETag from a Supabase storage bucket.
+        Returns (bytes, etag) or (None, None) if not found.
+        """
+        try:
+            url = self.supabase.storage.from_(bucket).get_public_url(filename)
+            if not url:
+                return None, None
+            response = requests.get(url)
+            response.raise_for_status()
+            etag = response.headers.get("ETag", "")
+            return response.content, etag
+        except Exception:
+            return None, None
+
+    def _fetch_etag(self, bucket: str, filename: str) -> str | None:
+        """
+        Fetches only the ETag for an image via HEAD request (no image download).
+        """
+        try:
+            url = self.supabase.storage.from_(bucket).get_public_url(filename)
+            if not url:
+                return None
+            response = requests.head(url)
+            response.raise_for_status()
+            return response.headers.get("ETag")
+        except Exception:
+            return None
+
+    def get_image(self, bucket: str, filename: str) -> tuple[bytes, str] | tuple[None, None]:
+        return self._fetch_image(bucket, filename)
+
+    def get_image_etag(self, bucket: str, filename: str) -> str | None:
+        return self._fetch_etag(bucket, filename)
+
     def get_my_username(self):
         result = self.verify_query((
             self.supabase

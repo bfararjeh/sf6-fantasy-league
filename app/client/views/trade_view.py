@@ -8,9 +8,6 @@ from PyQt6.QtWidgets import (
     QSpacerItem
 )
 
-from app.client.widgets.footer_nav import FooterNav
-from app.client.widgets.header_bar import HeaderBar
-
 class TradeView(QWidget):
     def __init__(self, app):
         super().__init__()
@@ -22,8 +19,6 @@ class TradeView(QWidget):
         self._build_main()
 
     def _build_main(self):
-        self.root_layout.addWidget(HeaderBar(self.app))
-
         content_widget = QWidget()
         content_layout = QVBoxLayout(content_widget)
         content_layout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
@@ -40,7 +35,6 @@ class TradeView(QWidget):
         content_layout.addSpacerItem(QSpacerItem(0,100))
 
         self.root_layout.addWidget(content_widget, stretch=1)
-        self.root_layout.addWidget(FooterNav(self.app))
 
     def _build_title(self):
         container = QWidget()

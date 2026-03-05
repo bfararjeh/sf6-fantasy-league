@@ -24,8 +24,6 @@ from PyQt6.QtWidgets import (
 from app.client.controllers.resource_path import ResourcePath
 from app.client.controllers.session import Session
 from app.client.controllers.async_runner import run_async
-from app.client.widgets.header_bar import HeaderBar
-from app.client.widgets.footer_nav import FooterNav
 from app.client.widgets.painter import PointsChart
 from app.client.theme import *
 
@@ -57,6 +55,7 @@ class LeagueView(QWidget):
     def __init__(self, app):
         super().__init__()
         self.app = app
+        self.app.connect_refresh(lambda: self._refresh(force=1))
 
         self._stat_cache = {}
 
@@ -69,10 +68,6 @@ class LeagueView(QWidget):
         self.root_layout = QVBoxLayout()
         self.root_layout.setContentsMargins(0, 0, 0, 0)
         self.root_layout.setSpacing(0)
-
-        self.header = HeaderBar(self.app)
-        self.header.refresh_button.refresh_requested.connect(lambda: self._refresh(force=1))
-        self.footer = FooterNav(self.app)
 
         self.status_label = QLabel("")
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -87,10 +82,8 @@ class LeagueView(QWidget):
         self.view_stack.addWidget(self.pre_draft_page)
         self.view_stack.addWidget(self.post_draft_page)
 
-        self.root_layout.addWidget(self.header)
         self.root_layout.addWidget(self.view_stack, stretch=1)
         self.root_layout.addWidget(self.status_label)
-        self.root_layout.addWidget(self.footer)
 
         self.setLayout(self.root_layout)
 
@@ -562,10 +555,13 @@ class LeagueView(QWidget):
 
         if player:
             player_name = player.get("id", "-")
-            pixmap = QPixmap(str(ResourcePath.PLAYERS / f"{player_name}.jpg"))
-            if pixmap.isNull():
-                pixmap = QPixmap(str(ResourcePath.PLAYERS / "placeholder.png"))
-            image.setPixmap(pixmap.scaled(75, 75, Qt.AspectRatioMode.IgnoreAspectRatio, Qt.TransformationMode.SmoothTransformation))
+            image.setPixmap(
+                Session.get_pixmap("players", player_name).scaled(
+                    75, 75,
+                    Qt.AspectRatioMode.IgnoreAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation
+                )
+            )
             image.setStyleSheet("border: 2px solid #BBBBBB;")
             image.setCursor(Qt.CursorShape.PointingHandCursor)
         else:
@@ -677,9 +673,7 @@ class LeagueView(QWidget):
     def _build_portrait_button(self, player: dict, inactive: bool = False) -> QLabel:
         # grab name then image path
         name = player.get("id", "-")
-        pixmap = QPixmap(str(ResourcePath.PLAYERS / f"{name}.jpg"))
-        if pixmap.isNull():
-            pixmap = QPixmap(str(ResourcePath.PLAYERS / "placeholder.png"))
+        pixmap = Session.get_pixmap("players", name)
 
         # return consistent styled image
         image = QLabel()
@@ -810,11 +804,13 @@ class LeagueView(QWidget):
         image.setFixedSize(180, 180)
         image.setStyleSheet("border: 2px solid #FFFFFF;")
         image.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        pixmap = QPixmap(str(ResourcePath.PLAYERS / f"{name}.jpg"))
-        if pixmap.isNull():
-            pixmap = QPixmap(str(ResourcePath.PLAYERS / "placeholder.png"))
-        image.setPixmap(pixmap.scaled(180, 180, Qt.AspectRatioMode.IgnoreAspectRatio, Qt.TransformationMode.SmoothTransformation))
-
+        image.setPixmap(
+            Session.get_pixmap("players", name).scaled(
+                180, 180,
+                Qt.AspectRatioMode.IgnoreAspectRatio,
+                Qt.TransformationMode.SmoothTransformation
+            )
+        )
         region_img = ResourcePath.FLAGS / f"{region}.png"
         if not region_img.exists():
             region_img = ResourcePath.FLAGS / "placeholder.png"
@@ -934,7 +930,7 @@ class LeagueView(QWidget):
         helper svg magic method that highlights countries in the world map.
         searches country by name and adds a fill style tag
         '''
-        svg_path = ResourcePath.MAP / "world.svg"
+        svg_path = ResourcePath.IMAGES / "world.svg"
         svg_text = svg_path.read_text(encoding="utf-8")
 
         mapping = REGION_SVG_MAP.get(region)
@@ -1128,23 +1124,29 @@ class LeagueView(QWidget):
 
     def _refresh(self, force=0):
         Session.init_league_data(force)
+        Session.init_player_scores()
 
-        self.my_league_name     = Session.current_league_name
-        self.my_league_id       = Session.current_league_id
-        self.my_league_forfeit  = Session.league_forfeit
-        leaguemates             = Session.leaguemates or []
-        self.my_capacity        = f"{len(leaguemates)}/5"
-        self.my_leaguemates     = [d['manager_name'] for d in leaguemates]
-        self.my_draft_order     = Session.draft_order or []
-        self.my_next_pick       = Session.next_pick
-        self.is_league_locked   = Session.is_league_locked
-        self.is_owner           = Session.is_league_owner
-        self.is_draft_complete  = Session.draft_complete
+        league              = Session.league_data or {}
+        team                = Session.team_data or {}
+
         self.my_username        = Session.user
         self.my_user_id         = Session.user_id
-        self.my_team_name       = Session.current_team_name
-        self.my_team_standings  = Session.my_team_standings or []
-        self.my_ex_players      = Session.my_inactive_players or []
+
+        self.my_league_id       = league.get("league_id")
+        self.my_league_name     = league.get("league_name")
+        self.my_league_forfeit  = league.get("forfeit")
+        self.is_league_locked   = league.get("locked", False)
+        self.is_draft_complete  = league.get("draft_complete", False)
+        self.is_owner           = league.get("league_owner") == self.my_user_id
+        self.my_draft_order     = league.get("draft_order") or []
+        self.my_next_pick       = league.get("next_pick")
+        leaguemates             = league.get("leaguemates") or []
+        self.my_leaguemates     = [d["manager_name"] for d in leaguemates]
+        self.my_capacity        = f"{len(leaguemates)}/5"
+
+        self.my_team_name       = team.get("team_name")
+        self.my_team_standings  = team
+        self.my_ex_players      = team.get("inactive_players") or []
 
         self._update_view()
 
@@ -1274,10 +1276,13 @@ class LeagueView(QWidget):
         image.setStyleSheet("border: 2px solid #FFFFFF;")
         image.setFixedSize(200, 200)
         image.setAlignment(Qt.AlignmentFlag.AlignHCenter)
-        pixmap = QPixmap(str(ResourcePath.PLAYERS / f"{name}.jpg"))
-        if pixmap.isNull():
-            pixmap = QPixmap(str(ResourcePath.PLAYERS / "placeholder.png"))
-        image.setPixmap(pixmap.scaled(200, 200, Qt.AspectRatioMode.IgnoreAspectRatio, Qt.TransformationMode.SmoothTransformation))
+        image.setPixmap(
+            Session.get_pixmap("players", name).scaled(
+                200, 200,
+                Qt.AspectRatioMode.IgnoreAspectRatio,
+                Qt.TransformationMode.SmoothTransformation
+            )
+        )
 
         region_img = ResourcePath.FLAGS / f"{region}.png"
         if not region_img.exists():
