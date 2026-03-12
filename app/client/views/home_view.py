@@ -146,6 +146,9 @@ It's quiet. Too quiet...
         Opens a file dialog to select an image and updates the user's avatar.
         """
 
+        if Session.blocking_state:
+            return
+
         # create file dialog manually
         file_dialog = QFileDialog(parent=self)
         file_dialog.setWindowTitle("Select Avatar Image")
@@ -161,9 +164,9 @@ It's quiet. Too quiet...
         # assign avatar
         try:
             QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+            Session.auth_base.assign_avatar(file_path)
             Session.avatar_cache.pop(self.my_user_id, None)
             ImageCache.invalidate("avatars", str(self.my_user_id))
-            self._refresh_avatar()
             self._refresh_avatar()
             QApplication.restoreOverrideCursor()
 

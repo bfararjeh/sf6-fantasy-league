@@ -112,7 +112,7 @@ class EventView(QWidget):
 
     def _build_info(self):
         container = QWidget()
-        layout = QVBoxLayout(container)
+        layout = QHBoxLayout(container)
         layout.setSpacing(20)
 
         events = QLabel("CPT Season XIII")
@@ -120,6 +120,33 @@ class EventView(QWidget):
         events.setStyleSheet("font-size: 64px; font-weight: bold;")
 
         layout.addWidget(events)
+
+        qualified = QPushButton("Qualified")
+        qualified.setCursor(Qt.CursorShape.PointingHandCursor)
+        qualified.clicked.connect(self.app.show_qualified_view)
+        qualified.setStyleSheet(BUTTON_STYLESHEET_A)
+
+        left = QWidget()
+        center = QWidget()
+        right = QWidget()
+
+        center_layout = QHBoxLayout(center)
+        center_layout.setContentsMargins(0, 0, 0, 0)
+        center_layout.addWidget(events, alignment=Qt.AlignmentFlag.AlignCenter)
+
+        right_layout = QHBoxLayout(right)
+        right_layout.setContentsMargins(0, 0, 10, 0)
+        right_layout.addStretch()
+        right_layout.addWidget(qualified, alignment=Qt.AlignmentFlag.AlignTop)
+
+        left_layout = QHBoxLayout(left)
+        left_layout.setContentsMargins(0, 0, 0, 0)
+        left_layout.addStretch()
+
+        layout.addWidget(left, 1)
+        layout.addWidget(center)
+        layout.addWidget(right, 1)
+
         return container
 
     def _build_carousel(self):
@@ -652,11 +679,10 @@ class EventView(QWidget):
         if rank in self.RANK_STYLES and enable_glow:
             color = self.RANK_STYLES[rank]
             glow = QGraphicsDropShadowEffect()
-            glow.setBlurRadius(30)
+            glow.setBlurRadius(50)
             glow.setOffset(0)
             glow.setColor(QColor(color))
             image.setGraphicsEffect(glow)
-            layout.setContentsMargins(15, 15, 15, 15)
 
         def enterEvent(event):
             QToolTip.showText(
@@ -861,9 +887,12 @@ class EventView(QWidget):
         dt_event = datetime.fromisoformat(event_date_str.replace("Z", "+00:00"))
         sel_year, sel_month = dt_event.year, dt_event.month
 
+        start_year = 2013 + Session.SEASON
+
         for i, dot in enumerate(self.timeline_dots):
-            dot_year  = 2026 if i <= 9 else 2027
-            dot_month = (i + 3) if i <= 9 else (i - 9)
+            total_months = 3 + i
+            dot_year  = start_year + (total_months - 1) // 12
+            dot_month = ((total_months - 1) % 12) + 1
 
             if dot_year == sel_year and dot_month == sel_month:
                 color = "#008CFF"

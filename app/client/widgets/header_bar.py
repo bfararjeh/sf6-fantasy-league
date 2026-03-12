@@ -38,16 +38,16 @@ class HeaderBar(QWidget):
         layout.setSpacing(10)
 
         # banner created when there's a message to display
-        if Session.banner_message != None and (datetime.now(timezone.utc) - datetime.fromisoformat(Session.updated_at) < timedelta(days=7)):
-            self.banner_label = QLabel(Session.banner_message)
-            self.banner_label.setWordWrap(True)
-            self.banner_label.setStyleSheet(BANNER_LABEL_STYLESHEET)
-            self.banner_label.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
-            self.banner_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-            layout.addWidget(self.banner_label, stretch=1)
-
+        if Session.banner_message != None:
+            msg = Session.banner_message
         else:
-            layout.addStretch()
+            msg = "Welcome to Fantasy Street Fighter 6!"
+        self.banner_label = QLabel(msg)
+        self.banner_label.setWordWrap(True)
+        self.banner_label.setStyleSheet(BANNER_LABEL_STYLESHEET)
+        self.banner_label.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
+        self.banner_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        layout.addWidget(self.banner_label, stretch=1)
 
         # help and logout button
         help_button = QPushButton()
@@ -71,3 +71,22 @@ class HeaderBar(QWidget):
         layout.addWidget(self.refresh_button)
         layout.addWidget(help_button)
         layout.addWidget(logout_button)
+
+    def refresh(self):
+        layout = self.layout()
+
+        item = layout.takeAt(0)
+        if item.widget():
+            item.widget().deleteLater()
+        
+        if Session.banner_message != None:
+            msg = Session.banner_message
+        else:
+            msg = "Welcome to Fantasy Street Fighter 6!"
+
+        self.banner_label = QLabel(msg)
+        self.banner_label.setWordWrap(True)
+        self.banner_label.setStyleSheet(BANNER_LABEL_STYLESHEET)
+        self.banner_label.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
+        self.banner_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        layout.insertWidget(0, self.banner_label, stretch=1)

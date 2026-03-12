@@ -30,7 +30,7 @@ After any event displayed in the events tab, points are awarded to the top 64 pl
 
 | Position       | Tier 1 | Tier 2 |
 |----------------|--------|--------|
-| 1              | 100    | 50     |
+| 1              | 125    | 75     |
 | 2              | 80     | 40     |
 | 3              | 70     | 35     |
 | 4              | 60     | 30     |
@@ -44,16 +44,6 @@ After any event displayed in the events tab, points are awarded to the top 64 pl
 | 49 (tied)      | 1      | 1      |
 
 Once event standings are live and updated, all players in your team will score based on how they placed. If your lineup ends up all in the top 8 of Evo for example, you'll be raking in the big bucks. Also, should the top 64 contains players not currently in the player pool, they'll be added. Ensuring that ultimately, every player present in the league has scored some points. Wanna see your face in the app? Better get to winning!
-
-Furthermore, bonus points will be handed out to competitors for the following accomplishments:
-
-| Achievement       | Bonus |
-|----------------|--------|
-| Capcom Cup Qualified              | 25    |
-| SFL Worlds Win              | 35     |
-| SFL Regionals Win              | 15     |
-
-These bonus points will be handed out around the date of the events.
 
 ## **How does trading work?**
 

@@ -63,6 +63,7 @@ class FooterNav(QWidget):
 
     def _show_warning(self):
         self.setFixedHeight(100)
+        self.app.show_home_view()
         text = Session.warning_message or "Server connection has been lost. Please reload the app."
         warning_label = QLabel(text)
         warning_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)

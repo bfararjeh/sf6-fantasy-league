@@ -864,7 +864,7 @@ class LeagueView(QWidget):
         for i, (label, value) in enumerate([
             ("Events Played", str(len(timeline))),
             ("Total Points",  str(points)),
-            ("Average Points",str(avg_gained)),
+            ("AVG. Pts/Event",str(avg_gained)),
             ("Best Event",    f"+{best_gained}"),
             ("Worst Event",   f"+{worst_gained}"),
         ]):

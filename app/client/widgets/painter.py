@@ -4,6 +4,8 @@ from PyQt6.QtCore import QPointF, QRectF, Qt
 from PyQt6.QtGui import QColor, QPainter, QPen
 from PyQt6.QtWidgets import QApplication, QWidget
 
+from app.client.controllers.session import Session
+
 
 class PointsChart(QWidget):
     def __init__(self, timeline: list, joined_at: str, parent=None):
@@ -34,7 +36,7 @@ class PointsChart(QWidget):
         x_months = []
         for m in range(13):
             month = (3 + m - 1) % 12 + 1
-            year  = 2026 if m < 10 else 2027
+            year  = (2013 + Session.SEASON) if m < 10 else (2014 + Session.SEASON)
             x_months.append(datetime(year, month, 1))
         x_start = x_months[0]
         x_end   = x_months[-1]
@@ -91,7 +93,7 @@ class PointsChart(QWidget):
 
         # Build data points using actual dates
         joined_dt = datetime.fromisoformat(self.joined_at.replace("Z", "+00:00")).replace(tzinfo=None)
-        clip_start = datetime(2026, 3, 1)
+        clip_start = datetime(2013 + Session.SEASON, 3, 1)
         if joined_dt < clip_start:
             joined_dt = clip_start
         data_x = [date_to_x(joined_dt)] + [date_to_x(e["event_date"]) for e in self.timeline]

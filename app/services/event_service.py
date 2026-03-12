@@ -66,6 +66,15 @@ class EventService():
 
         return distributions
 
+    def get_qualified(self):
+        qualified = self.verify_query(
+            self.supabase
+            .table("qualified")
+            .select("*")
+        ).data
+
+        return qualified
+
     def get_event_standings(self, event_id):   
         event = self.verify_query(
             self.supabase
