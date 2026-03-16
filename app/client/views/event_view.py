@@ -1,5 +1,5 @@
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QColor, QPixmap, QIcon, QFontMetrics
+from PyQt6.QtGui import QColor, QPixmap, QIcon
 from PyQt6.QtWidgets import (
     QGraphicsColorizeEffect,
     QHBoxLayout,
@@ -19,6 +19,8 @@ from app.client.controllers.async_runner import run_async
 from app.client.controllers.resource_path import ResourcePath
 from app.client.controllers.session import Session
 from app.client.theme import *
+from app.client.widgets.misc import _build_empty_label, fit_text_to_width
+from app.client.widgets.hover_image import HoverImage
 
 from datetime import datetime, timezone
 from dataclasses import dataclass, field
@@ -187,21 +189,22 @@ class EventView(QWidget):
         self.event_name_label.setStyleSheet("font-weight: bold;")
 
         self.event_date_label = QLabel("")
-        self.event_date_label.setFixedHeight(40)
+        self.event_date_label.setFixedHeight(30)
         self.event_date_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.event_date_label.setStyleSheet("font-weight: bold; font-size: 20px;")
 
         self.event_tier_label = QLabel("")
-        self.event_tier_label.setFixedHeight(40)
+        self.event_tier_label.setFixedHeight(30)
         self.event_tier_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.event_tier_label.setStyleSheet("font-size: 20px;")
 
         hint_label = QLabel("Click to view details")
+        hint_label.setFixedHeight(30)
         hint_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         hint_label.setStyleSheet("font-size: 11px; color: #666666;")
         
-        center_layout.addWidget(hint_label)
         center_layout.addWidget(self.event_name_label)
+        center_layout.addWidget(hint_label)
         center_layout.addWidget(self.center_display)
         center_layout.addWidget(self.event_date_label)
         center_layout.addWidget(self.event_tier_label)
@@ -349,7 +352,7 @@ class EventView(QWidget):
         image = self._build_event_image(event, size=300)
 
         name = QLabel()
-        self._fit_text_to_width(name, str(event.get("name", "N/A")), 300)
+        fit_text_to_width(name, str(event.get("name", "N/A")), 250)
 
         tier_val = event.get("tier", 0)
         tier = QLabel("Tier " + str(tier_val) if tier_val > 0 else "Non-standard Tier")
@@ -394,8 +397,7 @@ class EventView(QWidget):
         loading_label = QLabel("Loading...")
         loading_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        empty_label = QLabel("Nothing to see here!")
-        empty_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        empty_label = _build_empty_label()
 
         score_container.addWidget(empty_label)
         score_container.addWidget(loading_label)
@@ -477,7 +479,8 @@ class EventView(QWidget):
                 row_layout.setContentsMargins(0, 0, 0, 0)
                 row_layout.addStretch()
                 for player in chunk:
-                    player_image = self._build_player_tile(player, image_size, rank)
+                    extra_padding = 20 if rank <= 3 else 0
+                    player_image = self._build_player_tile(player, image_size, rank, extra_padding=extra_padding)
                     row_layout.addWidget(player_image)
 
                 row_layout.addStretch()
@@ -657,32 +660,29 @@ class EventView(QWidget):
         
         return scroll
 
-    def _build_player_tile(self, player, image_size, rank, enable_tooltip=True, enable_glow=True):
+    def _build_player_tile(self, player, image_size, rank, enable_tooltip=True, enable_glow=True, extra_padding=0):
         widget = QWidget()
         layout = QVBoxLayout(widget)
         layout.setSpacing(4)
-        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setContentsMargins(0, extra_padding, 0, extra_padding)
 
         image = QLabel()
         image.setFixedSize(image_size, image_size)
         image.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         pixmap = Session.get_pixmap("players", player["player"])
-        image.setPixmap(
-            pixmap.scaled(
-                image_size, image_size,
-                Qt.AspectRatioMode.KeepAspectRatioByExpanding,
-                Qt.TransformationMode.SmoothTransformation,
-            )
-        )
-
+        image = HoverImage(pixmap, size=image_size)
+            
         if rank in self.RANK_STYLES and enable_glow:
             color = self.RANK_STYLES[rank]
             glow = QGraphicsDropShadowEffect()
-            glow.setBlurRadius(50)
+            glow.setBlurRadius(35)
             glow.setOffset(0)
             glow.setColor(QColor(color))
-            image.setGraphicsEffect(glow)
+            widget.setGraphicsEffect(glow)
+
+        _original_enter = image.enterEvent
+        _original_leave = image.leaveEvent
 
         def enterEvent(event):
             QToolTip.showText(
@@ -690,11 +690,11 @@ class EventView(QWidget):
                 f"{player['player']}",
                 image,
             )
-            QWidget.enterEvent(widget, event)
+            _original_enter(event)
 
         def leaveEvent(event):
             QToolTip.hideText()
-            QWidget.leaveEvent(widget, event)
+            _original_leave(event)
 
         if enable_tooltip:
             image.enterEvent = enterEvent
@@ -871,7 +871,7 @@ class EventView(QWidget):
 
         # Labels — pull directly from event_data, no redundant dict needed
         event = self.event_data[center_idx]
-        self._fit_text_to_width(self.event_name_label, event.get("name", "N/A"), 300)
+        fit_text_to_width(self.event_name_label, event.get("name", "N/A"), 250)
         self.event_date_label.setText(
             str(datetime.fromisoformat(event.get("start_weekend", "")).date())
         )
@@ -922,26 +922,3 @@ class EventView(QWidget):
             padding: 6px 10px;
             border-radius: 8px;
         """)
-
-    def _fit_text_to_width(self, label: QLabel, text: str, max_width: int,
-                           min_font_size=2, max_font_size=40):
-        """Binary-search the largest font size that fits text within max_width."""
-        if not text or max_width <= 0:
-            return
-
-        font = label.font()
-        font.setBold(True)
-        low, high, best_size = min_font_size, max_font_size, min_font_size
-
-        while low <= high:
-            mid = (low + high) // 2
-            font.setPointSize(mid)
-            if QFontMetrics(font).boundingRect(text).width() <= max_width:
-                best_size = mid
-                low = mid + 1
-            else:
-                high = mid - 1
-
-        font.setPointSize(best_size)
-        label.setFont(font)
-        label.setText(text)

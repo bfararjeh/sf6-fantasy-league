@@ -1,5 +1,5 @@
-from PyQt6.QtCore import Qt, QSize, QTimer
-from PyQt6.QtGui import QColor, QFontMetrics, QPixmap
+from PyQt6.QtCore import Qt, QSize
+from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -12,11 +12,10 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from app.client.controllers.resource_path import ResourcePath
 from app.client.controllers.session import Session
 from app.client.theme import *
-from app.client.widgets.footer_nav import FooterNav
-from app.client.widgets.header_bar import HeaderBar
+from app.client.widgets.misc import _build_empty_label, fit_text_to_width
+from app.client.widgets.hover_image import HoverImage
 
 class LeaderboardView(QWidget):
     def __init__(self, app):
@@ -174,7 +173,7 @@ class LeaderboardView(QWidget):
             font-size: 50px;
             color: {rank_color};
         """)
-        self._fit_text_to_width(owner_label, f"#{rank} {team['user_name']}", 500, max_font_size=50)
+        fit_text_to_width(owner_label, f"#{rank} {team['user_name']}", 500, max_font_size=50)
 
         if rank <= 3:
             glow = QGraphicsDropShadowEffect()
@@ -256,14 +255,9 @@ class LeaderboardView(QWidget):
             player_name = player.get("player_name", "-")
             player_points = str(player.get("points", "-"))
 
-            image.setPixmap(
-                Session.get_pixmap("players", player_name).scaled(
-                    150, 150,
-                    Qt.AspectRatioMode.IgnoreAspectRatio,
-                    Qt.TransformationMode.SmoothTransformation
-                )
-            )
-            image.setStyleSheet("border: 2px solid #BBBBBB;")
+            pixmap = Session.get_pixmap("players", player_name)
+            image = HoverImage(pixmap, size=150, border_width=2, border_color="#BBBBBB")
+            
             name.setText(player_name)
             points.setText(player_points)
         else:
@@ -295,25 +289,6 @@ class LeaderboardView(QWidget):
 
         self._update_view()
 
-    def _set_status(self, msg, code=0):
-        colors = {0: "#FFFFFF", 1: "#00ff0d", 2: "#FFD700"}
-        self.status_label.setStyleSheet(f"""
-            QLabel {{
-                font-size: 16px;
-                font-weight: bold;
-                color: {colors.get(code, '#FFFFFF')};
-            }}
-        """)
-        self.status_label.setText(msg)
-
-        if hasattr(self, "_status_timer") and self._status_timer.isActive():
-            self._status_timer.stop()
-
-        self._status_timer = QTimer(self)
-        self._status_timer.setSingleShot(True)
-        self._status_timer.timeout.connect(lambda: self.status_label.setText(""))
-        self._status_timer.start(8000)
-
     def _update_view(self):
         self._update_leaguemates()
 
@@ -340,9 +315,8 @@ class LeaderboardView(QWidget):
                 self.leaguemate_layout.addWidget(team_widget)
 
         else:
-            label = QLabel("It's quiet. Too quiet...")
             self.leaguemate_layout.addSpacerItem(QSpacerItem(10,100))
-            self.leaguemate_layout.addWidget(label, alignment= Qt.AlignmentFlag.AlignVCenter)
+            self.leaguemate_layout.addWidget(_build_empty_label(), alignment= Qt.AlignmentFlag.AlignVCenter)
 
     def _apply_ranks(self, teams):
         ranked = []
@@ -365,39 +339,6 @@ class LeaderboardView(QWidget):
             ranked.append(team)
 
         return ranked
-
-    def _fit_text_to_width(self, label: QLabel, text: str, max_width: int,
-                        min_font_size=2, max_font_size=40, bold=True):
-        """
-        Adjusts the font size of a label to fit within a specific width 
-        restriction.
-        """
-        if not text or max_width <= 0:
-            return
-
-        font = label.font()
-        font.setBold(bold)
-        font_size = min_font_size
-        font.setPointSize(font_size)
-        metrics = QFontMetrics(font)
-
-        # binary search to find the largest font that fits
-        low, high = min_font_size, max_font_size
-        best_size = min_font_size
-
-        while low <= high:
-            mid = (low + high) // 2
-            font.setPointSize(mid)
-            metrics = QFontMetrics(font)
-            if metrics.boundingRect(text).width() <= max_width:
-                best_size = mid  # fits, try bigger
-                low = mid + 1
-            else:
-                high = mid - 1  # too big, try smaller
-                
-        font.setPointSize(best_size)
-        label.setFont(font)
-        label.setText(text)
 
     def showEvent(self, event):
         super().showEvent(event)

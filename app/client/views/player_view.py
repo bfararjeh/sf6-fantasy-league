@@ -12,6 +12,7 @@ from PyQt6.QtWidgets import (
 )
 
 from app.client.controllers.resource_path import ResourcePath
+from app.client.widgets.hover_image import HoverImage
 from app.client.controllers.session import Session
 from app.client.theme import *
 
@@ -157,18 +158,9 @@ class PlayerView(QWidget):
             player_layout.setContentsMargins(0, 0, 0, 0)
             player_layout.setSpacing(10)
 
-            image = QLabel()
-            image.setFixedSize(160, 160)
+            pixmap = Session.get_pixmap("players", player["name"])
+            image = HoverImage(pixmap, size=160)
             image.setStyleSheet("border: 3px solid #BBBBBB;")
-            image.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-            image.setPixmap(
-                Session.get_pixmap("players", player["name"]).scaled(
-                    160, 160,
-                    Qt.AspectRatioMode.IgnoreAspectRatio,
-                    Qt.TransformationMode.SmoothTransformation
-                )
-            )
 
             img_path = ResourcePath.FLAGS / f"{player["region"]}.png"
             if not img_path.exists():

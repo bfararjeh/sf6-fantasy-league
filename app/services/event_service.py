@@ -6,6 +6,43 @@ from app.services.base_service import BaseService
 class EventService():
     """
     Service for grabbing event data and score history.
+
+    Attributes:
+        base (BaseService):
+            An authenticated BaseService instance, providing access to the
+            Supabase client and shared utility methods.
+
+    Methods:
+        __init__(base: BaseService):
+            Sets the base service instance.
+
+        get_events() -> list[dict]:
+            Returns all events sorted by start date. Each event dict includes
+            raw event data plus an image_bytes field containing the event's
+            image as raw bytes, or None if unavailable.
+
+        get_qualified() -> list[dict]:
+            Returns all qualified players from the qualified table.
+
+        get_event_standings(event_id: str) -> list[dict]:
+            Returns the full score history for a completed event, including
+            player name, rank, and points. Raises if the event is incomplete.
+
+        get_user_event_scores(team_id: str, event_id: str) -> list[dict] | None:
+            Returns the active roster at the time of the event and each
+            player's rank and points. Returns None if no players were active.
+            Raises if the team is missing or the event is incomplete.
+
+        get_league_event_scores(league_id: str, event_id: str) -> dict | None:
+            Returns all active rosters in a league at the time of the event,
+            keyed by username, with each player's rank and points. Returns
+            None if no teams are found. Raises if not in a league or the
+            event is incomplete.
+
+        get_player_points_timeline(player: str, joined_at: str | None, left_at: str | None) -> list[dict]:
+            Returns a chronological list of score history entries for a player
+            within their tenure on a team. Each entry includes event name,
+            event date, points gained, and cumulative points after that event.
     """
     def __init__(self, base: BaseService):
         self.base = base
@@ -46,7 +83,7 @@ class EventService():
                 event["image_bytes"] = response.content
 
             except Exception as e:
-                # fail gracefully, store None if fetching fails
+                # store None if fetching fails
                 event["image_bytes"] = None
         
         
@@ -56,15 +93,6 @@ class EventService():
         )
 
         return sorted_events
-
-    def get_distributions(self):  
-        distributions = self.verify_query(
-            self.supabase
-            .table("distributions")
-            .select("*")
-        ).data
-
-        return distributions
 
     def get_qualified(self):
         qualified = self.verify_query(

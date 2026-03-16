@@ -11,6 +11,9 @@ class BaseService:
     This class is responsible for assigning base attributes and methods for
     use by other services.
 
+    Methods that interact with the database in this service are more universal
+    methods that may be used by multiple services.
+
     Attributes:
         supabase (Client):
             An authenticated Supabase client instance
@@ -25,6 +28,7 @@ class BaseService:
             The authenticated user's refresh token
 
 
+
     Methods:
         __init__(supabase: Client, user_id: str, access_token: str, refresh_token: str):
             Sets all the class attributes.
@@ -34,17 +38,36 @@ class BaseService:
             actually returns data. Returns the APIResponse or None if the 
             query returned empty.
 
+        assign_avatar(image: str) -> None:
+            Processes, compresses, and uploads a user's avatar image to
+            Supabase storage as a WebP file.
+
+        get_avatar(user_id: str) -> bytes | None:
+            Retrieves a user's avatar as raw bytes suitable for loading
+            into a QPixmap.
+
+        get_image(bucket: str, filename: str) -> tuple[bytes, str] | tuple[None, None]:
+            Fetches image bytes and ETag from a Supabase storage bucket.
+
+        get_image_etag(bucket: str, filename: str) -> str | None:
+            Fetches only the ETag for an image via HEAD request, without
+            downloading the image itself.
+
         get_my_username() -> str:
-            Returns the user's username
+            Returns the authenticated user's username.
 
-        get_my_league() -> str:
-            Returns the user's league UUID
+        get_my_league() -> str | None:
+            Returns the authenticated user's league UUID, or None if
+            they are not in a league.
 
-        get_my_league() -> str:
-            Returns the user's league UUID
+        get_my_team() -> str | None:
+            Returns the authenticated user's team UUID, or None if
+            they do not have a team.
 
-        get_system_state() -> dict:
-            Returns the newest system message
+        get_system_state() -> dict | None:
+            Returns the most recent system state record, containing
+            blocking status, warning message, banner message, version,
+            and updated_at timestamp.
     """
     def __init__(self, supabase, user_id, access_token, refresh_token):
         self.supabase = supabase
@@ -162,7 +185,7 @@ class BaseService:
         except Exception as e:
             raise Exception (f"Failed to get avatar for user {user_id}: {e}")
 
-    def _fetch_image(self, bucket: str, filename: str) -> tuple[bytes, str] | tuple[None, None]:
+    def get_image(self, bucket, filename):
         """
         Fetches image bytes and ETag from a Supabase storage bucket.
         Returns (bytes, etag) or (None, None) if not found.
@@ -178,7 +201,7 @@ class BaseService:
         except Exception:
             return None, None
 
-    def _fetch_etag(self, bucket: str, filename: str) -> str | None:
+    def get_image_etag(self, bucket, filename):
         """
         Fetches only the ETag for an image via HEAD request (no image download).
         """
@@ -191,12 +214,6 @@ class BaseService:
             return response.headers.get("ETag")
         except Exception:
             return None
-
-    def get_image(self, bucket: str, filename: str) -> tuple[bytes, str] | tuple[None, None]:
-        return self._fetch_image(bucket, filename)
-
-    def get_image_etag(self, bucket: str, filename: str) -> str | None:
-        return self._fetch_etag(bucket, filename)
 
     def get_my_username(self):
         result = self.verify_query((

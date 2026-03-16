@@ -1,4 +1,3 @@
-
 from pathlib import Path
 import sys
 
@@ -15,4 +14,5 @@ class ResourcePath:
     ICONS = resource_path.__func__("app/client/assets/icons")
     IMAGES = resource_path.__func__("app/client/assets/images")
     PLAYERS = resource_path.__func__("app/client/assets/players")
+    SOUNDS = resource_path.__func__("app/client/assets/sounds")
     

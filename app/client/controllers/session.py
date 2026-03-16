@@ -5,6 +5,7 @@ from app.services.league_service import LeagueService
 from app.services.leaderboard_service import LeaderboardService
 from app.services.team_service import TeamService
 from app.services.event_service import EventService
+from app.services.trade_service import TradeService
 
 
 class Session:
@@ -25,6 +26,7 @@ class Session:
     @classmethod
     def _set_defaults(cls):
         # authenticated supabase session
+        cls._on_block: callable = None
         cls.auth_base               = None
 
         # user info
@@ -49,12 +51,14 @@ class Session:
         cls.global_stats            = None
         cls.event_data              = None
         cls.qualified_data          = None
+        cls.trade_windows           = None
 
         # services
         cls.team_service            = None
         cls.league_service          = None
         cls.leaderboard_service     = None
         cls.event_service           = None
+        cls.trade_service           = None
 
         # refresh timers
         cls.league_data_grabbed_at      = None
@@ -82,6 +86,7 @@ class Session(Session):
         cls.league_service      = LeagueService(cls.auth_base)
         cls.leaderboard_service = LeaderboardService(cls.auth_base)
         cls.event_service       = EventService(cls.auth_base)
+        cls.trade_service       = TradeService(cls.auth_base)
 
     @classmethod
     def init_system_state(cls):
@@ -200,6 +205,19 @@ class Session(Session):
             cls.qualified_data = cls.event_service.get_qualified()
         except Exception:
             cls.qualified_data = None
+
+    @classmethod
+    def init_trade_data(cls):
+        if cls.init_system_state():
+            cls._trigger_block()
+            return
+        if cls.trade_windows is not None:
+            return
+        
+        try:
+            cls.trade_windows = cls.trade_service.get_trade_windows()
+        except Exception:
+            cls.trade_windows = None
 
     # ------------------------------------------------------------------
     # Images

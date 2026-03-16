@@ -1,5 +1,6 @@
 from PyQt6.QtCore import QThread, QObject, pyqtSignal
 
+
 class _BuildWorker(QObject):
     finished = pyqtSignal()
 
@@ -14,7 +15,6 @@ class _BuildWorker(QObject):
 
 def load_view(stack, placeholder, build_fn, on_done, thread_registry=None):
     stack.setCurrentWidget(placeholder)
-    intended_widget = placeholder  # track what we showed
 
     thread = QThread()
     worker = _BuildWorker(build_fn)
@@ -28,8 +28,7 @@ def load_view(stack, placeholder, build_fn, on_done, thread_registry=None):
     def _finish():
         on_done()
         if stack.currentWidget() is placeholder:
-            new_widget = stack.widget(stack.count() - 1)
-            stack.setCurrentWidget(new_widget)
+            stack.setCurrentWidget(stack.widget(stack.count() - 1))
         worker.deleteLater()
         thread.quit()
         thread.wait()

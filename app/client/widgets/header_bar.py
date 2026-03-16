@@ -1,6 +1,5 @@
-from pathlib import Path
-import sys
 from PyQt6.QtWidgets import (
+    QApplication,
     QWidget, 
     QHBoxLayout, 
     QPushButton, 
@@ -8,17 +7,42 @@ from PyQt6.QtWidgets import (
     QSizePolicy
 )
 
-from PyQt6.QtCore import Qt, QSize
+from PyQt6.QtCore import QTimer, Qt, QSize, pyqtSignal
 
 from PyQt6.QtGui import QIcon
 
-from datetime import datetime, timedelta, timezone
-
 from app.client.controllers.session import Session
 from app.client.controllers.resource_path import ResourcePath
-from app.client.widgets.refresh_button import RefreshButton
 
 from app.client.theme import *
+
+class RefreshButton(QPushButton):
+    refresh_requested = pyqtSignal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self._last_clicked = None
+
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setStyleSheet(BUTTON_STYLESHEET_B)
+        icon_path = ResourcePath.ICONS / "refresh.svg"
+        icon = QIcon(str(icon_path))
+        icon.addFile(str(icon_path), mode=QIcon.Mode.Disabled)
+        self.setIcon(icon)
+        self.setIconSize(QSize(32, 32))
+        self.clicked.connect(self._on_click)
+
+    def _on_click(self):
+        self.setDisabled(True)
+        QApplication.processEvents()
+        self.refresh_requested.emit()
+
+        QTimer.singleShot(5000, self._enable_button)
+
+    def _enable_button(self):
+        self.setDisabled(False)
+
 
 class HeaderBar(QWidget):
     '''

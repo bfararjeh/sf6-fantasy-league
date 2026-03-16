@@ -1,6 +1,7 @@
-from PyQt6.QtCore import Qt, QTimer, QRectF
-from PyQt6.QtGui import QPainter, QPen, QColor
+from PyQt6.QtCore import Qt, QRectF, QTimer
+from PyQt6.QtGui import QColor, QPainter, QPen
 from PyQt6.QtWidgets import QWidget
+
 
 class SpinnerWidget(QWidget):
     def __init__(self, parent=None, size=48, color="#4200FF"):
@@ -11,7 +12,7 @@ class SpinnerWidget(QWidget):
 
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._rotate)
-        self._timer.start(16)  # ~60fps
+        self._timer.start(16)
 
     def _rotate(self):
         self._angle = (self._angle + 6) % 360
@@ -33,4 +34,7 @@ class SpinnerWidget(QWidget):
 
     def stop(self):
         self._timer.stop()
-        
+
+    def start(self):
+        self._angle = 0
+        self._timer.start()

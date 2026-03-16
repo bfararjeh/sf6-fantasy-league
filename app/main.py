@@ -6,21 +6,20 @@ from PyQt6.QtCore import QLockFile
 from PyQt6.QtGui import QFont, QFontDatabase, QIcon, QPalette
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtWidgets import QSplashScreen
+from PyQt6.QtWidgets import QStyleFactory
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtCore import Qt
 
 from app.client.app import FantasyApp
 from app.client.controllers.image_cache import ImageCache
-from app.client.theme import *
+from app.client.controllers.sound_manager import SoundManager
 from app.client.controllers.resource_path import ResourcePath
-from PyQt6.QtWidgets import QStyleFactory
+from app.client.theme import *
 
 APP_NAME = "FantasySF6"
 
 appdata_dir = Path.home() / "AppData" / "Roaming" / APP_NAME
 appdata_dir.mkdir(parents=True, exist_ok=True)
-
-ImageCache.init(appdata_dir / "cache")
 
 def main():
     # creating lock file to prevent multiple applications
@@ -32,6 +31,9 @@ def main():
         sys.exit(0)
 
     app = QApplication(sys.argv)
+
+    ImageCache.init(appdata_dir / "cache")
+    SoundManager.init()
 
     splash_pixmap = QPixmap(str(ResourcePath.IMAGES / "splash.png"))
     scaled_pixmap = splash_pixmap.scaled(

@@ -1,5 +1,5 @@
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QFontMetrics, QPixmap
+from PyQt6.QtGui import QFontMetrics
 from PyQt6.QtWidgets import (
     QApplication,
     QFileDialog,
@@ -14,6 +14,7 @@ from PyQt6.QtWidgets import (
 from app.client.controllers.image_cache import ImageCache
 from app.client.controllers.session import Session
 from app.client.theme import *
+from app.client.widgets.misc import _build_empty_label
 
 class HomeView(QWidget):
     def __init__(self, app):
@@ -126,14 +127,8 @@ This app was developed solely by Fararjeh. You can learn more about the develope
         layout = QVBoxLayout(cont)
         layout.setContentsMargins(25,0,25,0)
 
-        main = QLabel("""
-It's quiet. Too quiet...
-""")
-        main.setWordWrap(True)
-        main.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
         layout.addStretch()
-        layout.addWidget(main)
+        layout.addWidget(_build_empty_label())
         layout.addStretch()
 
         return cont

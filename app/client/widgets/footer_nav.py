@@ -1,9 +1,24 @@
-from PyQt6.QtWidgets import QWidget, QHBoxLayout, QPushButton, QLabel, QVBoxLayout
 from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
+
 from app.client.controllers.session import Session
 from app.client.theme import *
 
+
 class FooterNav(QWidget):
+    '''
+    Footer navigation bar visible on every view.
+    Displays navigation buttons normally, or a warning banner when the
+    server is in a blocking state.
+    '''
+    _BUTTONS = [
+        ("League",       "show_league_view"),
+        ("Leaderboards", "show_leaderboards_view"),
+        ("Home",         "show_home_view"),
+        ("Events",       "show_events_view"),
+        ("Trades",       "show_trades_view"),
+    ]
+
     def __init__(self, app):
         super().__init__()
         self.app = app
@@ -17,16 +32,6 @@ class FooterNav(QWidget):
         self.button_bar.setSpacing(0)
         self.root_layout.addLayout(self.button_bar)
 
-        self._buttons = [
-            ("League",       self.app.show_league_view),
-            ("Leaderboards", self.app.show_leaderboards_view),
-            ("Home",         self.app.show_home_view),
-            ("Events",       self.app.show_events_view),
-            ("Trades",       self.app.show_trades_view),
-        ]
-
-        # build with buttons visible by default — refresh() will correct
-        # this once session state is known after login/restore
         self._show_buttons()
 
     def refresh(self):
@@ -37,35 +42,30 @@ class FooterNav(QWidget):
             self._show_buttons()
 
     def _clear(self):
-        # clear button bar
         while self.button_bar.count():
             item = self.button_bar.takeAt(0)
             if item.widget():
                 item.widget().setParent(None)
-
-        # clear any warning label
         for i in reversed(range(self.root_layout.count())):
             item = self.root_layout.itemAt(i)
             if item and item.widget():
                 item.widget().setParent(None)
-
         self.setFixedHeight(48)
 
     def _show_buttons(self):
         self.setFixedHeight(48)
-        for text, callback in self._buttons:
+        for text, method in self._BUTTONS:
             btn = QPushButton(text)
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
             btn.setFixedHeight(48)
             btn.setStyleSheet(FOOTER_BUTTON_STYLE)
-            btn.clicked.connect(callback)
+            btn.clicked.connect(getattr(self.app, method))
             self.button_bar.addWidget(btn, stretch=1)
 
     def _show_warning(self):
         self.setFixedHeight(100)
         self.app.show_home_view()
-        text = Session.warning_message or "Server connection has been lost. Please reload the app."
-        warning_label = QLabel(text)
+        warning_label = QLabel(Session.warning_message or "Server connection has been lost. Please reload the app.")
         warning_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         warning_label.setWordWrap(True)
         warning_label.setAlignment(Qt.AlignmentFlag.AlignCenter)

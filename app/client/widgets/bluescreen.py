@@ -1,13 +1,9 @@
-from PyQt6.QtWidgets import (
-    QWidget, 
-    QVBoxLayout, 
-    QTextEdit
-)
+from PyQt6.QtWidgets import QTextEdit, QVBoxLayout, QWidget
+
 
 class BlueScreen(QWidget):
     '''
-    Responsible for displaying a bluescreen with a full stack trace should
-    something go wrong. Better safe than sorry!
+    Displays a blue screen with a full stack trace should something go wrong.
     '''
     def __init__(self, parent: QWidget):
         super().__init__(parent)
@@ -25,14 +21,15 @@ class BlueScreen(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self.text)
-
         self.hide()
 
     def show_error(self, error_text: str):
-        self.text.setPlainText(f"Unfortunately, the application has crashed.\n\nBelow is the full stack trace, you can report this issue on https://github.com/bfararjeh/sf6-fantasy-league/issues\n\n{error_text}")
-
+        self.text.setPlainText(
+            f"Unfortunately, the application has crashed.\n\n"
+            f"Below is the full stack trace, you can report this issue on "
+            f"https://github.com/bfararjeh/sf6-fantasy-league/issues\n\n{error_text}"
+        )
         self.setGeometry(self.parent().rect())
-
         self.show()
         self.raise_()
         self.setFocus()

@@ -1,6 +1,6 @@
 import httpx
 from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QFontMetrics, QPixmap
+from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import (
     QApplication,
     QLabel,
@@ -13,8 +13,8 @@ from PyQt6.QtWidgets import (
 
 from app.client.controllers.resource_path import ResourcePath
 from app.client.controllers.session import Session
-from app.services.auth_service import AuthService
-from app.services.auth_store import AuthStore
+from app.client.controllers.sound_manager import SoundManager
+from app.services.auth_service import AuthService, AuthStore
 
 class LoginView(QWidget):
     def __init__(self, app=None):
@@ -171,11 +171,13 @@ class LoginView(QWidget):
             QApplication.restoreOverrideCursor()
             self.status_label.setText(f"Login successful! Welcome back {Session.user}.")
             self.status_label.setStyleSheet("color: #4ade00;")
+            SoundManager.play("login")
 
             if self.app:
                 QTimer.singleShot(2000, self._login_success)
 
         except Exception as e:
+            SoundManager.play("error")
             if type(e) == httpx.ConnectError:
                 self.status_label.setText(f"Login failed: Unable to connect to servers.")
                 self.status_label.setStyleSheet("color: #FFD700;")

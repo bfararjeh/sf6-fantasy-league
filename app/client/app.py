@@ -17,15 +17,16 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import QTimer
 
+from app.client.controllers.sound_manager import SoundManager
 from app.client.views.global_view import GlobalView
-from app.client.views.loading_view import LoadingView
 from app.client.views.trade_view import TradeView
 from app.client.widgets.footer_nav import FooterNav
 from app.client.widgets.header_bar import HeaderBar
-from app.services.auth_store import AuthStore
-from app.services.auth_service import AuthService
+from app.services.auth_service import AuthService, AuthStore
 
-from app.client.widgets.blue_screen import BlueScreen
+from app.client.widgets.misc import set_status
+from app.client.widgets.bluescreen import BlueScreen
+from app.client.widgets.loading import LoadingView
 from app.client.widgets.view_loader import load_view
 
 from app.client.controllers.session import Session
@@ -152,6 +153,7 @@ class FantasyApp(QMainWindow):
         if self.home_view is None:
             self.home_view = HomeView(app=self)
             self.stack.addWidget(self.home_view)
+            SoundManager.play("boot")
         if self.loading_view is None:
             self.loading_view = LoadingView(app=self)
             self.stack.addWidget(self.loading_view)
@@ -187,6 +189,7 @@ class FantasyApp(QMainWindow):
                 return
             self.league_view = LeagueView(app=self)
             self.stack.addWidget(self.league_view)
+            SoundManager.play("loaded")
             self.connect_refresh(self.league_view._refresh)
             self._start_refresh_timer()
 
@@ -218,6 +221,7 @@ class FantasyApp(QMainWindow):
                 return
             self.leaderboard_view = LeaderboardView(app=self)
             self.stack.addWidget(self.leaderboard_view)
+            SoundManager.play("loaded")
             self.connect_refresh(self.leaderboard_view._refresh)
             self._start_refresh_timer()
 
@@ -242,6 +246,7 @@ class FantasyApp(QMainWindow):
         def _done():
             self.players_view = PlayerView(app=self)
             self.stack.addWidget(self.players_view)
+            SoundManager.play("loaded")
 
         load_view(self.stack, self.loading_view, _fetch, _done, self._active_threads)
 
@@ -261,6 +266,8 @@ class FantasyApp(QMainWindow):
         def _done():
             self.globals_view = GlobalView(app=self)
             self.stack.addWidget(self.globals_view)
+            SoundManager.play("loaded")
+
 
         load_view(self.stack, self.loading_view, _fetch, _done, self._active_threads)
 
@@ -280,6 +287,7 @@ class FantasyApp(QMainWindow):
         def _done():
             self.events_view = EventView(app=self)
             self.stack.addWidget(self.events_view)
+            SoundManager.play("loaded")
 
         load_view(self.stack, self.loading_view, _fetch, _done, self._active_threads)
 
@@ -294,10 +302,12 @@ class FantasyApp(QMainWindow):
 
         def _fetch():
             Session.init_qualified_data()
+            QualifiedView.preload()
 
         def _done():
             self.qualified_view = QualifiedView(app=self)
             self.stack.addWidget(self.qualified_view)
+            SoundManager.play("loaded")
 
         load_view(self.stack, self.loading_view, _fetch, _done, self._active_threads)
 
@@ -311,11 +321,12 @@ class FantasyApp(QMainWindow):
             return
 
         def _fetch():
-            pass
+            Session.init_trade_data()
 
         def _done():
             self.trades_view = TradeView(app=self)
             self.stack.addWidget(self.trades_view)
+            SoundManager.play("loaded")
 
         load_view(self.stack, self.loading_view, _fetch, _done, self._active_threads)
 
@@ -347,6 +358,8 @@ class FantasyApp(QMainWindow):
         self.events_view = self.trades_view = self.qualified_view = None
         self.login_view = self.signup_view = None
 
+        SoundManager.play("logout")
+
         self.show_login_view()
 
 
@@ -365,16 +378,16 @@ class FantasyApp(QMainWindow):
         view = self.stack.currentWidget()
         try:
             if manual:
-                view._set_status("Refreshing...", code=0)
+                set_status(view, "Refreshing...", code=0)
             view.setEnabled(False)
             self.header.setEnabled(False)
             QApplication.processEvents()
             callback()
             if manual:
-                view._set_status("Refreshed!", code=1)
+                set_status(view, "Refreshed!", code=1)
         except Exception as e:
             if manual:
-                view._set_status(f"Refresh failed: {e}", code=2)
+                set_status(view, f"Refresh failed: {e}", code=2)
         finally:
             view.setEnabled(True)
             self.header.setEnabled(True)

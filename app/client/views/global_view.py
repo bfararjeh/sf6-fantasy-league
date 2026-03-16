@@ -16,6 +16,7 @@ from PyQt6.QtWidgets import (
 from app.client.controllers.resource_path import ResourcePath
 from app.client.controllers.session import Session
 from app.client.theme import *
+from app.client.widgets.misc import _build_empty_label
 
 class GlobalView(QWidget):
     def __init__(self, app):
@@ -63,14 +64,8 @@ class GlobalView(QWidget):
             layout = QVBoxLayout(cont)
             layout.setContentsMargins(25,0,25,0)
 
-            main = QLabel("""
-            It's quiet. Too quiet...
-            """)
-            main.setWordWrap(True)
-            main.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
             layout.addStretch()
-            layout.addWidget(main)
+            layout.addWidget(_build_empty_label())
             layout.addStretch()
 
             content_layout.addWidget(cont)
