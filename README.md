@@ -76,7 +76,7 @@ If you happen to catch scores incorrect: fear not. All event standings are manag
 
 ## **The app is free, right?**
 
-No, it will cost $399.99 to begin a league. Just kidding. It's free and always will be!
+This app is free and always will be!
 
 ## **Is there an app or web version?**
 
