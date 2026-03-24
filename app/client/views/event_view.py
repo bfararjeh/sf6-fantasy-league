@@ -1,30 +1,33 @@
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QColor, QPixmap, QIcon, QFontMetrics
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from typing import Optional
+
+from PyQt6.QtCore import QEasingCurve, QPoint, QPropertyAnimation, Qt
+from PyQt6.QtGui import QColor, QIcon
 from PyQt6.QtWidgets import (
+    QApplication,
     QGraphicsColorizeEffect,
+    QGraphicsDropShadowEffect,
+    QGraphicsOpacityEffect,
     QHBoxLayout,
     QLabel,
-    QGraphicsDropShadowEffect,
     QPushButton,
     QScrollArea,
+    QSizePolicy,
+    QStackedWidget,
+    QToolTip,
     QVBoxLayout,
     QWidget,
-    QStackedWidget,
-    QSizePolicy
 )
-from PyQt6.QtWidgets import QToolTip
-from PyQt6.QtCore import QPoint
 
 from app.client.controllers.async_runner import run_async
 from app.client.controllers.resource_path import ResourcePath
 from app.client.controllers.session import Session
+from app.client.controllers.sound_manager import SoundManager
 from app.client.theme import *
-from app.client.widgets.footer_nav import FooterNav
-from app.client.widgets.header_bar import HeaderBar
-
-from datetime import datetime, timezone
-from dataclasses import dataclass, field
-from typing import Optional
+from app.client.widgets.hover_image import HoverImage
+from app.client.widgets.misc import _build_empty_label, fit_text_to_width
+from app.client.widgets.spinner import SpinnerWidget
 
 
 # dedicated class and widget for event detail view
@@ -32,7 +35,8 @@ from typing import Optional
 class ScoreState:
     event: dict
     score_container: QStackedWidget
-    loading_widget: QLabel
+    loading_widget: QWidget
+    spinner: SpinnerWidget
     empty_widget: QLabel
     buttons: dict
     loaded: dict = field(default_factory=lambda: {"all": False, "me": False, "league": False})
@@ -50,10 +54,7 @@ class EventView(QWidget):
         super().__init__()
         self.app = app
 
-        Session.init_league_data()
-
         self.event_data = Session.event_data
-        self.dist_data = Session.dist_data
         self.event_detail_cache = {}
         self.current_detail_event_id = None
 
@@ -82,9 +83,6 @@ class EventView(QWidget):
         self.root_layout.setContentsMargins(0, 0, 0, 0)
         self.root_layout.setSpacing(0)
 
-        self.header = HeaderBar(self.app)
-        self.footer = FooterNav(self.app)
-
         self.view_stack = QStackedWidget()
 
         self.main_page = QWidget()
@@ -95,9 +93,7 @@ class EventView(QWidget):
 
         self.view_stack.addWidget(self.main_page)
 
-        self.root_layout.addWidget(self.header)
         self.root_layout.addWidget(self.view_stack, stretch=1)
-        self.root_layout.addWidget(self.footer)
 
         self._build_sections()
 
@@ -106,7 +102,9 @@ class EventView(QWidget):
     def _build_sections(self):
         info_widget = self._build_info()
         self.timeline_widget = self._build_timeline()
-        self.next_up_label = self._build_next_up()
+        self.next_up_label = QLabel()
+        self.next_up_label.setFixedWidth(200)
+        self.next_up_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.content_layout.addWidget(info_widget)
         self.content_layout.addWidget(self._build_carousel())
@@ -115,18 +113,41 @@ class EventView(QWidget):
         self.content_layout.addWidget(self.timeline_widget)
 
 
-# -- BUILDERS --
+# -- MAIN BUILDERS --
 
     def _build_info(self):
         container = QWidget()
-        layout = QVBoxLayout(container)
+        layout = QHBoxLayout(container)
         layout.setSpacing(20)
 
-        events = QLabel("Events")
+        events = QLabel("CPT Season XIII")
         events.setAlignment(Qt.AlignmentFlag.AlignCenter)
         events.setStyleSheet("font-size: 64px; font-weight: bold;")
 
         layout.addWidget(events)
+
+        qualified = QPushButton("Qualified")
+        qualified.setCursor(Qt.CursorShape.PointingHandCursor)
+        qualified.clicked.connect(self.app.show_qualified_view)
+        qualified.setStyleSheet(BUTTON_STYLESHEET_A)
+
+        left = QWidget()
+        center = QWidget()
+        right = QWidget()
+
+        center_layout = QHBoxLayout(center)
+        center_layout.setContentsMargins(0, 0, 0, 0)
+        center_layout.addWidget(events, alignment=Qt.AlignmentFlag.AlignCenter)
+
+        right_layout = QHBoxLayout(right)
+        right_layout.setContentsMargins(0, 0, 10, 0)
+        right_layout.addStretch()
+        right_layout.addWidget(qualified, alignment=Qt.AlignmentFlag.AlignTop)
+
+        layout.addWidget(left, 1)
+        layout.addWidget(center)
+        layout.addWidget(right, 1)
+
         return container
 
     def _build_carousel(self):
@@ -135,11 +156,10 @@ class EventView(QWidget):
         layout.setSpacing(10)
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        # Arrows
+        # skeleton
         self.left_arrow = self._make_arrow_button("arrow_left.svg", lambda: self._change_event(-1))
         self.right_arrow = self._make_arrow_button("arrow_right.svg", lambda: self._change_event(1))
 
-        # Side previews
         self.left_preview = QLabel()
         self.left_preview.setFixedWidth(200)
         self.left_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -148,11 +168,11 @@ class EventView(QWidget):
         self.right_preview.setFixedWidth(200)
         self.right_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        # Centre display
         center_container = QWidget()
         center_layout = QVBoxLayout(center_container)
         center_layout.setSpacing(0)
 
+        # center
         self.center_display = QLabel()
         self.center_display.setFixedWidth(300)
         self.center_display.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -167,25 +187,27 @@ class EventView(QWidget):
         self.event_name_label.setStyleSheet("font-weight: bold;")
 
         self.event_date_label = QLabel("")
-        self.event_date_label.setFixedHeight(40)
+        self.event_date_label.setFixedHeight(30)
         self.event_date_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.event_date_label.setStyleSheet("font-weight: bold; font-size: 20px;")
 
         self.event_tier_label = QLabel("")
-        self.event_tier_label.setFixedHeight(40)
+        self.event_tier_label.setFixedHeight(30)
         self.event_tier_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.event_tier_label.setStyleSheet("font-size: 20px;")
 
         hint_label = QLabel("Click to view details")
+        hint_label.setFixedHeight(30)
         hint_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         hint_label.setStyleSheet("font-size: 11px; color: #666666;")
         
-        center_layout.addWidget(hint_label)
         center_layout.addWidget(self.event_name_label)
+        center_layout.addWidget(hint_label)
         center_layout.addWidget(self.center_display)
         center_layout.addWidget(self.event_date_label)
         center_layout.addWidget(self.event_tier_label)
 
+        # adding widgets
         layout.addWidget(self.left_arrow)
         layout.addStretch()
         layout.addWidget(self.left_preview)
@@ -194,7 +216,7 @@ class EventView(QWidget):
         layout.addStretch()
         layout.addWidget(self.right_arrow)
 
-        # Build image widgets once; raw event data stays in self.event_data
+        # build images once
         self.event_images = [
             self._build_event_image(event, size=250)
             for event in self.event_data
@@ -204,51 +226,6 @@ class EventView(QWidget):
             self._update_event_display()
 
         return container
-
-    def _make_arrow_button(self, icon_filename: str, callback) -> QLabel:
-        btn = QLabel()
-        btn.setPixmap(QIcon(str(ResourcePath.ICONS / icon_filename)).pixmap(32, 32))
-        btn.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn.setFixedWidth(125)
-        btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding)
-        btn.mousePressEvent = lambda e: callback()
-        return btn
-
-    def _build_event_image(self, event, size=300):
-        """Load an event image from bytes, falling back to a placeholder."""
-        image = QLabel()
-        pixmap = self._load_pixmap_from_bytes(
-            event.get("image_bytes"),
-            str(ResourcePath.EVENTS / "placeholder.png"),
-        )
-        image.setPixmap(
-            pixmap.scaled(
-                size, size,
-                Qt.AspectRatioMode.KeepAspectRatio,
-                Qt.TransformationMode.SmoothTransformation,
-            )
-        )
-        return image
-
-    def _load_pixmap_from_bytes(self, data: bytes | None, fallback_path: str) -> QPixmap:
-        """Shared helper: load a QPixmap from raw bytes, with a file fallback."""
-        pixmap = QPixmap()
-        if data:
-            try:
-                pixmap.loadFromData(data)
-            except Exception:
-                pass
-        if pixmap.isNull():
-            pixmap = QPixmap(fallback_path)
-        return pixmap
-
-    def _load_pixmap_from_file(self, path: str, fallback_path: str) -> QPixmap:
-        """Shared helper: load a QPixmap from a file path, with a fallback."""
-        pixmap = QPixmap(path)
-        if pixmap.isNull():
-            pixmap = QPixmap(fallback_path)
-        return pixmap
 
     def _build_timeline(self):
         container = QWidget()
@@ -311,12 +288,6 @@ class EventView(QWidget):
         layout.addWidget(labels_row)
         return container
 
-    def _build_next_up(self):
-        label = QLabel()
-        label.setFixedWidth(200)
-        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        return label
-
 
 # -- DETAIL BUILDERS --
 
@@ -333,7 +304,7 @@ class EventView(QWidget):
         image = self._build_event_image(event, size=300)
 
         name = QLabel()
-        self._fit_text_to_width(name, str(event.get("name", "N/A")), 300)
+        fit_text_to_width(name, str(event.get("name", "N/A")), 250)
 
         tier_val = event.get("tier", 0)
         tier = QLabel("Tier " + str(tier_val) if tier_val > 0 else "Non-standard Tier")
@@ -359,6 +330,7 @@ class EventView(QWidget):
         all_btn = QPushButton("All")
         me_btn = QPushButton("Me")
         league_btn = QPushButton("League")
+
         for btn in (all_btn, me_btn, league_btn):
             btn.setStyleSheet(BUTTON_STYLESHEET_A)
 
@@ -375,11 +347,15 @@ class EventView(QWidget):
             }
         """)
 
-        loading_label = QLabel("Loading...")
-        loading_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        spinner = SpinnerWidget(size=32, color="#4200FF")
+        loading_label = QWidget()
+        loading_layout = QVBoxLayout(loading_label)
+        loading_layout.setContentsMargins(0, 0, 0, 0)
+        loading_layout.addStretch()
+        loading_layout.addWidget(spinner, alignment=Qt.AlignmentFlag.AlignCenter)
+        loading_layout.addStretch()
 
-        empty_label = QLabel("Nothing to see here!")
-        empty_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        empty_label = _build_empty_label()
 
         score_container.addWidget(empty_label)
         score_container.addWidget(loading_label)
@@ -387,14 +363,16 @@ class EventView(QWidget):
         right_layout.addLayout(btn_row)
         right_layout.addWidget(score_container, stretch=1)
 
-        # -- Assemble root widget with typed state --
+        # assemble root widget with state
         state = ScoreState(
             event=event,
             score_container=score_container,
             loading_widget=loading_label,
+            spinner=spinner,
             empty_widget=empty_label,
             buttons={"all": all_btn, "me": me_btn, "league": league_btn},
         )
+
         root = EventDetailWidget(state)
         root_layout = QHBoxLayout(root)
         root_layout.addWidget(left)
@@ -418,10 +396,9 @@ class EventView(QWidget):
             outer_layout.addWidget(empty)
             return outer
 
-        # Group entries by rank
         ranks: dict[int, list] = {}
         for entry in data:
-            ranks.setdefault(entry["rank"], []).append(entry)
+            ranks.setdefault(entry["rank"], []).append(entry)           # group entries by rank
 
         MAX_PER_ROW = 4
 
@@ -446,14 +423,14 @@ class EventView(QWidget):
 
             font = rank_label.font()
             font.setBold(True)
-            font.setPointSize(self._rank_font_size(rank))
+            font.setPointSize(int(max(20, 24 - (rank - 1) * 1.2)))          # font size relative to rank
             rank_label.setFont(font)
 
             rank_block_layout.addWidget(rank_label)
 
             for i in range(0, len(players), MAX_PER_ROW):
                 chunk = players[i:i + MAX_PER_ROW]
-                image_size = self._size_from_quantity(len(chunk))
+                image_size = min(max(80, 200 - (len(chunk) - 1) * 25), 200)             # image size relative to number on row
 
                 row_widget = QWidget()
                 row_layout = QHBoxLayout(row_widget)
@@ -461,21 +438,24 @@ class EventView(QWidget):
                 row_layout.setContentsMargins(0, 0, 0, 0)
                 row_layout.addStretch()
                 for player in chunk:
-                    player_image = self._build_player_tile(player, image_size, rank)
+                    extra_padding = 20 if rank <= 3 else 0
+                    player_image = self._build_player_tile(player, image_size, rank, extra_padding=extra_padding)
                     row_layout.addWidget(player_image)
 
                 row_layout.addStretch()
                 rank_block_layout.addWidget(row_widget)
 
+            QApplication.processEvents()
             outer_layout.addWidget(rank_block)
 
         outer_layout.addStretch()
-
+        
         scroll = QScrollArea()
         scroll.setStyleSheet(SCROLL_STYLESHEET)
         scroll.setWidgetResizable(True)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         scroll.setWidget(outer)
+        
         return scroll
 
     def create_me_score_data(self, data):
@@ -525,7 +505,7 @@ class EventView(QWidget):
 
         row_layout.addStretch()
 
-        # Total points summary
+        # total points summary
         total_points = sum(p["points"] for p in data)
         total_label = self._make_centered_label(f"+{total_points} pts", bold=True)
         total_label.setStyleSheet("font-size: 20px; color: #3EA702;")
@@ -545,7 +525,6 @@ class EventView(QWidget):
 
         IMAGE_SIZE = 100
 
-        # Sort members by total points descending
         sorted_members = sorted(
             data.items(),
             key=lambda item: sum(p["points"] for p in item[1].values()),
@@ -560,7 +539,7 @@ class EventView(QWidget):
         for member_rank, (member_name, players) in enumerate(sorted_members, start=1):
             total_points = sum(p["points"] for p in players.values())
 
-            # -- Member block --
+            # member block
             block = QWidget()
             block.setObjectName("block")
             block.setStyleSheet("""
@@ -574,7 +553,6 @@ class EventView(QWidget):
             block_layout.setContentsMargins(15, 15, 15, 15)
             block_layout.setSpacing(10)
 
-            # Header row: rank + member name + total points
             header_layout = QHBoxLayout()
             rank_label = self._make_centered_label(f"#{member_rank}", bold=True)
             rank_label.setStyleSheet("font-size: 20px; color: #AAAAAA;")
@@ -594,13 +572,11 @@ class EventView(QWidget):
             header_layout.addWidget(total_label)
             block_layout.addLayout(header_layout)
 
-            # Divider
             divider = QWidget()
             divider.setFixedHeight(1)
             divider.setStyleSheet("background-color: #333333;")
             block_layout.addWidget(divider)
 
-            # Player row
             player_row = QWidget()
             player_layout = QHBoxLayout(player_row)
             player_layout.setSpacing(15)
@@ -636,38 +612,28 @@ class EventView(QWidget):
         scroll.setWidgetResizable(True)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         scroll.setWidget(outer)
+        
         return scroll
 
-    def _build_player_tile(self, player, image_size, rank, enable_tooltip=True, enable_glow=True):
+    def _build_player_tile(self, player, image_size, rank, enable_tooltip=True, enable_glow=True, extra_padding=0):
         widget = QWidget()
         layout = QVBoxLayout(widget)
         layout.setSpacing(4)
-        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setContentsMargins(0, extra_padding, 0, extra_padding)
 
-        image = QLabel()
-        image.setFixedSize(image_size, image_size)
-        image.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        pixmap = self._load_pixmap_from_file(
-            str(ResourcePath.PLAYERS / f"{player['player']}.jpg"),
-            str(ResourcePath.PLAYERS / "placeholder.png"),
-        )
-        image.setPixmap(
-            pixmap.scaled(
-                image_size, image_size,
-                Qt.AspectRatioMode.KeepAspectRatioByExpanding,
-                Qt.TransformationMode.SmoothTransformation,
-            )
-        )
-
-        if rank in self.RANK_STYLES and enable_glow == True:
+        pixmap = Session.get_pixmap("players", player["player"])
+        image = HoverImage(pixmap, size=image_size)
+            
+        if rank in self.RANK_STYLES and enable_glow:
             color = self.RANK_STYLES[rank]
             glow = QGraphicsDropShadowEffect()
-            glow.setBlurRadius(30)
+            glow.setBlurRadius(35)
             glow.setOffset(0)
             glow.setColor(QColor(color))
-            image.setGraphicsEffect(glow)
-            layout.setContentsMargins(15, 15, 15, 15)
+            widget.setGraphicsEffect(glow)
+
+        _original_enter = image.enterEvent
+        _original_leave = image.leaveEvent
 
         def enterEvent(event):
             QToolTip.showText(
@@ -675,11 +641,11 @@ class EventView(QWidget):
                 f"{player['player']}",
                 image,
             )
-            QWidget.enterEvent(widget, event)
+            _original_enter(event)
 
         def leaveEvent(event):
             QToolTip.hideText()
-            QWidget.leaveEvent(widget, event)
+            _original_leave(event)
 
         if enable_tooltip:
             image.enterEvent = enterEvent
@@ -688,7 +654,7 @@ class EventView(QWidget):
 
         layout.addWidget(image)
         return widget
-
+    
     def _format_rank_text(self, rank: int | None, points: int) -> str:
         if rank is None:
             return "Did not score"
@@ -701,12 +667,6 @@ class EventView(QWidget):
             return f"{rank}{suffix} - {points} points"
         else:
             return f"{rank}{suffix} - {points} point"
-
-    def _rank_font_size(self, rank: int) -> int:
-        return int(max(20, 24 - (rank - 1) * 1.2))
-
-    def _size_from_quantity(self, count: int) -> int:
-        return min(max(80, 200 - (count - 1) * 25), 200)
 
     def _make_centered_label(self, text: str, bold: bool = False, font_size: int | None = None) -> QLabel:
         label = QLabel(text)
@@ -731,9 +691,11 @@ class EventView(QWidget):
 
         self.current_detail_event_id = event_id
         self.view_stack.setCurrentWidget(self.event_detail_cache[event_id])
+        SoundManager.play("loaded")
 
     def _return_to_main(self):
         self.view_stack.setCurrentWidget(self.main_page)
+        SoundManager.play("error")
 
     def _set_active_score_button(self, root: EventDetailWidget, tab: str):
         for name, btn in root.score_state.buttons.items():
@@ -747,6 +709,7 @@ class EventView(QWidget):
             return
         state.active_filter = filter_type
         self._select_score_tab(root, filter_type)
+        SoundManager.play("button")
 
     def _select_score_tab(self, root: EventDetailWidget, tab: str):
         state = root.score_state
@@ -758,6 +721,7 @@ class EventView(QWidget):
             return
 
         container.setCurrentWidget(state.loading_widget)
+        state.spinner.start()
         self._load_score_data(root, tab)
 
     def _load_score_data(self, root: EventDetailWidget, tab: str):
@@ -767,8 +731,8 @@ class EventView(QWidget):
 
         tab_config = {
             "all":    (Session.event_service.get_event_standings,       (event_id,)),
-            "me":     (Session.event_service.get_user_event_scores,     (Session.current_team_id, event_id)),
-            "league": (Session.event_service.get_league_event_scores,   (Session.current_league_id, event_id)),
+            "me":     (Session.event_service.get_user_event_scores,     (Session.team_data.get("team_id"), event_id)),
+            "league": (Session.event_service.get_league_event_scores,   (Session.league_data.get("league_id"), event_id)),
         }
         builder_config = {
             "all":    self.create_all_score_data,
@@ -786,12 +750,14 @@ class EventView(QWidget):
             state.loaded[tab] = True
             if state.active_filter == tab:
                 container.setCurrentWidget(result)
+            state.spinner.stop()
 
         def _error(e):
             error_label = QLabel(f"Failed to load data: {e}")
             error_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             container.addWidget(error_label)
             container.setCurrentWidget(error_label)
+            state.spinner.stop()
 
         run_async(
             parent_widget=container,
@@ -808,8 +774,34 @@ class EventView(QWidget):
     def _change_event(self, delta: int):
         if not self.event_images:
             return
-        self.current_event_idx = (self.current_event_idx + delta) % len(self.event_images)
+
+        self._delta = delta
+
+        # fade out
+        effect = QGraphicsOpacityEffect(self.center_display)
+        self.center_display.setGraphicsEffect(effect)
+        self._fade_out = QPropertyAnimation(effect, b"opacity")
+        self._fade_out.setDuration(120)
+        self._fade_out.setStartValue(1.0)
+        self._fade_out.setEndValue(0.0)
+        self._fade_out.setEasingCurve(QEasingCurve.Type.OutQuad)
+        self._fade_out.finished.connect(self._swap_and_fade_in)
+        self._fade_out.start()
+
+        SoundManager.play("button")
+
+    def _swap_and_fade_in(self):
+        self.current_event_idx = (self.current_event_idx + self._delta) % len(self.event_images)
         self._update_event_display()
+
+        effect = self.center_display.graphicsEffect()
+        self._fade_in = QPropertyAnimation(effect, b"opacity")
+        self._fade_in.setDuration(120)
+        self._fade_in.setStartValue(0.0)
+        self._fade_in.setEndValue(1.0)
+        self._fade_in.setEasingCurve(QEasingCurve.Type.InQuad)
+        self._fade_in.finished.connect(lambda: self.center_display.setGraphicsEffect(None))
+        self._fade_in.start()
 
     def _update_event_display(self):
         total = len(self.event_images)
@@ -830,9 +822,8 @@ class EventView(QWidget):
         self.left_preview.setPixmap(scale(self.event_images[left_idx].pixmap()))
         self.right_preview.setPixmap(scale(self.event_images[right_idx].pixmap()))
 
-        # Labels — pull directly from event_data, no redundant dict needed
         event = self.event_data[center_idx]
-        self._fit_text_to_width(self.event_name_label, event.get("name", "N/A"), 300)
+        fit_text_to_width(self.event_name_label, event.get("name", "N/A"), 250)
         self.event_date_label.setText(
             str(datetime.fromisoformat(event.get("start_weekend", "")).date())
         )
@@ -848,9 +839,12 @@ class EventView(QWidget):
         dt_event = datetime.fromisoformat(event_date_str.replace("Z", "+00:00"))
         sel_year, sel_month = dt_event.year, dt_event.month
 
+        start_year = 2013 + Session.SEASON
+
         for i, dot in enumerate(self.timeline_dots):
-            dot_year  = 2026 if i <= 9 else 2027
-            dot_month = (i + 3) if i <= 9 else (i - 9)
+            total_months = 3 + i
+            dot_year  = start_year + (total_months - 1) // 12
+            dot_month = ((total_months - 1) % 12) + 1
 
             if dot_year == sel_year and dot_month == sel_month:
                 color = "#008CFF"
@@ -881,25 +875,26 @@ class EventView(QWidget):
             border-radius: 8px;
         """)
 
-    def _fit_text_to_width(self, label: QLabel, text: str, max_width: int,
-                           min_font_size=2, max_font_size=40):
-        """Binary-search the largest font size that fits text within max_width."""
-        if not text or max_width <= 0:
-            return
+# -- HELPERS --
 
-        font = label.font()
-        font.setBold(True)
-        low, high, best_size = min_font_size, max_font_size, min_font_size
+    def _make_arrow_button(self, icon_filename: str, callback) -> QLabel:
+        btn = QLabel()
+        btn.setPixmap(QIcon(str(ResourcePath.ICONS / icon_filename)).pixmap(32, 32))
+        btn.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn.setFixedWidth(125)
+        btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding)
+        btn.mousePressEvent = lambda e: callback()
+        return btn
 
-        while low <= high:
-            mid = (low + high) // 2
-            font.setPointSize(mid)
-            if QFontMetrics(font).boundingRect(text).width() <= max_width:
-                best_size = mid
-                low = mid + 1
-            else:
-                high = mid - 1
-
-        font.setPointSize(best_size)
-        label.setFont(font)
-        label.setText(text)
+    def _build_event_image(self, event, size=300):
+        image = QLabel()
+        pixmap = Session.get_pixmap("events", event.get("name", ""))
+        image.setPixmap(
+            pixmap.scaled(
+                size, size,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation,
+            )
+        )
+        return image

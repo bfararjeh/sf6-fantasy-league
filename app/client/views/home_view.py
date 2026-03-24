@@ -1,5 +1,4 @@
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QFontMetrics, QPixmap
 from PyQt6.QtWidgets import (
     QApplication,
     QFileDialog,
@@ -11,11 +10,12 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from app.client.controllers.image_cache import ImageCache
 from app.client.controllers.resource_path import ResourcePath
 from app.client.controllers.session import Session
+from app.client.controllers.sound_manager import SoundManager
 from app.client.theme import *
-from app.client.widgets.footer_nav import FooterNav
-from app.client.widgets.header_bar import HeaderBar
+from app.client.widgets.misc import _build_empty_label, fit_text_to_width
 
 class HomeView(QWidget):
     def __init__(self, app):
@@ -38,10 +38,7 @@ class HomeView(QWidget):
         self.content_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
         self.content_layout.setContentsMargins(0,0,0,0)
 
-        self.root_layout.addWidget(HeaderBar(self.app))
         self.root_layout.addWidget(self.content_widget)
-        self.root_layout.addStretch()
-        self.root_layout.addWidget(FooterNav(self.app))
 
         self._build_sections()
     
@@ -86,7 +83,7 @@ class HomeView(QWidget):
         label.setStyleSheet("""
             font-weight: bold;
         """)
-        self._fit_text_to_width(label, f"Welcome back, {self.my_username}.", 850, 2, 60)
+        fit_text_to_width(label, f"Welcome back, {self.my_username}.", 850, 2, 60)
 
         subtitle = QLabel(f"User ID: {self.my_user_id}")
         subtitle.setAlignment(Qt.AlignmentFlag.AlignHCenter)
@@ -106,22 +103,16 @@ class HomeView(QWidget):
     def _build_home_yap(self):
         cont = QWidget()
         layout = QVBoxLayout(cont)
-        layout.setContentsMargins(25,0,25,0)
+        layout.setContentsMargins(50,0,50,0)
 
-        main = QLabel("""
-Welcome to the first ever Street Fighter 6 Fantasy League! Create leagues with you and up to 5 friends, draft your dream teams of 5 players, and keep an eye out throughout the season to see who comes out on top!
-
-The app works simply. Firstly, head on over to the "League" page where you can create a league or join one using a League ID. Once you're in your league, wait for all your friends to join then the league owner can set the draft order and begin the draft. This fantasy league uses a snake draft; with an order like "Alice, Bob, Charlie", the draft will go "Alice, Bob, Charlie, Charlie, Bob, Alice".
-
-Once the draft is over and you and all your leaguemates have created your dream teams, it's time to wait! You can check out the list of scoring events on the "Events" page, and after each event the scores will be updated for you and your league! You can check out your own standings in the "League" page, or your league's standings in the "Leaderboards" page, where you can also view the global player pool and global stats. Thank you for downloading this app, and I hope you win!
-               
-This app was developed solely by Fararjeh. You can learn more about the developer here: https://fararjeh-fgc.com/.
-""")
+        main = QLabel()
+        with open(str(ResourcePath.TEXTS / "home_yap.txt"), "r") as file:
+            text = file.read()
+        main.setText(text)
         main.setWordWrap(True)
         main.setAlignment(Qt.AlignmentFlag.AlignCenter)
         main.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
 
-        layout.addStretch()
         layout.addWidget(main)
         layout.addStretch()
 
@@ -132,14 +123,9 @@ This app was developed solely by Fararjeh. You can learn more about the develope
         layout = QVBoxLayout(cont)
         layout.setContentsMargins(25,0,25,0)
 
-        main = QLabel("""
-It's quiet. Too quiet...
-""")
-        main.setWordWrap(True)
-        main.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
         layout.addStretch()
-        layout.addWidget(main)
+        layout.addWidget(_build_empty_label())
+        layout.addStretch()
 
         return cont
 
@@ -150,6 +136,11 @@ It's quiet. Too quiet...
         """
         Opens a file dialog to select an image and updates the user's avatar.
         """
+
+        if Session.blocking_state:
+            return
+        
+        SoundManager.play("button")
 
         # create file dialog manually
         file_dialog = QFileDialog(parent=self)
@@ -168,6 +159,7 @@ It's quiet. Too quiet...
             QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
             Session.auth_base.assign_avatar(file_path)
             Session.avatar_cache.pop(self.my_user_id, None)
+            ImageCache.invalidate("avatars", str(self.my_user_id))
             self._refresh_avatar()
             QApplication.restoreOverrideCursor()
 
@@ -175,7 +167,8 @@ It's quiet. Too quiet...
             msg.setWindowTitle("Change Avatar")
             msg.setText("Avatar updated successfuly!")
             msg.setStyleSheet("background: #10194D;")
-            msg.setIcon(QMessageBox.Icon.Information)
+            msg.setIcon(QMessageBox.Icon.NoIcon)
+            SoundManager.play("success")
             msg.exec()
 
         except Exception as e:
@@ -184,7 +177,8 @@ It's quiet. Too quiet...
             msg.setWindowTitle("Change Avatar")
             msg.setText(f"Avatar updated failed: {e}")
             msg.setStyleSheet("background: #10194D;")
-            msg.setIcon(QMessageBox.Icon.Critical)
+            msg.setIcon(QMessageBox.Icon.NoIcon)
+            SoundManager.play("error")
             msg.exec()
 
 
@@ -192,63 +186,20 @@ It's quiet. Too quiet...
 
     def _build_avatar(self):
         image = QLabel()
-        avatar = QPixmap()
-
-        try:
-            avatar.loadFromData(Session.init_avatar(self.my_user_id))
-            if avatar.isNull():
-                avatar = QPixmap(str(ResourcePath.AVATAR / "placeholder.png"))
-
-        except Exception:
-            avatar = QPixmap(str(ResourcePath.AVATAR / "placeholder.png"))
-
         image.setPixmap(
-            avatar.scaled(
+            Session.get_pixmap("avatars", self.my_user_id).scaled(
                 250, 250,
                 Qt.AspectRatioMode.KeepAspectRatio,
                 Qt.TransformationMode.SmoothTransformation
             )
         )
-        
         return image
 
     def _refresh_avatar(self):
-        try:
-            pixmap = QPixmap()
-            pixmap.loadFromData(Session.init_avatar(self.my_user_id))
-            if pixmap.isNull():
-                pixmap = QPixmap(str(ResourcePath.AVATAR / "placeholder.png"))
-
-        except Exception as e:
-            pixmap = QPixmap(str(ResourcePath.AVATAR / "placeholder.png"))
-
         self.avatar_label.setPixmap(
-            pixmap.scaled(
+            Session.get_pixmap("avatars", self.my_user_id).scaled(
                 250, 250,
                 Qt.AspectRatioMode.KeepAspectRatio,
                 Qt.TransformationMode.SmoothTransformation
             )
         )
-
-    def _fit_text_to_width(self, label: QLabel, text: str, max_width: int,
-                           min_font_size=2, max_font_size=40):
-        """Binary-search the largest font size that fits text within max_width."""
-        if not text or max_width <= 0:
-            return
-
-        font = label.font()
-        font.setBold(True)
-        low, high, best_size = min_font_size, max_font_size, min_font_size
-
-        while low <= high:
-            mid = (low + high) // 2
-            font.setPointSize(mid)
-            if QFontMetrics(font).boundingRect(text).width() <= max_width:
-                best_size = mid
-                low = mid + 1
-            else:
-                high = mid - 1
-
-        font.setPointSize(best_size)
-        label.setFont(font)
-        label.setText(text)

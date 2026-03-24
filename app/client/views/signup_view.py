@@ -7,7 +7,10 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from PyQt6.QtGui import QPixmap
 
+from app.client.controllers.resource_path import ResourcePath
+from app.client.controllers.sound_manager import SoundManager
 from app.services.signup_service import SignupService
 
 class SignupView(QWidget):
@@ -19,16 +22,14 @@ class SignupView(QWidget):
     def _build_ui(self):
         root_layout = QVBoxLayout()
 
-        # title
-        title = QLabel("Fantasy Street Fighter 6")
-        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        title.setStyleSheet(
-            """
-            QLabel {
-                font-size: 28px;
-                font-weight: bold;
-            }
-            """
+        logo = QLabel()
+        image = QPixmap(str(ResourcePath.IMAGES / "logo.png"))
+        logo.setPixmap(
+            image.scaled(
+                150, 150,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation
+            )
         )
 
         # footer
@@ -152,7 +153,7 @@ class SignupView(QWidget):
         content_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         content_layout.setSpacing(20)
 
-        content_layout.addWidget(title)
+        content_layout.addWidget(logo, alignment=Qt.AlignmentFlag.AlignCenter)
         content_layout.addWidget(form_container)
 
         content_container.setLayout(content_layout)
@@ -181,6 +182,7 @@ class SignupView(QWidget):
         username = self.name_input.text()
 
         if password != self.password_verify_input.text():
+            SoundManager.play("error")
             self.status_label.setText(f"Passwords must match!")
             self.status_label.setStyleSheet("color: #cc0000;")
             return
@@ -199,11 +201,14 @@ class SignupView(QWidget):
                 QApplication.restoreOverrideCursor()
                 self.status_label.setText(f"Signup successful! You may return to the login page.")
                 self.status_label.setStyleSheet("color: #4ade00;")
+                SoundManager.play("success")
             else:
                 raise Exception("Unable to create user.")
+                SoundManager.play("error")
 
         except Exception as e:
             self.status_label.setText(f"Signup failed: {e}")
             self.status_label.setStyleSheet("color: #ffd500;")
             self._set_inputs_enabled(True)
             QApplication.restoreOverrideCursor()
+            SoundManager.play("error")

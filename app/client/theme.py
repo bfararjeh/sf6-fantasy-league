@@ -17,6 +17,17 @@ BRIGHT_TEXT_COLOR = QColor("#FF4D6D")
 # banner
 BANNER_LABEL_STYLESHEET = f"""
 QLabel {{
+    background-color: {QColor("#10194D").lighter(125).name()};
+    color: {QColor("#888888").name()};
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 500;
+}}
+"""
+
+BANNER_LABEL_STYLESHEET_IMPORTANT = f"""
+QLabel {{
     background-color: {QColor("#4200FF").lighter(110).name()};
     color: {QColor("#FFFFFF").name()};
     border-radius: 6px;
@@ -150,4 +161,27 @@ QToolTip {{
     font-size: 18px;
     font-weight: bold;
 }}
+"""
+
+FOOTER_BUTTON_STYLE = """
+    QPushButton {
+        font-size: 14px;
+        font-weight: bold;
+        background-color: #4200ff;
+        color: white;
+        border: none;
+    }
+    QPushButton:hover { background-color: #642bff; }
+    QPushButton:pressed { background-color: #3900d5; }
+"""
+
+FOOTER_WARNING_STYLE = """
+    QLabel {
+        font-size: 16px;
+        font-weight: bold;
+        background-color: #700000;
+        color: #ffffff;
+        padding-left: 10px;
+        padding-right: 10px;
+    }
 """

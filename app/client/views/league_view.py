@@ -1,6 +1,6 @@
 import re
 from PyQt6.QtCore import Qt, QTimer, QSize
-from PyQt6.QtGui import QFontMetrics, QPixmap, QColor
+from PyQt6.QtGui import QColor
 from PyQt6.QtSvgWidgets import QSvgWidget
 from PyQt6.QtWidgets import (
     QGridLayout,
@@ -24,9 +24,10 @@ from PyQt6.QtWidgets import (
 from app.client.controllers.resource_path import ResourcePath
 from app.client.controllers.session import Session
 from app.client.controllers.async_runner import run_async
-from app.client.widgets.header_bar import HeaderBar
-from app.client.widgets.footer_nav import FooterNav
-from app.client.widgets.painter import PointsChart
+from app.client.controllers.sound_manager import SoundManager
+from app.client.widgets.misc import fit_text_to_width, set_status
+from app.client.widgets.hover_image import HoverImage
+from app.client.widgets.point_graph import PointsChart
 from app.client.theme import *
 
 
@@ -57,6 +58,7 @@ class LeagueView(QWidget):
     def __init__(self, app):
         super().__init__()
         self.app = app
+        self.app.connect_refresh(lambda: self._refresh(force=1))
 
         self._stat_cache = {}
 
@@ -69,10 +71,6 @@ class LeagueView(QWidget):
         self.root_layout = QVBoxLayout()
         self.root_layout.setContentsMargins(0, 0, 0, 0)
         self.root_layout.setSpacing(0)
-
-        self.header = HeaderBar(self.app)
-        self.header.refresh_button.refresh_requested.connect(lambda: self._refresh(force=1))
-        self.footer = FooterNav(self.app)
 
         self.status_label = QLabel("")
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -87,10 +85,8 @@ class LeagueView(QWidget):
         self.view_stack.addWidget(self.pre_draft_page)
         self.view_stack.addWidget(self.post_draft_page)
 
-        self.root_layout.addWidget(self.header)
         self.root_layout.addWidget(self.view_stack, stretch=1)
         self.root_layout.addWidget(self.status_label)
-        self.root_layout.addWidget(self.footer)
 
         self.setLayout(self.root_layout)
 
@@ -557,16 +553,15 @@ class LeagueView(QWidget):
         layout.setSpacing(5)
 
         image = QLabel()
-        image.setFixedSize(QSize(75, 75))
+        image.setFixedSize(QSize(85, 85))
         image.setAlignment(Qt.AlignmentFlag.AlignHCenter)
 
         if player:
             player_name = player.get("id", "-")
-            pixmap = QPixmap(str(ResourcePath.PLAYERS / f"{player_name}.jpg"))
-            if pixmap.isNull():
-                pixmap = QPixmap(str(ResourcePath.PLAYERS / "placeholder.png"))
-            image.setPixmap(pixmap.scaled(75, 75, Qt.AspectRatioMode.IgnoreAspectRatio, Qt.TransformationMode.SmoothTransformation))
-            image.setStyleSheet("border: 2px solid #BBBBBB;")
+
+            pixmap = Session.get_pixmap("players", player_name)
+            image = HoverImage(pixmap, size=85, border_width=2, border_color="#BBBBBB")
+            
             image.setCursor(Qt.CursorShape.PointingHandCursor)
         else:
             image.setStyleSheet("border: 2px dashed #555; background-color: #333; color: #eee;")
@@ -677,9 +672,7 @@ class LeagueView(QWidget):
     def _build_portrait_button(self, player: dict, inactive: bool = False) -> QLabel:
         # grab name then image path
         name = player.get("id", "-")
-        pixmap = QPixmap(str(ResourcePath.PLAYERS / f"{name}.jpg"))
-        if pixmap.isNull():
-            pixmap = QPixmap(str(ResourcePath.PLAYERS / "placeholder.png"))
+        pixmap = Session.get_pixmap("players", name)
 
         # return consistent styled image
         image = QLabel()
@@ -769,7 +762,7 @@ class LeagueView(QWidget):
                 if item.widget():
                     item.widget().setParent(None)
 
-            self._set_status(f"Failed to load history: {e}", code=2)
+            set_status(self, f"Failed to load history: {e}", code=2)
 
         # grabbing player score timeline async
         # manual delay: loads too fast but not fast enough - looks weird
@@ -810,11 +803,13 @@ class LeagueView(QWidget):
         image.setFixedSize(180, 180)
         image.setStyleSheet("border: 2px solid #FFFFFF;")
         image.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        pixmap = QPixmap(str(ResourcePath.PLAYERS / f"{name}.jpg"))
-        if pixmap.isNull():
-            pixmap = QPixmap(str(ResourcePath.PLAYERS / "placeholder.png"))
-        image.setPixmap(pixmap.scaled(180, 180, Qt.AspectRatioMode.IgnoreAspectRatio, Qt.TransformationMode.SmoothTransformation))
-
+        image.setPixmap(
+            Session.get_pixmap("players", name).scaled(
+                180, 180,
+                Qt.AspectRatioMode.IgnoreAspectRatio,
+                Qt.TransformationMode.SmoothTransformation
+            )
+        )
         region_img = ResourcePath.FLAGS / f"{region}.png"
         if not region_img.exists():
             region_img = ResourcePath.FLAGS / "placeholder.png"
@@ -868,7 +863,7 @@ class LeagueView(QWidget):
         for i, (label, value) in enumerate([
             ("Events Played", str(len(timeline))),
             ("Total Points",  str(points)),
-            ("Average Points",str(avg_gained)),
+            ("AVG. Pts/Event",str(avg_gained)),
             ("Best Event",    f"+{best_gained}"),
             ("Worst Event",   f"+{worst_gained}"),
         ]):
@@ -934,7 +929,7 @@ class LeagueView(QWidget):
         helper svg magic method that highlights countries in the world map.
         searches country by name and adds a fill style tag
         '''
-        svg_path = ResourcePath.MAP / "world.svg"
+        svg_path = ResourcePath.IMAGES / "world.svg"
         svg_text = svg_path.read_text(encoding="utf-8")
 
         mapping = REGION_SVG_MAP.get(region)
@@ -958,36 +953,36 @@ class LeagueView(QWidget):
         name = self.create_league_input.text().strip()
         self.create_league_input.setText("")
         if not name:
-            self._set_status("Please enter a league name.", code=2)
+            set_status(self, "Please enter a league name.", code=2)
             return
 
         def _success(success):
             if success:
                 self._refresh(force=1)
-                self._set_status("League created successfully!", code=1)
+                set_status(self, "League created successfully!", code=1)
 
         def _error(error):
-            self._set_status(f"Failed to create league: {error}", code=2)
+            set_status(self, f"Failed to create league: {error}", code=2)
 
-        self._set_status("Creating League...")
+        set_status(self, "Creating League...")
         run_async(parent_widget=self.league_widget, fn=Session.league_service.create_then_join_league, args=(name,), on_success=_success, on_error=_error)
 
     def join_league(self):
         league_id = self.join_input.text().strip()
         self.join_input.setText("")
         if not league_id:
-            self._set_status("Please enter a league ID.", code=2)
+            set_status(self, "Please enter a league ID.", code=2)
             return
 
         def _success(success):
             if success:
                 self._refresh(force=1)
-                self._set_status("League joined successfully!", code=1)
+                set_status(self, "League joined successfully!", code=1)
 
         def _error(error):
-            self._set_status(f"Failed to join league: {error}", code=2)
+            set_status(self, f"Failed to join league: {error}", code=2)
 
-        self._set_status("Joining League...")
+        set_status(self, "Joining League...")
         run_async(parent_widget=self.league_widget, fn=Session.league_service.join_league, args=(league_id,), on_success=_success, on_error=_error)
 
     def leave_league(self):
@@ -995,42 +990,43 @@ class LeagueView(QWidget):
         msg.setWindowTitle("Leave League")
         msg.setStyleSheet("background: #10194D;")
         msg.setText("Are you sure you would like to leave your league?")
-        msg.setIcon(QMessageBox.Icon.Warning)
+        msg.setIcon(QMessageBox.Icon.NoIcon)
         ok_btn = msg.addButton("Leave", QMessageBox.ButtonRole.AcceptRole)
         msg.addButton("Cancel", QMessageBox.ButtonRole.RejectRole)
+        SoundManager.play("button")
         msg.exec()
 
         if msg.clickedButton() != ok_btn:
-            self._set_status("Leave cancelled.", 2)
+            set_status(self, "Leave cancelled.", 2)
             return
 
         def _success(success):
             if success:
                 self._refresh(force=1)
-                self._set_status("League left successfully!", code=1)
+                set_status(self, "League left successfully!", code=1)
 
         def _error(error):
-            self._set_status(f"Failed to leave league: {error}", code=2)
+            set_status(self, f"Failed to leave league: {error}", code=2)
 
-        self._set_status("Leaving League...")
+        set_status(self, "Leaving League...")
         run_async(parent_widget=self.league_widget, fn=Session.league_service.leave_league, args=(), on_success=_success, on_error=_error)
 
     def assign_draft_order(self):
         usernames = self.draft_input.text().strip()
         if not usernames:
-            self._set_status("Please enter a list of usernames.", code=2)
+            set_status(self, "Please enter a list of usernames.", code=2)
             return
         user_list = [name.strip() for name in usernames.split(",")]
 
         def _success(success):
             if success:
                 self._refresh(force=1)
-                self._set_status("Draft order assigned successfully!", code=1)
+                set_status(self, "Draft order assigned successfully!", code=1)
 
         def _error(error):
-            self._set_status(f"Failed to assign draft order: {error}", code=2)
+            set_status(self, f"Failed to assign draft order: {error}", code=2)
 
-        self._set_status("Assigning draft order...")
+        set_status(self, "Assigning draft order...")
         run_async(parent_widget=self.league_widget, fn=Session.league_service.assign_draft_order, args=(user_list,), on_success=_success, on_error=_error)
 
     def begin_draft(self):
@@ -1038,42 +1034,42 @@ class LeagueView(QWidget):
         msg.setWindowTitle("Begin Draft")
         msg.setStyleSheet("background: #10194D;")
         msg.setText("Beginning the draft will lock your league, preventing any member leaving or joining, and preventing the changing of the forfeit. Continue?")
-        msg.setIcon(QMessageBox.Icon.Question)
+        msg.setIcon(QMessageBox.Icon.NoIcon)
         ok_btn = msg.addButton("Begin draft", QMessageBox.ButtonRole.AcceptRole)
         msg.addButton("Cancel", QMessageBox.ButtonRole.RejectRole)
+        SoundManager.play("button")
         msg.exec()
 
         if msg.clickedButton() != ok_btn:
-            self._set_status("Draft cancelled.", 2)
+            set_status(self, "Draft cancelled.", 2)
             return
 
         def _success(success):
             if success:
                 self._refresh(force=1)
-                self._set_status("Draft started successfully!", code=1)
+                set_status(self, "Draft started successfully!", code=1)
 
         def _error(error):
-            self._set_status(f"Failed to begin draft: {error}", code=2)
+            set_status(self, f"Failed to begin draft: {error}", code=2)
 
-        self._set_status("Beginning draft...")
+        set_status(self, "Beginning draft...")
         run_async(parent_widget=self.league_widget, fn=Session.league_service.begin_draft, args=(), on_success=_success, on_error=_error)
 
     def set_forfeit(self):
         forfeit = self.forfeit_input.text().strip()
         self.forfeit_input.setText("")
         if not forfeit:
-            self._set_status("Please enter a forfeit.", code=2)
+            set_status(self, "Please enter a forfeit.", code=2)
             return
 
         def _success(success):
             if success:
                 self.my_league_forfeit = forfeit
-                Session.league_forfeit = forfeit
-                self._fit_text_to_width(label=self.forfeit_label, text=self.my_league_forfeit, max_width=400, max_font_size=12)
-                self._set_status("Forfeit set!", code=1)
+                fit_text_to_width(label=self.forfeit_label, text=self.my_league_forfeit, max_width=400, max_font_size=12)
+                set_status(self, "Forfeit set!", code=1)
 
         def _error(error):
-            self._set_status(f"Failed to set forfeit: {error}", code=2)
+            set_status(self, f"Failed to set forfeit: {error}", code=2)
 
         run_async(parent_widget=self.league_widget, fn=Session.league_service.set_forfeit, args=(forfeit,), on_success=_success, on_error=_error)
 
@@ -1081,39 +1077,39 @@ class LeagueView(QWidget):
         player = self.pick_input.currentText()
         self.pick_input.setCurrentIndex(-1)
         if not player:
-            self._set_status("Please enter a player name.", 2)
+            set_status(self, "Please enter a player name.", 2)
             return
         if not any(p["name"] == player for p in Session.player_scores):
-            self._set_status(f"{player} not found. Names are case sensitive!", 2)
+            set_status(self, f"{player} not found. Names are case sensitive!", 2)
             return
 
         def _success(success):
             if success:
                 self._refresh(force=1)
-                self._set_status(f"Welcome {player} to {self.my_team_name}!", 1)
+                set_status(self, f"Welcome {player} to {self.my_team_name}!", 1)
 
         def _error(error):
-            self._set_status(f"Failed to pick player: {error}", 2)
+            set_status(self, f"Failed to pick player: {error}", 2)
 
-        self._set_status("Picking player...", 0)
+        set_status(self, "Picking player...", 0)
         run_async(parent_widget=self.team_widget, fn=Session.team_service.pick_player, args=(player,), on_success=_success, on_error=_error)
 
     def create_team(self):
         team_name = self.create_team_input.text().strip()
         self.create_team_input.setText("")
         if not team_name:
-            self._set_status("Please enter a team name.", 2)
+            set_status(self, "Please enter a team name.", 2)
             return
 
         def _success(success):
             if success:
                 self._refresh(force=1)
-                self._set_status("Team created successfully!", 1)
+                set_status(self, "Team created successfully!", 1)
 
         def _error(error):
-            self._set_status(f"Failed to create team: {error}", 2)
+            set_status(self, f"Failed to create team: {error}", 2)
 
-        self._set_status("Creating team...", 0)
+        set_status(self, "Creating team...", 0)
         run_async(parent_widget=self.team_widget, fn=Session.team_service.create_team, args=(team_name,), on_success=_success, on_error=_error)
 
     def toggle_former_players(self):
@@ -1127,24 +1123,39 @@ class LeagueView(QWidget):
 # -- REFRESHERS --
 
     def _refresh(self, force=0):
-        Session.init_league_data(force)
+        draft_complete_before = getattr(self, "is_draft_complete", None)
 
-        self.my_league_name     = Session.current_league_name
-        self.my_league_id       = Session.current_league_id
-        self.my_league_forfeit  = Session.league_forfeit
-        leaguemates             = Session.leaguemates or []
-        self.my_capacity        = f"{len(leaguemates)}/5"
-        self.my_leaguemates     = [d['manager_name'] for d in leaguemates]
-        self.my_draft_order     = Session.draft_order or []
-        self.my_next_pick       = Session.next_pick
-        self.is_league_locked   = Session.is_league_locked
-        self.is_owner           = Session.is_league_owner
-        self.is_draft_complete  = Session.draft_complete
+        Session.init_league_data(force)
+        Session.init_player_scores()
+
+        league              = Session.league_data or {}
+        team                = Session.team_data or {}
+
         self.my_username        = Session.user
         self.my_user_id         = Session.user_id
-        self.my_team_name       = Session.current_team_name
-        self.my_team_standings  = Session.my_team_standings or []
-        self.my_ex_players      = Session.my_inactive_players or []
+
+        self.my_league_id       = league.get("league_id")
+        self.my_league_name     = league.get("league_name")
+        self.my_league_forfeit  = league.get("forfeit")
+        self.is_league_locked   = league.get("locked", False)
+        self.is_draft_complete  = league.get("draft_complete", False)
+        self.is_owner           = league.get("league_owner") == self.my_user_id
+        self.my_draft_order     = league.get("draft_order") or []
+        self.my_next_pick       = league.get("next_pick")
+        leaguemates             = league.get("leaguemates") or []
+        self.my_leaguemates     = [d["manager_name"] for d in leaguemates]
+        self.my_capacity        = f"{len(leaguemates)}/5"
+
+        self.my_team_name       = team.get("team_name")
+        self.my_team_standings  = team
+        self.my_ex_players      = team.get("inactive_players") or []
+
+        if draft_complete_before is not None and draft_complete_before != self.is_draft_complete:
+            self.app.stack.removeWidget(self.app.league_view)
+            self.app.league_view.deleteLater()
+            self.app.league_view = None
+            self.app.show_league_view()
+            return
 
         self._update_view()
 
@@ -1183,17 +1194,17 @@ class LeagueView(QWidget):
                 self.league_owner.setText("Owner")
 
             self.league_id_label.setText(str(self.my_league_id))
-            self._fit_text_to_width(label=self.league_name_label, text=self.my_league_name, max_width=400)
-            self._fit_text_to_width(label=self.leaguemates, text=", ".join(self.my_leaguemates), max_width=400, max_font_size=14, bold=False)
+            fit_text_to_width(label=self.league_name_label, text=self.my_league_name, max_width=400)
+            fit_text_to_width(label=self.leaguemates, text=", ".join(self.my_leaguemates), max_width=400, max_font_size=14, bold=False)
 
             if self.my_league_forfeit:
-                self._fit_text_to_width(label=self.forfeit_label, text=self.my_league_forfeit, max_width=400, max_font_size=12)
+                fit_text_to_width(label=self.forfeit_label, text=self.my_league_forfeit, max_width=400, max_font_size=12)
             else:
                 self.forfeit_label.setText("Forfeit not yet set.")
 
             self.draft_info_container.setVisible(True)
             if self.my_draft_order:
-                self._fit_text_to_width(label=self.draft_order_label, text=", ".join(self.my_draft_order), max_width=400, max_font_size=14, bold=False)
+                fit_text_to_width(label=self.draft_order_label, text=", ".join(self.my_draft_order), max_width=400, max_font_size=14, bold=False)
             if self.is_league_locked:
                 self.next_pick_label.setText(str(self.my_next_pick))
             if self.is_draft_complete:
@@ -1211,10 +1222,11 @@ class LeagueView(QWidget):
             and self.is_league_locked
         )
 
-        self._update_player_stat(None)
+        if self.draft_picker.isVisible() == True:
+            self._update_player_stat(None)
 
         if has_team:
-            self._fit_text_to_width(label=self.team_name_label, text=self.my_team_name, max_width=400)
+            fit_text_to_width(label=self.team_name_label, text=self.my_team_name, max_width=400)
             self._update_player_slots()
 
     def _show_post_draft_state(self):
@@ -1265,6 +1277,14 @@ class LeagueView(QWidget):
         frame = QFrame()
         frame.setFrameShape(QFrame.Shape.StyledPanel)
         frame.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        frame.setObjectName("frame")
+        frame.setStyleSheet("""
+            QFrame#frame {
+                background-color: #090E2B;
+                border: 2px solid #444444;
+                border-radius: 4px;
+            }
+        """)
 
         layout = QVBoxLayout(frame)
         layout.setContentsMargins(20, 20, 20, 20)
@@ -1274,10 +1294,13 @@ class LeagueView(QWidget):
         image.setStyleSheet("border: 2px solid #FFFFFF;")
         image.setFixedSize(200, 200)
         image.setAlignment(Qt.AlignmentFlag.AlignHCenter)
-        pixmap = QPixmap(str(ResourcePath.PLAYERS / f"{name}.jpg"))
-        if pixmap.isNull():
-            pixmap = QPixmap(str(ResourcePath.PLAYERS / "placeholder.png"))
-        image.setPixmap(pixmap.scaled(200, 200, Qt.AspectRatioMode.IgnoreAspectRatio, Qt.TransformationMode.SmoothTransformation))
+        image.setPixmap(
+            Session.get_pixmap("players", name).scaled(
+                200, 200,
+                Qt.AspectRatioMode.IgnoreAspectRatio,
+                Qt.TransformationMode.SmoothTransformation
+            )
+        )
 
         region_img = ResourcePath.FLAGS / f"{region}.png"
         if not region_img.exists():
@@ -1310,44 +1333,6 @@ class LeagueView(QWidget):
 
    
 # -- HELPERS --
-
-    def _set_status(self, msg, code=0):
-        colors = {0: "#FFFFFF", 1: "#00ff0d", 2: "#FFD700"}
-        self.status_label.setStyleSheet(f"""
-            QLabel {{
-                font-size: 16px;
-                font-weight: bold;
-                color: {colors.get(code, '#FFFFFF')};
-            }}
-        """)
-        self.status_label.setText(msg)
-
-        if hasattr(self, "_status_timer") and self._status_timer.isActive():
-            self._status_timer.stop()
-
-        self._status_timer = QTimer(self)
-        self._status_timer.setSingleShot(True)
-        self._status_timer.timeout.connect(lambda: self.status_label.setText(""))
-        self._status_timer.start(8000)
-
-    def _fit_text_to_width(self, label: QLabel, text: str, max_width: int,
-                           min_font_size=2, max_font_size=40, bold=True):
-        if not text or max_width <= 0:
-            return
-        font = label.font()
-        font.setBold(bold)
-        low, high, best_size = min_font_size, max_font_size, min_font_size
-        while low <= high:
-            mid = (low + high) // 2
-            font.setPointSize(mid)
-            if QFontMetrics(font).boundingRect(text).width() <= max_width:
-                best_size = mid
-                low = mid + 1
-            else:
-                high = mid - 1
-        font.setPointSize(best_size)
-        label.setFont(font)
-        label.setText(text)
 
     def showEvent(self, event):
         super().showEvent(event)

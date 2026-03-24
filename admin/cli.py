@@ -8,7 +8,6 @@ sys.path.insert(0, PROJECT_ROOT)
 from app.db.admin_client import get_admin_client
 
 from admin.score_handler import ScoreHandler
-from admin.dist_handler import DistributionHandler
 from admin.event_handler import EventHandler
 
 def prompt_choice(prompt, choices):
@@ -32,7 +31,6 @@ def main():
     # instantiate handlers + client
     client = get_admin_client()
     handlers = {
-        "Distributions": DistributionHandler(client),
         "Events": EventHandler(client),
         "Scores": ScoreHandler(client),
     }

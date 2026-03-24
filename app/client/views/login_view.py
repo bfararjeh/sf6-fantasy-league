@@ -1,4 +1,6 @@
+import httpx
 from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import (
     QApplication,
     QLabel,
@@ -6,11 +8,13 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QVBoxLayout,
     QWidget,
+    
 )
 
+from app.client.controllers.resource_path import ResourcePath
 from app.client.controllers.session import Session
-from app.services.auth_service import AuthService
-from app.services.auth_store import AuthStore
+from app.client.controllers.sound_manager import SoundManager
+from app.services.auth_service import AuthService, AuthStore
 
 class LoginView(QWidget):
     def __init__(self, app=None):
@@ -21,17 +25,16 @@ class LoginView(QWidget):
     def _build_ui(self):
         root_layout = QVBoxLayout()
 
-        # title
-        title = QLabel("Fantasy Street Fighter 6")
-        title.setAlignment(Qt.AlignmentFlag.AlignHCenter)
-        title.setStyleSheet(
-            """
-            QLabel {
-                font-size: 28px;
-                font-weight: bold;
-            }
-        """)
-
+        logo = QLabel()
+        image = QPixmap(str(ResourcePath.IMAGES / "logo.png"))
+        logo.setPixmap(
+            image.scaled(
+                300, 300,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation
+            )
+        )
+        
         # footer
         footer = QLabel("© 2026 Fararjeh, All rights reserved.")
         footer.setAlignment(Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignHCenter)
@@ -108,7 +111,7 @@ class LoginView(QWidget):
         # form container for width control
         form_layout = QVBoxLayout()
         form_layout.setSpacing(15)
-        form_layout.addWidget(title)
+        form_layout.addWidget(logo, alignment=Qt.AlignmentFlag.AlignCenter)
         form_layout.addWidget(self.email_input)
         form_layout.addWidget(self.password_input)
         form_layout.addWidget(return_to_login)
@@ -168,13 +171,19 @@ class LoginView(QWidget):
             QApplication.restoreOverrideCursor()
             self.status_label.setText(f"Login successful! Welcome back {Session.user}.")
             self.status_label.setStyleSheet("color: #4ade00;")
+            SoundManager.play("login")
 
             if self.app:
                 QTimer.singleShot(2000, self._login_success)
 
         except Exception as e:
-            self.status_label.setText(f"Login failed: {e}")
-            self.status_label.setStyleSheet("color: #FFD700;")
+            SoundManager.play("error")
+            if type(e) == httpx.ConnectError:
+                self.status_label.setText(f"Login failed: Unable to connect to servers.")
+                self.status_label.setStyleSheet("color: #FFD700;")
+            else:
+                self.status_label.setText(f"Login failed: {e}")
+                self.status_label.setStyleSheet("color: #FFD700;")
         
         finally:
             self._toggle_inputs(True)

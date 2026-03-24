@@ -1,5 +1,5 @@
 from PyQt6.QtCore import Qt, QSize
-from PyQt6.QtGui import QColor, QFontMetrics, QPixmap
+from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -12,16 +12,16 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from app.client.controllers.resource_path import ResourcePath
 from app.client.controllers.session import Session
 from app.client.theme import *
-from app.client.widgets.footer_nav import FooterNav
-from app.client.widgets.header_bar import HeaderBar
+from app.client.widgets.misc import _build_empty_label, fit_text_to_width
+from app.client.widgets.hover_image import HoverImage
 
 class LeaderboardView(QWidget):
     def __init__(self, app):
         super().__init__()
         self.app = app
+        self.app.connect_refresh(lambda: self._refresh(force=1))
 
         self.RANK_STYLES = {
             1: "#FFD700",
@@ -40,10 +40,9 @@ class LeaderboardView(QWidget):
         self.root_layout.setContentsMargins(0, 0, 0, 0)
         self.root_layout.setSpacing(0)
 
-        self.header = HeaderBar(self.app)
-        self.header.refresh_button.refresh_requested.connect(lambda: self._refresh(force=1))
-        
-        self.footer = FooterNav(self.app)
+        self.status_label = QLabel("")
+        self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.status_label.setFixedHeight(30)
 
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
@@ -60,9 +59,7 @@ class LeaderboardView(QWidget):
 
         scroll.setWidget(self.content_widget)
 
-        self.root_layout.addWidget(self.header)
         self.root_layout.addWidget(scroll, stretch=1)
-        self.root_layout.addWidget(self.footer)
 
         self._build_sections()
 
@@ -72,6 +69,7 @@ class LeaderboardView(QWidget):
         self.leaguemate_container = self._build_leaguemates()
 
         self.content_layout.addWidget(self._build_info())
+        self.content_layout.addWidget(self.status_label)
         self.content_layout.addWidget(self.leaguemate_container)
 
 
@@ -136,80 +134,6 @@ class LeaderboardView(QWidget):
 
         return container
 
-    def _build_player_slot(self, player: dict):
-        slot = QWidget()
-        layout = QVBoxLayout(slot)
-        layout.setAlignment(Qt.AlignmentFlag.AlignHCenter)
-        layout.setSpacing(5)
-
-        image = QLabel()
-        image.setFixedSize(QSize(150, 150))
-        image.setAlignment(Qt.AlignmentFlag.AlignHCenter)
-
-        name = QLabel()
-        name.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        name.setStyleSheet("""
-            font-size: 16px; 
-            font-weight: bold;
-        """)
-
-        points = QLabel()
-        points.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        points.setStyleSheet("""
-            font-size: 14px; 
-            font-weight: bold;
-        """)
-
-        if player:
-            player_name = player.get("player_name", "-")
-            player_points = str(player.get("points", "-"))
-            img_path = ResourcePath.PLAYERS / f"{player_name}.jpg"
-
-            pixmap = QPixmap(str(img_path))
-            if pixmap.isNull():
-                pixmap = QPixmap(str(ResourcePath.PLAYERS / "placeholder.png"))
-
-            image.setPixmap(
-                pixmap.scaled(
-                    150, 150,
-                    Qt.AspectRatioMode.IgnoreAspectRatio,
-                    Qt.TransformationMode.SmoothTransformation
-                )
-            )
-
-            name.setText(player_name)
-            points.setText(player_points)
-            image.setStyleSheet("border: 2px solid #BBBBBB;")
-
-        else:
-            image.setStyleSheet("""
-                border: 2px dashed #555;
-                background-color: #333;
-                color: #eee;
-            """)
-            image.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            image.setText("?")
-
-            name.setText("-")
-            name.setStyleSheet("""
-                font-size: 16px; 
-                font-weight: bold; 
-                color: #999; 
-            """)
-
-            points.setText("-")
-            points.setStyleSheet("""
-                font-size: 14px; 
-                font-weight: bold; 
-                color: #999; 
-            """)
-
-        layout.addWidget(image)
-        layout.addWidget(name)
-        layout.addWidget(points)
-
-        return slot
-
     def _build_team_widget(self, team: dict) -> QWidget:
         team_frame = QFrame()
         team_frame.setObjectName("teamFrame")
@@ -248,7 +172,7 @@ class LeaderboardView(QWidget):
             font-size: 50px;
             color: {rank_color};
         """)
-        self._fit_text_to_width(owner_label, f"#{rank} {team['user_name']}", 500, max_font_size=50)
+        fit_text_to_width(owner_label, f"#{rank} {team['user_name']}", 500, max_font_size=50)
 
         if rank <= 3:
             glow = QGraphicsDropShadowEffect()
@@ -299,25 +223,59 @@ class LeaderboardView(QWidget):
 
     def _build_avatar(self, user_id, size):
         image = QLabel()
-        avatar = QPixmap()
-
-        try:
-            avatar.loadFromData(Session.init_avatar(user_id))
-            if avatar.isNull():
-                avatar = QPixmap(str(ResourcePath.AVATAR / "placeholder.png"))
-
-        except Exception:
-            avatar = QPixmap(str(ResourcePath.AVATAR / "placeholder.png"))
-
         image.setPixmap(
-            avatar.scaled(
+            Session.get_pixmap("avatars", str(user_id)).scaled(
                 size, size,
                 Qt.AspectRatioMode.KeepAspectRatio,
                 Qt.TransformationMode.SmoothTransformation
             )
         )
-        
         return image
+
+    def _build_player_slot(self, player: dict):
+        slot = QWidget()
+        layout = QVBoxLayout(slot)
+        layout.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        layout.setSpacing(5)
+
+        image = QLabel()
+        image.setFixedSize(QSize(150, 150))
+        image.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+
+        name = QLabel()
+        name.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        name.setStyleSheet("font-size: 16px; font-weight: bold;")
+
+        points = QLabel()
+        points.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        points.setStyleSheet("font-size: 14px; font-weight: bold;")
+
+        if player:
+            player_name = player.get("player_name", "-")
+            player_points = str(player.get("points", "-"))
+
+            pixmap = Session.get_pixmap("players", player_name)
+            image = HoverImage(pixmap, size=150, border_width=2, border_color="#BBBBBB")
+            
+            name.setText(player_name)
+            points.setText(player_points)
+        else:
+            image.setStyleSheet("""
+                border: 2px dashed #555;
+                background-color: #333;
+                color: #eee;
+            """)
+            image.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            image.setText("?")
+            name.setText("-")
+            name.setStyleSheet("font-size: 16px; font-weight: bold; color: #999;")
+            points.setText("-")
+            points.setStyleSheet("font-size: 14px; font-weight: bold; color: #999;")
+
+        layout.addWidget(image)
+        layout.addWidget(name)
+        layout.addWidget(points)
+        return slot
 
 
 # -- LAYOUT STUFF --
@@ -329,9 +287,6 @@ class LeaderboardView(QWidget):
         self.my_user_id = Session.user_id
         self.leaguemate_data = Session.leaguemate_standings
 
-        self._update_view()
-
-    def _update_view(self):
         self._update_leaguemates()
 
     def _update_leaguemates(self):
@@ -357,9 +312,8 @@ class LeaderboardView(QWidget):
                 self.leaguemate_layout.addWidget(team_widget)
 
         else:
-            label = QLabel("It's quiet. Too quiet...")
             self.leaguemate_layout.addSpacerItem(QSpacerItem(10,100))
-            self.leaguemate_layout.addWidget(label, alignment= Qt.AlignmentFlag.AlignVCenter)
+            self.leaguemate_layout.addWidget(_build_empty_label(), alignment= Qt.AlignmentFlag.AlignVCenter)
 
     def _apply_ranks(self, teams):
         ranked = []
@@ -382,39 +336,6 @@ class LeaderboardView(QWidget):
             ranked.append(team)
 
         return ranked
-
-    def _fit_text_to_width(self, label: QLabel, text: str, max_width: int,
-                        min_font_size=2, max_font_size=40, bold=True):
-        """
-        Adjusts the font size of a label to fit within a specific width 
-        restriction.
-        """
-        if not text or max_width <= 0:
-            return
-
-        font = label.font()
-        font.setBold(bold)
-        font_size = min_font_size
-        font.setPointSize(font_size)
-        metrics = QFontMetrics(font)
-
-        # binary search to find the largest font that fits
-        low, high = min_font_size, max_font_size
-        best_size = min_font_size
-
-        while low <= high:
-            mid = (low + high) // 2
-            font.setPointSize(mid)
-            metrics = QFontMetrics(font)
-            if metrics.boundingRect(text).width() <= max_width:
-                best_size = mid  # fits, try bigger
-                low = mid + 1
-            else:
-                high = mid - 1  # too big, try smaller
-                
-        font.setPointSize(best_size)
-        label.setFont(font)
-        label.setText(text)
 
     def showEvent(self, event):
         super().showEvent(event)

@@ -1,4 +1,3 @@
-
 from pathlib import Path
 import sys
 
@@ -10,10 +9,11 @@ class ResourcePath:
             return Path(sys._MEIPASS) / relative_path
         return Path(relative_path).resolve()
 
-    AVATAR = resource_path.__func__("app/client/assets/avatars")
-    PLAYERS = resource_path.__func__("app/client/assets/player_pictures")
     FLAGS = resource_path.__func__("app/client/assets/icons/flags")
-    ICONS = resource_path.__func__("app/client/assets/icons")
     FONTS = resource_path.__func__("app/client/assets/fonts")
-    EVENTS = resource_path.__func__("app/client/assets/events")
-    MAP = resource_path.__func__("app/client/assets/map")
+    ICONS = resource_path.__func__("app/client/assets/icons")
+    IMAGES = resource_path.__func__("app/client/assets/images")
+    TEXTS = resource_path.__func__("app/client/assets/texts")
+    PLAYERS = resource_path.__func__("app/client/assets/players")
+    SOUNDS = resource_path.__func__("app/client/assets/sounds")
+    

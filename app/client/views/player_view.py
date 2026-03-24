@@ -12,10 +12,9 @@ from PyQt6.QtWidgets import (
 )
 
 from app.client.controllers.resource_path import ResourcePath
+from app.client.widgets.hover_image import HoverImage
 from app.client.controllers.session import Session
 from app.client.theme import *
-from app.client.widgets.footer_nav import FooterNav
-from app.client.widgets.header_bar import HeaderBar
 
 class PlayerView(QWidget):
     def __init__(self, app):
@@ -44,10 +43,9 @@ class PlayerView(QWidget):
         }
 
         self._build_main()
+        self._rebuild_players_view()
 
     def _build_main(self):
-        self.root_layout.addWidget(HeaderBar(self.app))
-
         # main content
         content_widget = QWidget()
         content_layout = QVBoxLayout(content_widget)
@@ -65,8 +63,6 @@ class PlayerView(QWidget):
         # adding widgets to main content wiget
         content_layout.addWidget(self._build_title())
 
-        self._rebuild_players_view()
-
         content_layout.addWidget(self.player_cont)
 
         # scrollable if required
@@ -79,7 +75,6 @@ class PlayerView(QWidget):
 
         # composing root
         self.root_layout.addWidget(scroll, stretch=1)
-        self.root_layout.addWidget(FooterNav(self.app))
 
     def _build_title(self):
         info_cont = QWidget()
@@ -163,24 +158,9 @@ class PlayerView(QWidget):
             player_layout.setContentsMargins(0, 0, 0, 0)
             player_layout.setSpacing(10)
 
-            image = QLabel()
-            image.setFixedSize(160, 160)
+            pixmap = Session.get_pixmap("players", player["name"])
+            image = HoverImage(pixmap, size=160)
             image.setStyleSheet("border: 3px solid #BBBBBB;")
-            image.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-            img_path = ResourcePath.PLAYERS / f"{player['name']}.jpg"
-
-            pixmap = QPixmap(str(img_path))
-            if pixmap.isNull():
-                pixmap = QPixmap(str(ResourcePath.PLAYERS / "placeholder.png"))
-
-            image.setPixmap(
-                pixmap.scaled(
-                    160, 160,
-                    Qt.AspectRatioMode.IgnoreAspectRatio,
-                    Qt.TransformationMode.SmoothTransformation
-                )
-            )
 
             img_path = ResourcePath.FLAGS / f"{player["region"]}.png"
             if not img_path.exists():
@@ -236,3 +216,8 @@ class PlayerView(QWidget):
         self._rebuild_players_view(sort_by=self.current_sort)
 
         QApplication.restoreOverrideCursor()
+
+    @staticmethod
+    def preload():
+        for player in Session.player_scores or []:
+            Session.get_image("players", player["name"])
