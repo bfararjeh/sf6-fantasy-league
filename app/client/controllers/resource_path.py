@@ -13,6 +13,7 @@ class ResourcePath:
     FONTS = resource_path.__func__("app/client/assets/fonts")
     ICONS = resource_path.__func__("app/client/assets/icons")
     IMAGES = resource_path.__func__("app/client/assets/images")
+    TEXTS = resource_path.__func__("app/client/assets/texts")
     PLAYERS = resource_path.__func__("app/client/assets/players")
     SOUNDS = resource_path.__func__("app/client/assets/sounds")
     

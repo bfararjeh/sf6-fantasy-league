@@ -57,7 +57,6 @@ class LeaderboardView(QWidget):
         self.content_layout.setContentsMargins(50, 35, 50, 35)
         self.content_layout.setSpacing(10)
 
-
         scroll.setWidget(self.content_widget)
 
         self.root_layout.addWidget(scroll, stretch=1)
@@ -278,6 +277,7 @@ class LeaderboardView(QWidget):
         layout.addWidget(points)
         return slot
 
+
 # -- LAYOUT STUFF --
 
     def _refresh(self, force=0):
@@ -287,9 +287,6 @@ class LeaderboardView(QWidget):
         self.my_user_id = Session.user_id
         self.leaguemate_data = Session.leaguemate_standings
 
-        self._update_view()
-
-    def _update_view(self):
         self._update_leaguemates()
 
     def _update_leaguemates(self):

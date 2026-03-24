@@ -24,6 +24,7 @@ from PyQt6.QtWidgets import (
 from app.client.controllers.resource_path import ResourcePath
 from app.client.controllers.session import Session
 from app.client.controllers.async_runner import run_async
+from app.client.controllers.sound_manager import SoundManager
 from app.client.widgets.misc import fit_text_to_width, set_status
 from app.client.widgets.hover_image import HoverImage
 from app.client.widgets.point_graph import PointsChart
@@ -989,9 +990,10 @@ class LeagueView(QWidget):
         msg.setWindowTitle("Leave League")
         msg.setStyleSheet("background: #10194D;")
         msg.setText("Are you sure you would like to leave your league?")
-        msg.setIcon(QMessageBox.Icon.Warning)
+        msg.setIcon(QMessageBox.Icon.NoIcon)
         ok_btn = msg.addButton("Leave", QMessageBox.ButtonRole.AcceptRole)
         msg.addButton("Cancel", QMessageBox.ButtonRole.RejectRole)
+        SoundManager.play("button")
         msg.exec()
 
         if msg.clickedButton() != ok_btn:
@@ -1032,9 +1034,10 @@ class LeagueView(QWidget):
         msg.setWindowTitle("Begin Draft")
         msg.setStyleSheet("background: #10194D;")
         msg.setText("Beginning the draft will lock your league, preventing any member leaving or joining, and preventing the changing of the forfeit. Continue?")
-        msg.setIcon(QMessageBox.Icon.Question)
+        msg.setIcon(QMessageBox.Icon.NoIcon)
         ok_btn = msg.addButton("Begin draft", QMessageBox.ButtonRole.AcceptRole)
         msg.addButton("Cancel", QMessageBox.ButtonRole.RejectRole)
+        SoundManager.play("button")
         msg.exec()
 
         if msg.clickedButton() != ok_btn:
@@ -1062,7 +1065,6 @@ class LeagueView(QWidget):
         def _success(success):
             if success:
                 self.my_league_forfeit = forfeit
-                Session.league_forfeit = forfeit
                 fit_text_to_width(label=self.forfeit_label, text=self.my_league_forfeit, max_width=400, max_font_size=12)
                 set_status(self, "Forfeit set!", code=1)
 
@@ -1121,6 +1123,8 @@ class LeagueView(QWidget):
 # -- REFRESHERS --
 
     def _refresh(self, force=0):
+        draft_complete_before = getattr(self, "is_draft_complete", None)
+
         Session.init_league_data(force)
         Session.init_player_scores()
 
@@ -1146,17 +1150,23 @@ class LeagueView(QWidget):
         self.my_team_standings  = team
         self.my_ex_players      = team.get("inactive_players") or []
 
+        if draft_complete_before is not None and draft_complete_before != self.is_draft_complete:
+            self.app.stack.removeWidget(self.app.league_view)
+            self.app.league_view.deleteLater()
+            self.app.league_view = None
+            self.app.show_league_view()
+            return
+
         self._update_view()
 
     def _update_view(self):
-        self._show_pre_draft_state()
-        # if self.my_league_id:
-        #     if self.is_draft_complete:
-        #         self._show_post_draft_state()
-        #     else:
-        #         self._show_pre_draft_state()
-        # else:
-        #     self._show_no_league_state()
+        if self.my_league_id:
+            if self.is_draft_complete:
+                self._show_post_draft_state()
+            else:
+                self._show_pre_draft_state()
+        else:
+            self._show_no_league_state()
 
     def _show_no_league_state(self):
         self.view_stack.setCurrentWidget(self.no_league_page)
@@ -1212,7 +1222,8 @@ class LeagueView(QWidget):
             and self.is_league_locked
         )
 
-        self._update_player_stat(None)
+        if self.draft_picker.isVisible() == True:
+            self._update_player_stat(None)
 
         if has_team:
             fit_text_to_width(label=self.team_name_label, text=self.my_team_name, max_width=400)

@@ -17,6 +17,17 @@ BRIGHT_TEXT_COLOR = QColor("#FF4D6D")
 # banner
 BANNER_LABEL_STYLESHEET = f"""
 QLabel {{
+    background-color: {QColor("#10194D").lighter(125).name()};
+    color: {QColor("#888888").name()};
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 500;
+}}
+"""
+
+BANNER_LABEL_STYLESHEET_IMPORTANT = f"""
+QLabel {{
     background-color: {QColor("#4200FF").lighter(110).name()};
     color: {QColor("#FFFFFF").name()};
     border-radius: 6px;

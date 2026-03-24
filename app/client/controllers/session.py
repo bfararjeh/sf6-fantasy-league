@@ -293,18 +293,18 @@ class Session(Session):
     def _should_refresh(cls, grabbed_at, force=False):
         if force or grabbed_at is None:
             return True
-        seconds = cls.get_refresh_interval() / 1000
+        seconds = cls.get_refresh_interval()
         return grabbed_at <= datetime.now() - timedelta(seconds=seconds)
 
     @classmethod
     def get_refresh_interval(cls) -> int:
         league = cls.league_data or {}
         if league.get("locked") and not league.get("draft_complete"):
-            return 5000
+            return 5
         elif league.get("league_id"):
-            return 90000
+            return 90
         else:
-            return 900000
+            return 900
 
     @classmethod
     def reset(cls):

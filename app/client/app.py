@@ -15,7 +15,6 @@ from PyQt6.QtWidgets import (
     QComboBox,
     QAbstractSpinBox
 )
-from PyQt6.QtCore import QTimer
 
 from app.client.controllers.sound_manager import SoundManager
 from app.client.views.global_view import GlobalView
@@ -84,9 +83,6 @@ class FantasyApp(QMainWindow):
         self.qualified_view = None
         self.trades_view = None
 
-        self._refresh_timer = QTimer()
-        self._refresh_timer.timeout.connect(self._auto_refresh)
-
         if self._try_restore_session():
             self.show_home_view()
         else:
@@ -125,6 +121,7 @@ class FantasyApp(QMainWindow):
         if self.login_view is None:
             self.login_view = LoginView(app=self)
             self.stack.addWidget(self.login_view)
+        SoundManager.play("loaded")
         self.stack.setCurrentWidget(self.login_view)
 
     def show_signup_view(self):
@@ -134,6 +131,7 @@ class FantasyApp(QMainWindow):
         if self.signup_view is None:
             self.signup_view = SignupView(app=self)
             self.stack.addWidget(self.signup_view)
+        SoundManager.play("loaded")
         self.stack.setCurrentWidget(self.signup_view)
 
 
@@ -148,15 +146,16 @@ class FantasyApp(QMainWindow):
         self.header.setVisible(True)
         self.footer.setVisible(True)
         self.header.refresh_button.setVisible(False)
-        self._refresh_timer.stop()
 
+        if self.loading_view is None:
+            self.loading_view = LoadingView(app=self)
+            self.stack.addWidget(self.loading_view)
         if self.home_view is None:
             self.home_view = HomeView(app=self)
             self.stack.addWidget(self.home_view)
             SoundManager.play("boot")
-        if self.loading_view is None:
-            self.loading_view = LoadingView(app=self)
-            self.stack.addWidget(self.loading_view)
+        else:
+            SoundManager.play("loaded")
         self.stack.setCurrentWidget(self.home_view)
 
 
@@ -168,8 +167,8 @@ class FantasyApp(QMainWindow):
         self.header.refresh_button.setVisible(True)
         if self.league_view is not None:
             self.stack.setCurrentWidget(self.league_view)
+            SoundManager.play("loaded")
             self.connect_refresh(self.league_view._refresh)
-            self._start_refresh_timer()
             return
 
         blocked = False
@@ -191,7 +190,6 @@ class FantasyApp(QMainWindow):
             self.stack.addWidget(self.league_view)
             SoundManager.play("loaded")
             self.connect_refresh(self.league_view._refresh)
-            self._start_refresh_timer()
 
         load_view(self.stack, self.loading_view, _fetch, _done, self._active_threads)
 
@@ -201,8 +199,8 @@ class FantasyApp(QMainWindow):
         self.header.refresh_button.setVisible(True)
         if self.leaderboard_view is not None:
             self.stack.setCurrentWidget(self.leaderboard_view)
+            SoundManager.play("loaded")
             self.connect_refresh(self.leaderboard_view._refresh)
-            self._start_refresh_timer()
             return
 
         blocked = False
@@ -223,7 +221,6 @@ class FantasyApp(QMainWindow):
             self.stack.addWidget(self.leaderboard_view)
             SoundManager.play("loaded")
             self.connect_refresh(self.leaderboard_view._refresh)
-            self._start_refresh_timer()
 
         load_view(self.stack, self.loading_view, _fetch, _done, self._active_threads)
 
@@ -234,9 +231,9 @@ class FantasyApp(QMainWindow):
         self.header.setVisible(True)
         self.footer.setVisible(True)
         self.header.refresh_button.setVisible(False)
-        self._refresh_timer.stop()
         if self.players_view is not None:
             self.stack.setCurrentWidget(self.players_view)
+            SoundManager.play("loaded")
             return
 
         def _fetch():
@@ -254,9 +251,9 @@ class FantasyApp(QMainWindow):
         self.header.setVisible(True)
         self.footer.setVisible(True)
         self.header.refresh_button.setVisible(False)
-        self._refresh_timer.stop()
         if self.globals_view is not None:
             self.stack.setCurrentWidget(self.globals_view)
+            SoundManager.play("loaded")
             return
 
         def _fetch():
@@ -275,9 +272,9 @@ class FantasyApp(QMainWindow):
         self.header.setVisible(True)
         self.footer.setVisible(True)
         self.header.refresh_button.setVisible(False)
-        self._refresh_timer.stop()
         if self.events_view is not None:
             self.stack.setCurrentWidget(self.events_view)
+            SoundManager.play("loaded")
             return
 
         def _fetch():
@@ -295,9 +292,9 @@ class FantasyApp(QMainWindow):
         self.header.setVisible(True)
         self.footer.setVisible(True)
         self.header.refresh_button.setVisible(False)
-        self._refresh_timer.stop()
         if self.qualified_view is not None:
             self.stack.setCurrentWidget(self.qualified_view)
+            SoundManager.play("loaded")
             return
 
         def _fetch():
@@ -315,9 +312,9 @@ class FantasyApp(QMainWindow):
         self.header.setVisible(True)
         self.footer.setVisible(True)
         self.header.refresh_button.setVisible(False)
-        self._refresh_timer.stop()
         if self.trades_view is not None:
             self.stack.setCurrentWidget(self.trades_view)
+            SoundManager.play("loaded")
             return
 
         def _fetch():
@@ -337,11 +334,11 @@ class FantasyApp(QMainWindow):
         webbrowser.open(
             "https://github.com/bfararjeh/sf6-fantasy-league/blob/main/README.md#faqs"
         )
+        SoundManager.play("button")
 
     def logout(self):
         Session.reset()
         AuthStore.clear()
-        self._refresh_timer.stop()
 
         for view in [
             self.loading_view, self.league_view, self.home_view,
@@ -391,19 +388,3 @@ class FantasyApp(QMainWindow):
         finally:
             view.setEnabled(True)
             self.header.setEnabled(True)
-
-    def _auto_refresh(self):
-        current = self.stack.currentWidget()
-        if current in (self.league_view, self.leaderboard_view):
-            if hasattr(current, '_refresh'):
-                self._do_refresh(current._refresh)
-        self._update_refresh_interval()
-
-    def _update_refresh_interval(self):
-        interval = Session.get_refresh_interval()
-        if self._refresh_timer.interval() != interval:
-            self._refresh_timer.setInterval(interval)
-
-    def _start_refresh_timer(self):
-        self._update_refresh_interval()
-        self._refresh_timer.start()

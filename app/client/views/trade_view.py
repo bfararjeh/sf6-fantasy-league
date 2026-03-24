@@ -70,7 +70,7 @@ class TradeView(QWidget):
             start = datetime.fromisoformat(self._next_window["start_date"])
             end   = datetime.fromisoformat(self._next_window["end_date"])
             date_str = f"{start.strftime('%B %d')} – {end.strftime('%B %d, %Y')}"
-            sub_label = QLabel(f"until trade window opens  ·  {date_str}")
+            sub_label = QLabel(f"Trade window opens at 00:00 UTC.")
         else:
             sub_label = QLabel("No upcoming trade windows.")
 
