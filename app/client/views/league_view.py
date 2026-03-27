@@ -58,7 +58,6 @@ class LeagueView(QWidget):
     def __init__(self, app):
         super().__init__()
         self.app = app
-        self.app.connect_refresh(lambda: self._refresh(force=1))
 
         self._stat_cache = {}
 

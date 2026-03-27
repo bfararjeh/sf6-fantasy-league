@@ -51,7 +51,11 @@ class Session:
         cls.global_stats            = None
         cls.event_data              = None
         cls.qualified_data          = None
+
         cls.trade_windows           = None
+        cls.trade_history           = None
+        cls.trade_requests          = None
+        cls.trade_players           = None
 
         # services
         cls.team_service            = None
@@ -63,6 +67,7 @@ class Session:
         # refresh timers
         cls.league_data_grabbed_at      = None
         cls.leaguemate_data_grabbed_at  = None
+        cls.trade_data_grabbed_at       = None
         cls.system_state_grabbed_at     = None
 
 Session._set_defaults()
@@ -207,17 +212,23 @@ class Session(Session):
             cls.qualified_data = None
 
     @classmethod
-    def init_trade_data(cls):
+    def init_trade_data(cls, force=False):
         if cls.init_system_state():
             cls._trigger_block()
             return
-        if cls.trade_windows is not None:
+        if not cls._should_refresh(cls.trade_data_grabbed_at, force=force):
             return
         
         try:
             cls.trade_windows = cls.trade_service.get_trade_windows()
+            cls.trade_history = cls.trade_service.get_trade_history()
+            cls.trade_requests = cls.trade_service.get_open_requests(cls.user_id)
+            cls.trade_players = cls.trade_service.get_pool_players()
         except Exception:
             cls.trade_windows = None
+            cls.trade_history = None
+            cls.trade_requests = None
+            cls.trade_players = None
 
     # ------------------------------------------------------------------
     # Images

@@ -79,6 +79,8 @@ class AuthStore:
     def _path(cls) -> Path:
         if os.name == "nt":
             base = Path(os.environ["APPDATA"]) / "FantasySF6"
+        else:
+            base = Path.home() / ".config" / "FantasySF6"  # fallback for non-Windows
         base.mkdir(parents=True, exist_ok=True)
         return base / cls._filename
 

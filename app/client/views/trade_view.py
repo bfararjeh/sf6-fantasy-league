@@ -1,8 +1,10 @@
 from datetime import datetime, timezone
+
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
+    QStackedWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -13,27 +15,41 @@ class TradeView(QWidget):
     def __init__(self, app):
         super().__init__()
         self.app = app
+
+        self._build_static()
+        self._refresh()
+
+    def _build_static(self):
         self.root_layout = QVBoxLayout()
         self.root_layout.setContentsMargins(0, 0, 0, 0)
         self.root_layout.setSpacing(0)
         self.setLayout(self.root_layout)
-        self._build_main()
 
-    def _build_main(self):
         content_widget = QWidget()
         content_layout = QVBoxLayout(content_widget)
         content_layout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
         content_layout.setContentsMargins(50, 35, 50, 35)
         content_layout.setSpacing(50)
 
+        self.status_label = QLabel("")
+        self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.status_label.setFixedHeight(30)
+
+        # stack switches between countdown and trade page
+        self.view_stack = QStackedWidget()
+        # self.trade_page = self._build_trade_menu()
+        # self.view_stack.addWidget(self.trade_page)
+        self.countdown_page  = self._build_countdown_page()
+        self.view_stack.addWidget(self.countdown_page)
+
         content_layout.addWidget(self._build_title())
-        content_layout.addStretch()
-        content_layout.addWidget(self._build_countdown(), alignment=Qt.AlignmentFlag.AlignCenter)
-        content_layout.addSpacing(40)
-        content_layout.addWidget(self._build_window_list(), alignment=Qt.AlignmentFlag.AlignCenter)
-        content_layout.addStretch()
+        content_layout.addWidget(self.view_stack)
 
         self.root_layout.addWidget(content_widget, stretch=1)
+        self.root_layout.addWidget(self.status_label)
+
+
+# -- PAGE BUILDERS --
 
     def _build_title(self):
         container = QWidget()
@@ -44,6 +60,20 @@ class TradeView(QWidget):
         title.setStyleSheet("font-size: 64px; font-weight: bold;")
         layout.addWidget(title)
         return container
+
+    def _build_countdown_page(self):
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        layout.addWidget(self._build_countdown())
+        layout.addStretch()
+        layout.addWidget(self._build_window_list())
+
+        return widget
+
+
+# -- COUNTDOWN BUILDERS --
 
     def _build_countdown(self):
         now = datetime.now(timezone.utc)
@@ -136,6 +166,9 @@ class TradeView(QWidget):
 
         return container
 
+
+# -- HELPERS --
+
     def _tick(self):
         if not self._next_window:
             return
@@ -150,3 +183,21 @@ class TradeView(QWidget):
         minutes = (total_seconds % 3600) // 60
         seconds = total_seconds % 60
         self.countdown_label.setText(f"{days:02d}d {hours:02d}h {minutes:02d}m {seconds:02d}s")
+
+    def _refresh(self, force=0):
+        Session.init_trade_data(force)
+        Session.init_leaderboards(force)
+
+        self.my_username = Session.user
+        self.my_user_id = Session.user_id
+
+        self.leaguemate_data = Session.leaguemate_standings
+
+        self.trade_windows = Session.trade_windows
+        self.trade_requests = Session.trade_requests
+        self.trade_players = Session.trade_players
+        self.trade_history = Session.trade_history
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        self._refresh()

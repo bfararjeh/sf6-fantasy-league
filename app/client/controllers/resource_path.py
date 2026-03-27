@@ -16,4 +16,3 @@ class ResourcePath:
     TEXTS = resource_path.__func__("app/client/assets/texts")
     PLAYERS = resource_path.__func__("app/client/assets/players")
     SOUNDS = resource_path.__func__("app/client/assets/sounds")
-    

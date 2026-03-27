@@ -40,11 +40,12 @@ class LeaderboardService():
                 roster:team_players(
                     team_id,
                     player_name,
-                    points
+                    points,
+                    joined_at,
+                    left_at
                 )
             """)
             .eq("league_id", my_league)
-            .is_("team_players.left_at", None)
         ).data
 
         team_name_map = {t["team_id"]: t["team_name"] for t in data}
@@ -79,7 +80,10 @@ class LeaderboardService():
 
             standings[team_id]["players"].append({
                 "player_name": row["player_name"],
-                "points": row["points"]
+                "points": row["points"],
+                "active": row["left_at"] is None,
+                "joined_at": row["joined_at"],
+                "left_at": row["left_at"]
             })
 
         return [
@@ -87,7 +91,23 @@ class LeaderboardService():
                 "team_name": data["team_name"],
                 "user_name": data["owner_username"]["username"],
                 "user_id": data["user_id"],
-                "players": data["players"],
+                "players": [
+                    {
+                        "player_name": p["player_name"],
+                        "points": p["points"],
+                        "joined_at": p["joined_at"]
+                    }
+                    for p in data["players"] if p["active"]
+                ],
+                "former_players": [
+                    {
+                        "player_name": p["player_name"],
+                        "points": p["points"],
+                        "joined_at": p["joined_at"],
+                        "left_at": p["left_at"]
+                    }
+                    for p in data["players"] if not p["active"]
+                ],
                 "total_points": sum(p["points"] for p in data["players"])
             }
             for team_id, data in standings.items()

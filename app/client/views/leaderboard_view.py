@@ -1,12 +1,15 @@
 from PyQt6.QtCore import Qt, QSize
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import (
+    QApplication,
     QFrame,
+    QGridLayout,
     QHBoxLayout,
     QLabel,
     QGraphicsDropShadowEffect,
     QPushButton,
     QScrollArea,
+    QSizePolicy,
     QSpacerItem,
     QVBoxLayout,
     QWidget,
@@ -21,7 +24,6 @@ class LeaderboardView(QWidget):
     def __init__(self, app):
         super().__init__()
         self.app = app
-        self.app.connect_refresh(lambda: self._refresh(force=1))
 
         self.RANK_STYLES = {
             1: "#FFD700",
@@ -219,6 +221,66 @@ class LeaderboardView(QWidget):
         root_layout.addWidget(user_cont)
         root_layout.addLayout(player_row)
 
+        former_players = team.get("former_players", [])
+        if former_players:
+            toggle = QPushButton(f"Former Players ({len(former_players)})")
+            toggle.setStyleSheet(BUTTON_STYLESHEET_A)
+            toggle.setCursor(Qt.CursorShape.PointingHandCursor)
+            toggle.setCheckable(True)
+
+            former_widget = QWidget()
+            former_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+            former_layout = QGridLayout(former_widget)
+            former_layout.setContentsMargins(100, 10, 100, 10)
+            former_layout.setHorizontalSpacing(80)
+            former_layout.setSpacing(10)
+
+            name = QLabel("Player")
+            name.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            name.setStyleSheet("font-size: 16px; font-weight:bold; color: #FFFFFF;")
+            points = QLabel("Points")
+            points.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            points.setStyleSheet("font-size: 16px; font-weight:bold; color: #FFFFFF;")
+            joined_at = QLabel("Joined At")
+            joined_at.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            joined_at.setStyleSheet("font-size: 16px; font-weight:bold; color: #FFFFFF;")
+            left_at = QLabel("Left At")
+            left_at.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            left_at.setStyleSheet("font-size: 16px; font-weight:bold; color: #FFFFFF;")
+
+            former_layout.addWidget(name, 0, 0)
+            former_layout.addWidget(points, 0, 1)
+            former_layout.addWidget(joined_at, 0, 2)
+            former_layout.addWidget(left_at, 0, 3)
+
+            row = 1
+            for p in former_players:
+                name = QLabel(f"{p['player_name']}")
+                name.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                name.setStyleSheet("font-size: 14px; color: #BBBBBB;")
+                points = QLabel(f"{p['points']}")
+                points.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                points.setStyleSheet("font-size: 14px; color: #BBBBBB;")
+                joined_at = QLabel(f"{p['joined_at'].split("T")[0]}")
+                joined_at.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                joined_at.setStyleSheet("font-size: 14px; color: #BBBBBB;")
+                left_at = QLabel(f"{p['left_at'].split("T")[0]}")
+                left_at.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                left_at.setStyleSheet("font-size: 14px; color: #BBBBBB;")
+
+                former_layout.addWidget(name, row, 0)
+                former_layout.addWidget(points, row, 1)
+                former_layout.addWidget(joined_at, row, 2)
+                former_layout.addWidget(left_at, row, 3)
+
+                row+=1
+
+            former_widget.setVisible(False)
+            toggle.toggled.connect(former_widget.setVisible)
+
+            root_layout.addWidget(toggle, alignment=Qt.AlignmentFlag.AlignCenter)
+            root_layout.addWidget(former_widget, stretch=1)
+            
         return team_frame
 
     def _build_avatar(self, user_id, size):
@@ -250,15 +312,21 @@ class LeaderboardView(QWidget):
         points.setAlignment(Qt.AlignmentFlag.AlignCenter)
         points.setStyleSheet("font-size: 14px; font-weight: bold;")
 
+        joined = QLabel()
+        joined.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        joined.setStyleSheet("font-size: 14px; color: #BBBBBB;")
+
         if player:
             player_name = player.get("player_name", "-")
             player_points = str(player.get("points", "-"))
+            player_joined = player.get("joined_at", "-").split("T")[0]
 
             pixmap = Session.get_pixmap("players", player_name)
             image = HoverImage(pixmap, size=150, border_width=2, border_color="#BBBBBB")
             
             name.setText(player_name)
             points.setText(player_points)
+            joined.setText(player_joined)
         else:
             image.setStyleSheet("""
                 border: 2px dashed #555;
@@ -269,12 +337,15 @@ class LeaderboardView(QWidget):
             image.setText("?")
             name.setText("-")
             name.setStyleSheet("font-size: 16px; font-weight: bold; color: #999;")
-            points.setText("-")
+            points.setText("")
             points.setStyleSheet("font-size: 14px; font-weight: bold; color: #999;")
+            joined.setText("")
+            joined.setStyleSheet("font-size: 14px; color: #BBBBBB;")
 
         layout.addWidget(image)
         layout.addWidget(name)
         layout.addWidget(points)
+        layout.addWidget(joined)
         return slot
 
 
