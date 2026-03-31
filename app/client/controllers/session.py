@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from packaging import version
 
 from app.services.league_service import LeagueService
@@ -26,6 +26,7 @@ class Session:
     @classmethod
     def _set_defaults(cls):
         # authenticated supabase session
+        cls.test = 0
         cls._on_block: callable = None
         cls.auth_base               = None
 
@@ -224,6 +225,7 @@ class Session(Session):
             cls.trade_history = cls.trade_service.get_trade_history()
             cls.trade_requests = cls.trade_service.get_open_requests(cls.user_id)
             cls.trade_players = cls.trade_service.get_pool_players()
+
         except Exception:
             cls.trade_windows = None
             cls.trade_history = None
@@ -311,7 +313,7 @@ class Session(Session):
     def get_refresh_interval(cls) -> int:
         league = cls.league_data or {}
         if league.get("locked") and not league.get("draft_complete"):
-            return 5
+            return 10
         elif league.get("league_id"):
             return 90
         else:
