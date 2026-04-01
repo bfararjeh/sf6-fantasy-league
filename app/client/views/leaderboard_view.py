@@ -56,7 +56,7 @@ class LeaderboardView(QWidget):
 
         self.content_layout = QVBoxLayout(self.content_widget)
         self.content_layout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
-        self.content_layout.setContentsMargins(50, 35, 50, 35)
+        self.content_layout.setContentsMargins(50, 15, 50, 15)
         self.content_layout.setSpacing(10)
 
         scroll.setWidget(self.content_widget)
@@ -276,7 +276,14 @@ class LeaderboardView(QWidget):
                 row+=1
 
             former_widget.setVisible(False)
-            toggle.toggled.connect(former_widget.setVisible)
+            
+            def on_toggle(checked):
+                former_widget.setVisible(checked)
+                former_widget.updateGeometry()
+                team_frame.updateGeometry()
+                QApplication.processEvents()
+
+            toggle.toggled.connect(on_toggle)
 
             root_layout.addWidget(toggle, alignment=Qt.AlignmentFlag.AlignCenter)
             root_layout.addWidget(former_widget, stretch=1)
@@ -358,6 +365,17 @@ class LeaderboardView(QWidget):
         self.my_user_id = Session.user_id
         self.leaguemate_data = Session.leaguemate_standings
 
+        new_fingerprint = (
+            tuple(
+                (d["user_name"], d["total_points"], tuple(p["player_name"] for p in d["players"]))
+                for d in (self.leaguemate_data or [])
+            )
+        )
+
+        if getattr(self, "_last_fingerprint", None) == new_fingerprint:
+            return
+
+        self._last_fingerprint = new_fingerprint
         self._update_leaguemates()
 
     def _update_leaguemates(self):

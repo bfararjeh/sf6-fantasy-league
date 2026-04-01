@@ -26,7 +26,6 @@ class Session:
     @classmethod
     def _set_defaults(cls):
         # authenticated supabase session
-        cls.test = 0
         cls._on_block: callable = None
         cls.auth_base               = None
 
@@ -317,7 +316,7 @@ class Session(Session):
         elif league.get("league_id"):
             return 90
         else:
-            return 900
+            return 120
 
     @classmethod
     def reset(cls):

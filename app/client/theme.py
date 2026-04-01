@@ -123,6 +123,50 @@ BUTTON_STYLESHEET_D = """
             border-radius: 8px;
         """
 
+# more subtle leave/back button
+BUTTON_STYLESHEET_E = f"""
+QPushButton {{
+    background-color: {QColor("#B80000").name()};
+    color: {QColor("#ffffff").name()};
+    border-radius: 6px;
+    padding: 8px 8px;
+    font-size: 14px;
+    font-weight: bold;
+}}
+QPushButton:hover {{
+    background-color: {QColor("#B80000").lighter(120).name()};
+}}
+QPushButton:pressed {{
+    background-color: {QColor("#B80000").darker(120).name()};
+}}
+QPushButton:disabled {{
+    background-color: {QColor("#9C4444").name()};
+    color: #888888;
+}}
+"""
+
+# confirm button
+BUTTON_STYLESHEET_F = f"""
+QPushButton {{
+    background-color: {QColor("#2faf15").name()};
+    color: {QColor("#ffffff").name()};
+    border-radius: 6px;
+    padding: 8px 8px;
+    font-size: 14px;
+    font-weight: bold;
+}}
+QPushButton:hover {{
+    background-color: {QColor("#2faf15").lighter(120).name()};
+}}
+QPushButton:pressed {{
+    background-color: {QColor("#2faf15").darker(120).name()};
+}}
+QPushButton:disabled {{
+    background-color: {QColor("#31522B").name()};
+    color: #888888;
+}}
+"""
+
 SCROLL_STYLESHEET = f"""
 QScrollBar:vertical {{
     background: {QColor("#10194D").darker(130).name()};

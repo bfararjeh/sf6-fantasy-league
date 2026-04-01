@@ -1124,8 +1124,8 @@ class LeagueView(QWidget):
     def _refresh(self, force=0):
         draft_complete_before = getattr(self, "is_draft_complete", None)
 
-        Session.init_league_data(force)
         Session.init_player_scores()
+        Session.init_league_data(force)
 
         league              = Session.league_data or {}
         team                = Session.team_data or {}
@@ -1156,6 +1156,20 @@ class LeagueView(QWidget):
             self.app.show_league_view()
             return
 
+        new_fingerprint = (
+            self.my_league_name,
+            self.is_draft_complete,
+            self.is_league_locked,
+            self.my_next_pick,
+            self.my_team_name,
+            tuple(self.my_leaguemates),
+            tuple(p["id"] for p in (self.my_team_standings.get("players") or [])),
+        )
+
+        if getattr(self, "_last_fingerprint", None) == new_fingerprint:
+            return
+
+        self._last_fingerprint = new_fingerprint
         self._update_view()
 
     def _update_view(self):

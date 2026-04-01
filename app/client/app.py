@@ -166,8 +166,8 @@ class FantasyApp(QMainWindow):
         self.footer.setVisible(True)
         self.header.refresh_button.setVisible(True)
         if self.league_view is not None:
-            # self.stack.setCurrentWidget(self.loading_view)
-            # QApplication.processEvents()
+            self.stack.setCurrentWidget(self.loading_view)
+            QApplication.processEvents()
             self.stack.setCurrentWidget(self.league_view)
             SoundManager.play("loaded")
             self.connect_refresh(lambda: self.league_view._refresh(force=1))

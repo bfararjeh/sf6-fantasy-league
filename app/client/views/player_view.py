@@ -50,7 +50,7 @@ class PlayerView(QWidget):
         content_widget = QWidget()
         content_layout = QVBoxLayout(content_widget)
         content_layout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
-        content_layout.setContentsMargins(50, 35, 50, 35)
+        content_layout.setContentsMargins(50, 15, 50, 15)
         content_layout.setSpacing(50)
 
         # player layout

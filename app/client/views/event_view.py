@@ -88,7 +88,7 @@ class EventView(QWidget):
         self.main_page = QWidget()
         self.content_layout = QVBoxLayout(self.main_page)
         self.content_layout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
-        self.content_layout.setContentsMargins(50, 35, 50, 35)
+        self.content_layout.setContentsMargins(50, 15, 50, 15)
         self.content_layout.setSpacing(0)
 
         self.view_stack.addWidget(self.main_page)
@@ -298,7 +298,7 @@ class EventView(QWidget):
 
         back_btn = QPushButton("Back")
         back_btn.setFixedWidth(100)
-        back_btn.setStyleSheet(BUTTON_STYLESHEET_A)
+        back_btn.setStyleSheet(BUTTON_STYLESHEET_E)
         back_btn.clicked.connect(self._return_to_main)
 
         image = self._build_event_image(event, size=300)
