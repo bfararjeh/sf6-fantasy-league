@@ -123,9 +123,9 @@ def reject_request(receiver_name: str, request_id: str):
 
 def main():
     # get_everything("Alice")
-    # create_player_request("Alice", "Bobert", "FREESER", "Broski")
+    create_player_request("Bobert", "Alice", "Phenom", "MenaRD")
     # create_pool_request("Bobert", "Akira", "Broski")
-    accept_request("Bobert", "46a206c5-230c-4819-a3df-592d3ca1d805")
+    # accept_request("Bobert", "46a206c5-230c-4819-a3df-592d3ca1d805")
     # reject_request("Alice", "some-request-uuid")
 
 if __name__ == "__main__":

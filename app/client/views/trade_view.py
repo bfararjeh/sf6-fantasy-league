@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
-from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QPixmap
+from PyQt6.QtCore import QSize, Qt, QTimer
+from PyQt6.QtGui import QIcon, QPixmap
 from PyQt6.QtWidgets import (
     QApplication,
     QFrame,
@@ -11,6 +11,7 @@ from PyQt6.QtWidgets import (
     QLineEdit,
     QMessageBox,
     QPushButton,
+    QScrollArea,
     QSizePolicy,
     QSpacerItem,
     QStackedWidget,
@@ -24,7 +25,7 @@ from app.client.controllers.session import Session
 from app.client.controllers.sound_manager import SoundManager
 
 from app.client.widgets.hover_image import HoverImage
-from app.client.widgets.misc import set_status
+from app.client.widgets.misc import _build_empty_label, set_status
 from app.client.widgets.spinner import SpinnerWidget
 from app.client.widgets.utp_carousel import _UTPCarousel
 
@@ -80,10 +81,10 @@ class TradeView(QWidget):
 
         layout.addWidget(trades)
 
-        history = QPushButton("Trade History")
-        history.setCursor(Qt.CursorShape.PointingHandCursor)
-        # history.clicked.connect()
-        history.setStyleSheet(BUTTON_STYLESHEET_A)
+        self._history_btn = QPushButton("Trade History")
+        self._history_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._history_btn.clicked.connect(self._toggle_history)
+        self._history_btn.setStyleSheet(BUTTON_STYLESHEET_A)
 
         left = QWidget()
         center = QWidget()
@@ -96,7 +97,7 @@ class TradeView(QWidget):
         right_layout = QHBoxLayout(right)
         right_layout.setContentsMargins(0, 0, 10, 0)
         right_layout.addStretch()
-        right_layout.addWidget(history, alignment=Qt.AlignmentFlag.AlignTop)
+        right_layout.addWidget(self._history_btn, alignment=Qt.AlignmentFlag.AlignTop)
 
         layout.addWidget(left, 1)
         layout.addWidget(center)
@@ -232,7 +233,7 @@ class TradeView(QWidget):
             image_path=str(ResourcePath.IMAGES / "u2u.png"),
             title="Manager Trade",
             desc="Accept, reject, and create trades for owned players.",
-            on_click=lambda: None,
+            on_click=lambda: self._go_to_utu(),
             tag=True
         ))
 
@@ -318,7 +319,6 @@ class TradeView(QWidget):
         layout.addWidget(self._build_utp_carousel())
         layout.addStretch()
         layout.addWidget(self._build_utp_roster())
-        layout.addStretch()
 
         button_row.addStretch()
         button_row.addWidget(self._build_utp_confirm_button(),alignment=Qt.AlignmentFlag.AlignCenter)
@@ -328,6 +328,96 @@ class TradeView(QWidget):
         layout.addWidget(bar)
 
         return page
+
+    def _build_utu_page(self):
+        page = QWidget()
+        layout = QVBoxLayout(page)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(20)
+
+        # main columns
+        columns = QWidget()
+        columns_layout = QHBoxLayout(columns)
+        columns_layout.setSpacing(20)
+        columns_layout.setContentsMargins(0, 0, 0, 0)
+
+        incoming = [r for r in self.trade_requests if r["receiver_id"] == self.my_user_id]
+        outgoing = [r for r in self.trade_requests if r["initiator_id"] == self.my_user_id]
+
+        divider = QFrame()
+        divider.setFrameShape(QFrame.Shape.VLine)
+        divider.setFixedWidth(1)
+        divider.setStyleSheet("color: #444444;")
+
+        columns_layout.addWidget(self._build_utu_column("Incoming Requests", incoming, outgoing=False), stretch=1)
+        columns_layout.addWidget(divider)
+        columns_layout.addWidget(self._build_utu_column("Outgoing Requests", outgoing, outgoing=True), stretch=1)
+
+        # buttons
+        buttons = QWidget()
+        buttons_layout = QHBoxLayout(buttons)
+        buttons_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        buttons_layout.setSpacing(20)
+
+        create_btn = QPushButton("Request")
+        create_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        create_btn.setStyleSheet(BUTTON_STYLESHEET_F)
+        create_btn.setFixedWidth(100)
+        create_btn.clicked.connect(lambda: None)
+
+        back_btn = QPushButton("Back")
+        back_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        back_btn.setStyleSheet(BUTTON_STYLESHEET_E)
+        back_btn.setFixedWidth(100)
+        back_btn.clicked.connect(lambda: self.view_stack.setCurrentWidget(self._selection_page))
+
+        buttons_layout.addStretch()
+        buttons_layout.addWidget(create_btn)
+        buttons_layout.addWidget(back_btn)
+        buttons_layout.addStretch()
+
+        layout.addWidget(columns, stretch=1)
+        layout.addWidget(buttons)
+
+        return page
+
+    def _build_history_page(self):
+        cont = QWidget()
+        layout = QVBoxLayout(cont)
+        layout.setSpacing(20)
+        layout.setContentsMargins(15, 0, 15, 0)
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setStyleSheet(SCROLL_STYLESHEET)
+        scroll.setWidget(cont)
+
+        windows_by_id = {w["id"]: w for w in self.trade_windows}
+        trades_by_window = {}
+        for trade in self.trade_history:
+            wid = trade["trade_window_id"]
+            trades_by_window.setdefault(wid, []).append(trade)
+
+        for wid in sorted(trades_by_window.keys(), reverse=True):
+            window = windows_by_id.get(wid)
+            if window:
+                start = datetime.fromisoformat(window["start_date"]).strftime("%b %d")
+                end = datetime.fromisoformat(window["end_date"]).strftime("%b %d, %Y")
+                header_text = f"Window: {start} - {end}"
+            else:
+                header_text = f"Window {wid}"
+
+            header = QLabel(header_text)
+            header.setStyleSheet("""
+                font-size: 15px;
+                font-weight: bold;
+                color: #AAAAAA;
+                border-bottom: 1px solid #333333;
+                padding-bottom: 6px;
+            """)
+        
+        return scroll
 
 
 # -- U2P BUILDERS --
@@ -339,7 +429,7 @@ class TradeView(QWidget):
         container = QWidget()
         layout = QVBoxLayout(container)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(5)
+        layout.setSpacing(10)
 
         search = QLineEdit()
         search.setFixedWidth(250)
@@ -352,7 +442,7 @@ class TradeView(QWidget):
 
         self._utp_carousel_name_label = QLabel("Select a player")
         self._utp_carousel_name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._utp_carousel_name_label.setStyleSheet("font-size: 16px; font-weight: bold; color: #FFFFFF;")
+        self._utp_carousel_name_label.setStyleSheet("font-size: 20px; font-weight: bold; color: #FFFFFF;")
 
         self._utp_carousel_widget = _UTPCarousel(
             players=self.trade_players,
@@ -361,9 +451,9 @@ class TradeView(QWidget):
             on_hover=self._utp_on_carousel_hover
         )
 
+        layout.addWidget(search, alignment=Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self._utp_carousel_name_label)
         layout.addWidget(self._utp_carousel_widget)
-        layout.addWidget(search, alignment=Qt.AlignmentFlag.AlignCenter)
         return container
 
     def _on_search_text_changed(self, text):
@@ -522,6 +612,360 @@ class TradeView(QWidget):
         )
 
 
+# -- U2U BUILDERS --
+
+    def _build_utu_column(self, title, requests, outgoing):
+        container = QWidget()
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(10)
+
+        label = QLabel(title)
+        label.setStyleSheet("font-size: 24px; font-weight: bold; color: white;")
+        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        scroll.setStyleSheet(SCROLL_STYLESHEET)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+
+        content = QWidget()
+        content.setStyleSheet("")
+        content_layout = QVBoxLayout(content)
+        content_layout.setContentsMargins(15, 15, 15, 15)
+        content_layout.setSpacing(10)
+        content_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+
+        if outgoing == True:
+            scroll.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
+        else:
+            scroll.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+            content.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
+
+        for r in requests:
+            if outgoing:
+                content_layout.addWidget(self._build_outgoing_request(r))
+            else:
+                content_layout.addWidget(self._build_incoming_request(r))
+
+        if not requests:
+            empty = _build_empty_label()
+            content_layout.addStretch()
+            content_layout.addWidget(empty, alignment=Qt.AlignmentFlag.AlignCenter)
+            content_layout.addStretch()
+
+        scroll.setWidget(content)
+        layout.addWidget(label)
+        layout.addWidget(scroll, stretch=1)
+        layout.addSpacerItem(QSpacerItem(0, 10))
+
+        return container
+
+    def _build_incoming_request(self, r):
+        card = QWidget()
+        card.setObjectName("card")
+        card.setStyleSheet("""
+            QWidget#card {
+                background-color: #0d0d1a;
+                border: 1px solid #333333;
+                border-radius: 8px;
+            }
+        """)
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(10, 10, 10, 10)
+        layout.setSpacing(8)
+
+        # top row: image + info
+        top = QWidget()
+        top_layout = QHBoxLayout(top)
+        top_layout.setContentsMargins(0, 0, 0, 0)
+        top_layout.setSpacing(10)
+
+        # init player
+        pixmap = Session.get_pixmap("players", r["initiator_player"])
+        image = HoverImage(pixmap, size=140)
+        label = QLabel(f"You Get\n{r["initiator_player"]}")
+        label.setStyleSheet(f"font-size: 16px; font-weight: bold; color: {"#36D136"};")
+        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        player = QWidget()
+        play_lay = QVBoxLayout(player)
+        play_lay.addWidget(image)
+        play_lay.addWidget(label)
+
+        top_layout.addStretch()
+        top_layout.addWidget(player)
+        top_layout.addStretch()
+
+        # receive player
+        pixmap = Session.get_pixmap("players", r["receiver_player"])
+        image = HoverImage(pixmap, size=140)
+        label = QLabel(f"You Give\n{r["receiver_player"]}")
+        label.setStyleSheet(f"font-size: 16px; font-weight: bold; color: {"#FF4545"};")
+        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        player = QWidget()
+        play_lay = QVBoxLayout(player)
+        play_lay.addWidget(image)
+        play_lay.addWidget(label)
+
+        top_layout.addWidget(player)
+        top_layout.addStretch()
+
+        # info
+        info = QWidget()
+        info_layout = QVBoxLayout(info)
+        info_layout.setContentsMargins(0, 0, 0, 0)
+        info_layout.setSpacing(5)
+
+        created = datetime.fromisoformat(r["created_at"]).strftime("%d %b, %H:%M")
+        initiator_name = self._get_username(r["initiator_id"])
+
+        image = QLabel()
+        image.setPixmap(
+            Session.get_pixmap("avatars", str(r["initiator_id"])).scaled(
+                75, 75,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation
+            )
+        )
+
+        # buttons
+        btns = QWidget()
+        btns_layout = QVBoxLayout(btns)
+        btns_layout.setContentsMargins(0, 0, 0, 0)
+        btns_layout.setSpacing(10)
+
+        accept = QPushButton("O")
+        accept.setCursor(Qt.CursorShape.PointingHandCursor)
+        accept.setStyleSheet(BUTTON_STYLESHEET_F)
+        accept.setFixedSize(QSize(35, 35))
+        accept.clicked.connect(lambda: self._utu_on_accept(r))
+
+        reject = QPushButton("X")
+        reject.setCursor(Qt.CursorShape.PointingHandCursor)
+        reject.setStyleSheet(BUTTON_STYLESHEET_E)
+        reject.setFixedSize(QSize(35, 35))
+        reject.clicked.connect(lambda: self._utu_on_reject(r))
+
+        btns_layout.addStretch()
+        btns_layout.addWidget(accept)
+        btns_layout.addWidget(reject)
+        btns_layout.addStretch()
+
+        bottom = QWidget()
+        bot_layout = QHBoxLayout(bottom)
+        bot_layout.setContentsMargins(0, 0, 0, 0)
+        bot_layout.setSpacing(10)
+
+        info_layout.addWidget(self._utu_info_label(f"From: {initiator_name}", bold=True, big=True))
+        info_layout.addWidget(image, alignment=Qt.AlignmentFlag.AlignCenter)
+        info_layout.addWidget(self._utu_info_label(created, color="#888888"))
+
+        bot_layout.addStretch()
+        bot_layout.addWidget(info)
+        bot_layout.addSpacerItem(QSpacerItem(25, 0))
+        bot_layout.addWidget(btns)
+        bot_layout.addStretch()
+
+        layout.addWidget(top)
+        layout.addWidget(bottom)
+
+        return card
+
+    def _build_outgoing_request(self, r):
+        card = QWidget()
+        card.setObjectName("card")
+        card.setStyleSheet("""
+            QWidget#card {
+                background-color: #0d0d1a;
+                border: 1px solid #333333;
+                border-radius: 8px;
+            }
+        """)
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(10, 10, 10, 10)
+        layout.setSpacing(8)
+
+        # top row: images
+        top = QWidget()
+        top_layout = QHBoxLayout(top)
+        top_layout.setContentsMargins(0, 0, 0, 0)
+        top_layout.setSpacing(10)
+
+        # initiator player (you give)
+        pixmap = Session.get_pixmap("players", r["initiator_player"])
+        image = HoverImage(pixmap, size=140)
+        label = QLabel(f"You Give\n{r['initiator_player']}")
+        label.setStyleSheet(f"font-size: 16px; font-weight: bold; color: #FF4545;")
+        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        player = QWidget()
+        play_lay = QVBoxLayout(player)
+        play_lay.addWidget(image)
+        play_lay.addWidget(label)
+        top_layout.addStretch()
+        top_layout.addWidget(player)
+        top_layout.addStretch()
+
+        # receiver player (you get)
+        pixmap = Session.get_pixmap("players", r["receiver_player"])
+        image = HoverImage(pixmap, size=140)
+        label = QLabel(f"You Get\n{r['receiver_player']}")
+        label.setStyleSheet(f"font-size: 16px; font-weight: bold; color: #36D136;")
+        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        player = QWidget()
+        play_lay = QVBoxLayout(player)
+        play_lay.addWidget(image)
+        play_lay.addWidget(label)
+        top_layout.addWidget(player)
+        top_layout.addStretch()
+
+        # bottom row: info + cancel button
+        info = QWidget()
+        info_layout = QVBoxLayout(info)
+        info_layout.setContentsMargins(0, 0, 0, 0)
+        info_layout.setSpacing(5)
+
+        created = datetime.fromisoformat(r["created_at"]).strftime("%d %b, %H:%M")
+        receiver_name = self._get_username(r["receiver_id"])
+
+        avatar = QLabel()
+        avatar.setPixmap(
+            Session.get_pixmap("avatars", str(r["receiver_id"])).scaled(
+                75, 75,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation
+            )
+        )
+
+        info_layout.addWidget(self._utu_info_label(f"To: {receiver_name}", bold=True, big=True))
+        info_layout.addWidget(avatar, alignment=Qt.AlignmentFlag.AlignCenter)
+        info_layout.addWidget(self._utu_info_label(created, color="#888888"))
+
+        # cancel button
+        btns = QWidget()
+        btns_layout = QVBoxLayout(btns)
+        btns_layout.setContentsMargins(0, 0, 0, 0)
+        btns_layout.setSpacing(10)
+
+        cancel = QPushButton("X")
+        cancel.setCursor(Qt.CursorShape.PointingHandCursor)
+        cancel.setStyleSheet(BUTTON_STYLESHEET_E)
+        cancel.setFixedSize(QSize(35, 35))
+        cancel.clicked.connect(lambda: self._utu_on_cancel(r))
+
+        btns_layout.addStretch()
+        btns_layout.addWidget(cancel)
+        btns_layout.addStretch()
+
+        bottom = QWidget()
+        bot_layout = QHBoxLayout(bottom)
+        bot_layout.setContentsMargins(0, 0, 0, 0)
+        bot_layout.setSpacing(10)
+        bot_layout.addStretch()
+        bot_layout.addWidget(info)
+        bot_layout.addSpacerItem(QSpacerItem(25, 0))
+        bot_layout.addWidget(btns)
+        bot_layout.addStretch()
+
+        layout.addWidget(top)
+        layout.addWidget(bottom)
+
+        return card
+
+    def _utu_info_label(self, text, bold=False, color="#FFFFFF", big=False):
+        label = QLabel(text)
+        label.setStyleSheet(f"font-size: {"16px" if big else "13px"}; font-weight: {'bold' if bold else 'normal'}; color: {color};")
+        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        return label
+
+    def _get_username(self, user_id):
+        for d in (self.leaguemate_data or []):
+            if d["user_id"] == user_id:
+                return d["user_name"]
+        return "Unknown"
+
+    def _utu_on_accept(self, r):
+        msg = QMessageBox(self)
+        msg.setWindowTitle("Accept Trade")
+        msg.setStyleSheet("background: #10194D;")
+        msg.setText(f"Accept {self._get_username(r['initiator_id'])}'s offer of {r['initiator_player']} for {r['receiver_player']}?")
+        msg.setIcon(QMessageBox.Icon.NoIcon)
+        msg.addButton("Accept", QMessageBox.ButtonRole.AcceptRole)
+        msg.addButton("Cancel", QMessageBox.ButtonRole.RejectRole)
+        SoundManager.play("button")
+        result = msg.exec()
+        if result == 0:
+            set_status("Accepting Request...")
+            self._utu_execute_accept(r)
+
+    def _utu_on_reject(self, r):
+        msg = QMessageBox(self)
+        msg.setWindowTitle("Reject Trade")
+        msg.setStyleSheet("background: #10194D;")
+        msg.setText(f"Reject {self._get_username(r['initiator_id'])}'s offer of {r['initiator_player']} for {r['receiver_player']}?")
+        msg.setIcon(QMessageBox.Icon.NoIcon)
+        msg.addButton("Reject", QMessageBox.ButtonRole.AcceptRole)
+        msg.addButton("Cancel", QMessageBox.ButtonRole.RejectRole)
+        SoundManager.play("button")
+        result = msg.exec()
+        if result == 0:
+            self._utu_execute_reject(r)
+
+    def _utu_on_cancel(self, r):
+        msg = QMessageBox(self)
+        msg.setWindowTitle("Cancel Request")
+        msg.setStyleSheet("background: #10194D;")
+        msg.setText(f"Cancel your request of {r['initiator_player']} for {r['receiver_player']}?")
+        msg.setIcon(QMessageBox.Icon.NoIcon)
+        msg.addButton("Cancel Request", QMessageBox.ButtonRole.AcceptRole)
+        msg.addButton("Back", QMessageBox.ButtonRole.RejectRole)
+        SoundManager.play("button")
+        result = msg.exec()
+        if result == 0:
+            self._utu_execute_cancel(r)
+
+    def _utu_execute_accept(self, r):
+        pass
+
+    def _utu_execute_reject(self, r):
+        pass
+
+    def _utu_execute_cancel(self, r):
+        pass
+
+
+# -- HISTORY BUILDERS --
+
+    def _build_history_section(self, h):
+        frame = QFrame()
+        frame.setObjectName("hFrame")
+        frame.setStyleSheet("""
+            QFrame#hFrame {
+                background-color: #090E2B;
+                border: 2px solid #444444;
+                border-radius: 4px;
+            }
+        """)
+
+        root_layout = QVBoxLayout(frame)
+        root_layout.setSpacing(15)
+
+    
+    def _build_avatar(self, user_id, size):
+        image = QLabel()
+        image.setPixmap(
+            Session.get_pixmap("avatars", str(user_id)).scaled(
+                size, size,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation
+            )
+        )
+        return image
+
+
 # -- NAVIGATION
 
     def _go_to_utp(self):
@@ -538,6 +982,33 @@ class TradeView(QWidget):
         self.view_stack.setCurrentWidget(self._utp_page)
         SoundManager.play("loaded")
 
+    def _go_to_utu(self):
+        self._show_spinner()
+        QApplication.processEvents()
+        QTimer.singleShot(0, self._load_utu)
+
+    def _load_utu(self):
+        if hasattr(self, "_utu_page"):
+            self.view_stack.removeWidget(self._utu_page)
+            self._utu_page.deleteLater()
+        self._utu_page = self._build_utu_page()
+        self.view_stack.addWidget(self._utu_page)
+        self.view_stack.setCurrentWidget(self._utu_page)
+        SoundManager.play("loaded")
+
+    def _toggle_history(self):
+        if self.view_stack.currentWidget() == getattr(self, "_history_page", None):
+            self.view_stack.setCurrentWidget(self._selection_page)
+            self._history_btn.setText("Trade History")
+        else:
+            self._go_to_history()
+            self._history_btn.setText("Trade Page")
+
+    def _go_to_history(self):
+        if not hasattr(self, "_history_page"):
+            self._history_page = self._build_history_page()
+            self.view_stack.addWidget(self._history_page)
+        self.view_stack.setCurrentWidget(self._history_page)
 
 # -- HELPERS --
 
@@ -560,7 +1031,7 @@ class TradeView(QWidget):
             self.view_stack.setCurrentWidget(self._countdown_page)
 
     def _invalidate_pages(self):
-        for attr in ("_countdown_page", "_selection_page", "_utp_page", "_utu_page"):
+        for attr in ("_countdown_page", "_selection_page", "_utp_page", "_utu_page", "_history_page"):
             if hasattr(self, attr):
                 widget = getattr(self, attr)
                 self.view_stack.removeWidget(widget)
@@ -649,11 +1120,12 @@ class TradeView(QWidget):
             self.next_window.get("id") if self.next_window else None,
             self.trades_remaining,
             tuple(p["name"] for p in self.trade_players),
-            tuple(r["id"] for r in self.trade_requests),
+            tuple(r["request_id"] for r in self.trade_requests),
         )
 
         if getattr(self, "_last_fingerprint", None) == new_fingerprint:
             return
+        
 
         self._last_fingerprint = new_fingerprint
         self._determine_view()
