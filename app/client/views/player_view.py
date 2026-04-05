@@ -37,11 +37,13 @@ class PlayerView(QWidget):
         self.SORT_KEYS = {
             "name":   lambda p: p["name"].lower(),
             "region": lambda p: p["region"].lower(),
+            "points": lambda p: -int(p["cum_points"]),
         }
 
         self.SORT_LABELS = {
             "name":   "Sort: Name",
             "region": "Sort: Region",
+            "points": "Sort: Points"
         }
 
         self._all_players_sorted = []
@@ -68,7 +70,7 @@ class PlayerView(QWidget):
         self.player_layout = QVBoxLayout(self.player_cont)
         self.player_layout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
         self.player_layout.setContentsMargins(0, 0, 0, 0)
-        self.player_layout.setSpacing(35)
+        self.player_layout.setSpacing(20)
 
         content_layout.addWidget(self._build_title())
         content_layout.addWidget(self.player_cont)

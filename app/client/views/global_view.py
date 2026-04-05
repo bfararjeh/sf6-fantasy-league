@@ -54,7 +54,7 @@ class GlobalView(QWidget):
         # composing content
         content_layout.addWidget(self._build_title())
 
-        subtitle = QLabel("Global stats are updated every 2 hours.")
+        subtitle = QLabel("Global stats are updated every 24 hours.")
         subtitle.setStyleSheet("color: #666666; font-style: italic;")
 
         content_layout.addWidget(subtitle, alignment= Qt.AlignmentFlag.AlignCenter)

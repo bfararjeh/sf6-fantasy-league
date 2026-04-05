@@ -159,6 +159,13 @@ class _UTPCarousel(QWidget):
                 img_y = (base_img_size - img_size) // 2
                 painter.drawPixmap(img_x, img_y, px)
 
+                if self._selected == player and len(self._players) == 1:
+                    painter.setOpacity(1.0)
+                    pen = QPen(QColor("#FFFFFF"), 3)
+                    painter.setPen(pen)
+                    painter.setBrush(Qt.BrushStyle.NoBrush)
+                    painter.drawRect(img_x, img_y, img_size, img_size)
+
         finally:
             painter.end()
 

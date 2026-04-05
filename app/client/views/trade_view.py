@@ -420,7 +420,8 @@ class TradeView(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(10)
 
-        search = QLineEdit()
+        self._utp_search_bar = QLineEdit()
+        search = self._utp_search_bar
         search.setFixedWidth(250)
         search.setPlaceholderText("Search players...")
         self._search_timer = QTimer()
@@ -561,6 +562,11 @@ class TradeView(QWidget):
         self._utp_carousel_widget.set_selected(self._utp_selected_pool_player)
         if self._utp_selected_pool_player:
             self._utp_carousel_name_label.setText(self._utp_selected_pool_player["name"])
+        locked = self._utp_selected_pool_player is not None
+        self._utp_search_bar.setReadOnly(locked)
+        self._utp_search_bar.setStyleSheet(
+            f"color: {"#888888"}; background-color: {"#232138"};" if locked else ""
+        )
 
 
 # -- U2U BUILDERS --
@@ -1090,7 +1096,7 @@ class TradeView(QWidget):
             }
         """)
 
-        ROW_H = 100
+        ROW_H = 95
 
         for i, trade in enumerate(sorted(trades, key=lambda t: t["completed_at"], reverse=True)):
             table.setRowHeight(i, ROW_H)

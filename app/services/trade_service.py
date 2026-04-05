@@ -198,10 +198,15 @@ class TradeService():
         return True
 
     def accept_request(self, request_id):
-        self.supabase.rpc("accept_trade_request", {
-            "p_request_id": request_id,
-            "p_receiver_id": self.user_id
-        }).execute()
+        try:
+            self.supabase.rpc("accept_trade_request", {
+                "p_request_id": request_id,
+                "p_receiver_id": self.user_id
+            }).execute()
+        except Exception as e:
+            if "40P01" in str(e) or "deadlock detected" in str(e).lower():
+                raise Exception("This trade was blocked by another ongoing trade. Someone beat you to it!")
+            raise
         return True
 
     def reject_request(self, request_id):
@@ -246,12 +251,17 @@ class TradeService():
             raise Exception("You are not in a league.")
 
         # execute via db function
-        self.supabase.rpc("execute_pool_trade", {
-            "p_initiator_id": self.user_id,
-            "p_league_id": league_id,
-            "p_window_id": window_id,
-            "p_give_player": give_player,
-            "p_receive_player": receive_player,
-        }).execute()
+        try:
+            self.supabase.rpc("execute_pool_trade", {
+                "p_initiator_id": self.user_id,
+                "p_league_id": league_id,
+                "p_window_id": window_id,
+                "p_give_player": give_player,
+                "p_receive_player": receive_player,
+            }).execute()
+        except Exception as e:
+            if "40P01" in str(e) or "deadlock detected" in str(e).lower():
+                raise Exception("This trade was blocked by another ongoing trade. Someone beat you to it!")
+            raise
 
         return True
