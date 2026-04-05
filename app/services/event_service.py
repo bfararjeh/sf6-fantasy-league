@@ -1,7 +1,8 @@
-from datetime import datetime, timezone
-
 import requests
+
+from datetime import datetime, timezone
 from app.services.base_service import BaseService
+
 
 class EventService():
     """
@@ -93,15 +94,6 @@ class EventService():
         )
 
         return sorted_events
-
-    def get_qualified(self):
-        qualified = self.verify_query(
-            self.supabase
-            .table("qualified")
-            .select("*")
-        ).data
-
-        return qualified
 
     def get_event_standings(self, event_id):   
         event = self.verify_query(
@@ -304,7 +296,9 @@ class EventService():
                 dt = dt.replace(tzinfo=timezone.utc)
             return dt
 
-        joined_dt = parse_dt(joined_at)
+        from app.client.controllers.session import Session
+        default_joined = datetime(2013 + Session.SEASON, 3, 1, tzinfo=timezone.utc)
+        joined_dt = parse_dt(joined_at) or default_joined
         left_dt = parse_dt(left_at) or datetime.max.replace(tzinfo=timezone.utc)
 
         history = [
@@ -320,6 +314,7 @@ class EventService():
                 "event_name": h["events"]["name"],
                 "event_date": h["events"]["start_weekend"],
                 "points_gained": h["points"],
+                "rank": h["rank"],
                 "points_after": running
             })
         return timeline

@@ -16,6 +16,7 @@ from PyQt6.QtWidgets import (
 )
 
 from app.client.controllers.session import Session
+from app.client.controllers.sound_manager import SoundManager
 from app.client.theme import *
 from app.client.widgets.misc import _build_empty_label, fit_text_to_width
 from app.client.widgets.hover_image import HoverImage
@@ -282,6 +283,7 @@ class LeaderboardView(QWidget):
                 former_widget.updateGeometry()
                 team_frame.updateGeometry()
                 QApplication.processEvents()
+                SoundManager.play("button")
 
             toggle.toggled.connect(on_toggle)
 

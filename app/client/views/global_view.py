@@ -16,6 +16,7 @@ from PyQt6.QtWidgets import (
 
 from app.client.controllers.resource_path import ResourcePath
 from app.client.controllers.session import Session
+from app.client.controllers.sound_manager import SoundManager
 from app.client.theme import *
 from app.client.widgets.hover_image import HoverImage
 from app.client.widgets.misc import _build_empty_label
@@ -311,6 +312,7 @@ class GlobalView(QWidget):
             content.updateGeometry()
             wrapper.updateGeometry()
             QApplication.processEvents()
+            SoundManager.play("button")
 
         toggle.toggled.connect(on_toggle)
 
@@ -377,6 +379,7 @@ class GlobalView(QWidget):
             content.updateGeometry()
             container.updateGeometry()
             QApplication.processEvents()
+            SoundManager.play("button")
 
         toggle.toggled.connect(on_toggle)
 

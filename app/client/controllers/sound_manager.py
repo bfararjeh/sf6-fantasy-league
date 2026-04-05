@@ -25,7 +25,8 @@ class SoundManager:
             ("login",   "login.wav"),
             ("logout",   "logout.wav"),
             ("boot",   "boot.wav"),
-            ("button", "button.wav")
+            ("button", "button.wav"),
+            ("prompt", "prompt.wav")
         ]:
             path = str(ResourcePath.SOUNDS / filename)
             cls._effect_output = QSoundEffect()

@@ -56,6 +56,47 @@ class TradeService():
         
         return result.data
 
+    def get_pool_players(self):
+        league_id = self.get_my_league()
+        if not league_id:
+            raise Exception("You are not in a league.")
+
+        # get all claimed players in this league
+        claimed = self.verify_query(
+            self.supabase
+            .table("team_players")
+            .select("player_name")
+            .eq("league_id", league_id)
+            .is_("left_at", None)
+        )
+        claimed_names = [p["player_name"] for p in claimed.data] if claimed else []
+
+        if claimed_names:
+            # get all players not in claimed list
+            result = self.verify_query(
+                self.supabase
+                .table("players")
+                .select("*")
+                .not_.in_("name", claimed_names)
+            )
+            return result.data if result else []
+        else:
+            return []
+
+    def get_trade_history(self):
+        league_id = self.get_my_league()
+        if not league_id:
+            raise Exception("You are not in a league.")
+
+        result = self.verify_query(
+            self.supabase
+            .table("trades")
+            .select("*")
+            .eq("league_id", league_id)
+            .order("completed_at", desc=True)
+        )
+        return result.data if result else []
+
     def create_player_request(self, initiator_id, receiver_id, initiator_player, receiver_player):
         now = datetime.now(timezone.utc).isoformat()
 
@@ -214,44 +255,3 @@ class TradeService():
         }).execute()
 
         return True
-
-    def get_pool_players(self):
-        league_id = self.get_my_league()
-        if not league_id:
-            raise Exception("You are not in a league.")
-
-        # get all claimed players in this league
-        claimed = self.verify_query(
-            self.supabase
-            .table("team_players")
-            .select("player_name")
-            .eq("league_id", league_id)
-            .is_("left_at", None)
-        )
-        claimed_names = [p["player_name"] for p in claimed.data] if claimed else []
-
-        if claimed_names:
-            # get all players not in claimed list
-            result = self.verify_query(
-                self.supabase
-                .table("players")
-                .select("*")
-                .not_.in_("name", claimed_names)
-            )
-            return result.data if result else []
-        else:
-            return []
-
-    def get_trade_history(self):
-        league_id = self.get_my_league()
-        if not league_id:
-            raise Exception("You are not in a league.")
-
-        result = self.verify_query(
-            self.supabase
-            .table("trades")
-            .select("*")
-            .eq("league_id", league_id)
-            .order("completed_at", desc=True)
-        )
-        return result.data if result else []

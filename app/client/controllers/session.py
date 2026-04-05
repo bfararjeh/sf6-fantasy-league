@@ -1,3 +1,4 @@
+import time
 from datetime import datetime, timedelta, timezone
 from packaging import version
 
@@ -96,7 +97,7 @@ class Session(Session):
     @classmethod
     def init_system_state(cls):
         if cls.system_state_grabbed_at is not None:
-            if datetime.now() - cls.system_state_grabbed_at < timedelta(seconds=5):
+            if datetime.now() - cls.system_state_grabbed_at < timedelta(minutes=2):
                 return cls.blocking_state
         try:
             system_state            = cls.auth_base.get_system_state()
@@ -199,19 +200,6 @@ class Session(Session):
             cls.event_data = None
 
     @classmethod
-    def init_qualified_data(cls):
-        if cls.init_system_state():
-            cls._trigger_block()
-            return
-        if cls.qualified_data is not None:
-            return
-
-        try:
-            cls.qualified_data = cls.event_service.get_qualified()
-        except Exception:
-            cls.qualified_data = None
-
-    @classmethod
     def init_trade_data(cls, force=False):
         if cls.init_system_state():
             cls._trigger_block()
@@ -256,6 +244,9 @@ class Session(Session):
         cached_etag = ImageCache.get_etag(image_type, key)
 
         if cached and cached_etag:
+            cached_at = ImageCache.get_cached_at(image_type, key)
+            if cached_at and (time.time() - cached_at) < 86400:
+                return cached
             filename = cls._image_filename(image_type, key)
             remote_etag = cls.auth_base.get_image_etag(image_type, filename)
             if remote_etag == cached_etag:
@@ -316,7 +307,7 @@ class Session(Session):
         elif league.get("league_id"):
             return 90
         else:
-            return 120
+            return 300
 
     @classmethod
     def reset(cls):

@@ -336,7 +336,7 @@ class FantasyApp(QMainWindow):
             return
 
         def _fetch():
-            Session.init_qualified_data()
+            Session.init_player_scores()
             QualifiedView.preload()
 
         def _done():

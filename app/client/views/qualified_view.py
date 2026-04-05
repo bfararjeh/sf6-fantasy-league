@@ -11,6 +11,7 @@ from PyQt6.QtWidgets import (
 
 from app.client.controllers.session import Session
 from app.client.theme import *
+from app.client.widgets.hover_image import HoverImage
 
 class QualifiedView(QWidget):
     def __init__(self, app):
@@ -22,7 +23,7 @@ class QualifiedView(QWidget):
         self.root_layout.setSpacing(0)
         self.setLayout(self.root_layout)
 
-        self.qualified_data = Session.qualified_data or []
+        self.players = Session.player_scores or []
 
         self._build_main()
 
@@ -42,11 +43,12 @@ class QualifiedView(QWidget):
 
         content_layout.addWidget(self._build_title())
 
-        # pad to exactly 48 entries
-        padded = self.qualified_data[:48] + [None] * max(0, 48 - len(self.qualified_data))
+        # only qualified players, padded to exactly 48 entries
+        qualified = [p for p in self.players if p["qualified"]]
+        qualified += [{}] * (48 - len(qualified))
 
         for i in range(0, 48, 4):
-            content_layout.addWidget(self._build_player_slot(padded[i:i + 4]))
+            content_layout.addWidget(self._build_player_slot(qualified[i:i + 4]))
 
         self.root_layout.addWidget(scroll, stretch=1)
 
@@ -68,22 +70,9 @@ class QualifiedView(QWidget):
             image.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
             if player:
-                image.setStyleSheet("border: 3px solid #BBBBBB;")
-                image.setPixmap(
-                    Session.get_pixmap("players", player["player"]).scaled(
-                        200, 200,
-                        Qt.AspectRatioMode.IgnoreAspectRatio,
-                        Qt.TransformationMode.SmoothTransformation
-                    )
-                )
-                info_label = QLabel()
-                info_label.setTextFormat(Qt.TextFormat.RichText)
-                info_label.setText(
-                    "<div style='line-height: 1;'>"
-                    f"<span style='font-size:20px; font-weight: bold;'>{player['player']}</span><br/>"
-                    f"<span style='font-size:16px;'>{player['method']}</span>"
-                    "</div>"
-                )
+                image = HoverImage(Session.get_pixmap("players", player["name"]), size=200)
+                info_label = QLabel(f"{player['name']}")
+                info_label.setStyleSheet("font-size: 20px; font-weight: bold;")
                 info_label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
             else:
                 image.setStyleSheet("border: 2px dashed #555; background-color: #333; color: #eee;")
@@ -137,5 +126,5 @@ class QualifiedView(QWidget):
 
     @staticmethod
     def preload():
-        for player in Session.qualified_data or []:
-            Session.get_image("players", player["player"])
+        for player in Session.player_scores or []:
+            Session.get_image("players", player["name"])
