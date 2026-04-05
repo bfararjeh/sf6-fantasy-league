@@ -64,7 +64,7 @@ class HeaderBar(QWidget):
 
         # create layout
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(10, 10, 10, 0)
+        layout.setContentsMargins(10, 10, 10, 10)
         layout.setSpacing(10)
 
         # banner created when there's a message to display

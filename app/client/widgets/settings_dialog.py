@@ -25,12 +25,12 @@ class SettingsDialog(QDialog):
         layout.addWidget(self._build_slider(
             str(ResourcePath.ICONS / "bgm.svg"),
             int(SoundManager.get_bgm_volume() * 100),
-            lambda v: SoundManager.set_bgm_volume(v / 100)
+            lambda v: (SoundManager.set_bgm_volume(v / 100), SoundManager.save_settings())
         ))
         layout.addWidget(self._build_slider(
             str(ResourcePath.ICONS / "effects.svg"),
             int(SoundManager.get_effects_volume() * 100),
-            lambda v: SoundManager.set_effects_volume(v / 100)
+            lambda v: (SoundManager.set_effects_volume(v / 100), SoundManager.save_settings())
         ))
 
         ver_label = QLabel(f"Version {Session.VERSION}")

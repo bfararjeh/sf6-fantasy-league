@@ -5,6 +5,32 @@ from PyQt6.QtWidgets import QGraphicsOpacityEffect, QLabel
 from app.client.controllers.resource_path import ResourcePath
 from app.client.controllers.sound_manager import SoundManager
 
+REGION_SVG_MAP = {
+    "Australia":          ("class", "Australia"),
+    "Belgium":            ("id",    "BE"),
+    "Brazil":             ("id",    "BR"),
+    "Cameroon":           ("id",    "CM"),
+    "Canada":             ("class", "Canada"),
+    "Chile":              ("class", "Chile"),
+    "China":              ("class", "China"),
+    "Dominican Republic": ("id",    "DO"),
+    "France":             ("class", "France"),
+    "Hong Kong":          ("class", "China"),       # proxy: China
+    "Japan":              ("class", "Japan"),
+    "Norway":             ("class", "Norway"),
+    "Saudi Arabia":       ("id",    "SA"),
+    "Singapore":          ("id",    "MY"),           # proxy: Malaysia
+    "South Korea":        ("id",    "KR"),
+    "Sweden":             ("id",    "SE"),
+    "Taiwan":             ("id",    "TW"),
+    "UAE":                ("id",    "AE"),
+    "United Kingdom":     ("class", "United Kingdom"),
+    "United States":      ("class", "United States"),
+    "Lebanon":                      ("id",    "LB"),
+    "Germany":                      ("id",    "DE"),
+    "South Africa":                 ("id",    "ZA"),
+    "Netherlands":                 ("id",     "NL"),
+}
 
 def fit_text_to_width(label: QLabel, text: str, max_width: int,
                       min_font_size=2, max_font_size=40, bold=True):

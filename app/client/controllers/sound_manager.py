@@ -1,3 +1,7 @@
+import json
+import os
+from pathlib import Path
+
 from PyQt6.QtMultimedia import QSoundEffect
 
 from app.client.controllers.resource_path import ResourcePath
@@ -10,6 +14,7 @@ class SoundManager:
     _effects = {}
     _player = None
     _audio_output = None
+    _settings_filename = "sound_settings.json"
 
     @classmethod
     def init(cls):
@@ -20,7 +25,8 @@ class SoundManager:
             ("login",   "login.wav"),
             ("logout",   "logout.wav"),
             ("boot",   "boot.wav"),
-            ("button", "button.wav")
+            ("button", "button.wav"),
+            ("prompt", "prompt.wav")
         ]:
             path = str(ResourcePath.SOUNDS / filename)
             cls._effect_output = QSoundEffect()
@@ -65,3 +71,33 @@ class SoundManager:
     def get_effects_volume(cls) -> float:
         effect = next(iter(cls._effects.values()), None)
         return effect.volume() if effect else 0.5
+
+    @classmethod
+    def _settings_path(cls) -> Path:
+        if os.name == "nt":
+            base = Path(os.environ["APPDATA"]) / "FantasySF6"
+        else:
+            base = Path.home() / ".config" / "FantasySF6"  # fallback for non-Windows
+        base.mkdir(parents=True, exist_ok=True)
+        return base / cls._settings_filename
+
+    @classmethod
+    def load_settings(cls):
+        path = cls._settings_path()
+        if path.exists():
+            try:
+                with open(path, "r") as f:
+                    data = json.load(f)
+                cls.set_bgm_volume(data.get("bgm_volume", 1.0))
+                cls.set_effects_volume(data.get("effects_volume", 1.0))
+            except (json.JSONDecodeError, KeyError):
+                pass  # Corrupt file — just use defaults
+
+    @classmethod
+    def save_settings(cls):
+        path = cls._settings_path()
+        with open(path, "w") as f:
+            json.dump({
+                "bgm_volume": cls.get_bgm_volume(),
+                "effects_volume": cls.get_effects_volume()
+            }, f)

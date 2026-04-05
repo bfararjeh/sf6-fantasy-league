@@ -88,7 +88,7 @@ class EventView(QWidget):
         self.main_page = QWidget()
         self.content_layout = QVBoxLayout(self.main_page)
         self.content_layout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
-        self.content_layout.setContentsMargins(50, 35, 50, 35)
+        self.content_layout.setContentsMargins(50, 15, 50, 15)
         self.content_layout.setSpacing(0)
 
         self.view_stack.addWidget(self.main_page)
@@ -298,7 +298,7 @@ class EventView(QWidget):
 
         back_btn = QPushButton("Back")
         back_btn.setFixedWidth(100)
-        back_btn.setStyleSheet(BUTTON_STYLESHEET_A)
+        back_btn.setStyleSheet(BUTTON_STYLESHEET_E)
         back_btn.clicked.connect(self._return_to_main)
 
         image = self._build_event_image(event, size=300)
@@ -729,10 +729,13 @@ class EventView(QWidget):
         event_id = state.event.get("id")
         container = state.score_container
 
+        team_id   = Session.team_data.get("team_id")     if Session.team_data   else None
+        league_id = Session.league_data.get("league_id") if Session.league_data else None
+
         tab_config = {
             "all":    (Session.event_service.get_event_standings,       (event_id,)),
-            "me":     (Session.event_service.get_user_event_scores,     (Session.team_data.get("team_id"), event_id)),
-            "league": (Session.event_service.get_league_event_scores,   (Session.league_data.get("league_id"), event_id)),
+            "me":     (Session.event_service.get_user_event_scores,     (team_id,   event_id)),
+            "league": (Session.event_service.get_league_event_scores,   (league_id, event_id)),
         }
         builder_config = {
             "all":    self.create_all_score_data,
@@ -758,6 +761,10 @@ class EventView(QWidget):
             container.addWidget(error_label)
             container.setCurrentWidget(error_label)
             state.spinner.stop()
+
+        if (tab == "me" and team_id is None) or (tab == "league" and league_id is None):
+            _success(None)
+            return
 
         run_async(
             parent_widget=container,

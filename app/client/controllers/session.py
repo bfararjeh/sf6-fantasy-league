@@ -1,4 +1,5 @@
-from datetime import datetime, timedelta
+import time
+from datetime import datetime, timedelta, timezone
 from packaging import version
 
 from app.services.league_service import LeagueService
@@ -51,7 +52,11 @@ class Session:
         cls.global_stats            = None
         cls.event_data              = None
         cls.qualified_data          = None
+
         cls.trade_windows           = None
+        cls.trade_history           = None
+        cls.trade_requests          = None
+        cls.trade_players           = None
 
         # services
         cls.team_service            = None
@@ -63,6 +68,7 @@ class Session:
         # refresh timers
         cls.league_data_grabbed_at      = None
         cls.leaguemate_data_grabbed_at  = None
+        cls.trade_data_grabbed_at       = None
         cls.system_state_grabbed_at     = None
 
 Session._set_defaults()
@@ -91,7 +97,7 @@ class Session(Session):
     @classmethod
     def init_system_state(cls):
         if cls.system_state_grabbed_at is not None:
-            if datetime.now() - cls.system_state_grabbed_at < timedelta(seconds=5):
+            if datetime.now() - cls.system_state_grabbed_at < timedelta(minutes=2):
                 return cls.blocking_state
         try:
             system_state            = cls.auth_base.get_system_state()
@@ -194,30 +200,24 @@ class Session(Session):
             cls.event_data = None
 
     @classmethod
-    def init_qualified_data(cls):
+    def init_trade_data(cls, force=False):
         if cls.init_system_state():
             cls._trigger_block()
             return
-        if cls.qualified_data is not None:
-            return
-
-        try:
-            cls.qualified_data = cls.event_service.get_qualified()
-        except Exception:
-            cls.qualified_data = None
-
-    @classmethod
-    def init_trade_data(cls):
-        if cls.init_system_state():
-            cls._trigger_block()
-            return
-        if cls.trade_windows is not None:
+        if not cls._should_refresh(cls.trade_data_grabbed_at, force=force):
             return
         
         try:
             cls.trade_windows = cls.trade_service.get_trade_windows()
+            cls.trade_history = cls.trade_service.get_trade_history()
+            cls.trade_requests = cls.trade_service.get_open_requests(cls.user_id)
+            cls.trade_players = cls.trade_service.get_pool_players()
+
         except Exception:
             cls.trade_windows = None
+            cls.trade_history = None
+            cls.trade_requests = None
+            cls.trade_players = None
 
     # ------------------------------------------------------------------
     # Images
@@ -244,6 +244,9 @@ class Session(Session):
         cached_etag = ImageCache.get_etag(image_type, key)
 
         if cached and cached_etag:
+            cached_at = ImageCache.get_cached_at(image_type, key)
+            if cached_at and (time.time() - cached_at) < 86400:
+                return cached
             filename = cls._image_filename(image_type, key)
             remote_etag = cls.auth_base.get_image_etag(image_type, filename)
             if remote_etag == cached_etag:
@@ -300,11 +303,11 @@ class Session(Session):
     def get_refresh_interval(cls) -> int:
         league = cls.league_data or {}
         if league.get("locked") and not league.get("draft_complete"):
-            return 5
+            return 10
         elif league.get("league_id"):
             return 90
         else:
-            return 900
+            return 300
 
     @classmethod
     def reset(cls):

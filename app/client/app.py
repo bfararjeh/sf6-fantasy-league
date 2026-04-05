@@ -166,9 +166,11 @@ class FantasyApp(QMainWindow):
         self.footer.setVisible(True)
         self.header.refresh_button.setVisible(True)
         if self.league_view is not None:
+            self.stack.setCurrentWidget(self.loading_view)
+            QApplication.processEvents()
             self.stack.setCurrentWidget(self.league_view)
             SoundManager.play("loaded")
-            self.connect_refresh(self.league_view._refresh)
+            self.connect_refresh(lambda: self.league_view._refresh(force=1))
             return
 
         blocked = False
@@ -189,7 +191,7 @@ class FantasyApp(QMainWindow):
             self.league_view = LeagueView(app=self)
             self.stack.addWidget(self.league_view)
             SoundManager.play("loaded")
-            self.connect_refresh(self.league_view._refresh)
+            self.connect_refresh(lambda: self.league_view._refresh(force=1))
 
         load_view(self.stack, self.loading_view, _fetch, _done, self._active_threads)
 
@@ -198,9 +200,11 @@ class FantasyApp(QMainWindow):
         self.footer.setVisible(True)
         self.header.refresh_button.setVisible(True)
         if self.leaderboard_view is not None:
+            self.stack.setCurrentWidget(self.loading_view)
+            QApplication.processEvents()
             self.stack.setCurrentWidget(self.leaderboard_view)
             SoundManager.play("loaded")
-            self.connect_refresh(self.leaderboard_view._refresh)
+            self.connect_refresh(lambda: self.leaderboard_view._refresh(force=1))
             return
 
         blocked = False
@@ -220,7 +224,41 @@ class FantasyApp(QMainWindow):
             self.leaderboard_view = LeaderboardView(app=self)
             self.stack.addWidget(self.leaderboard_view)
             SoundManager.play("loaded")
-            self.connect_refresh(self.leaderboard_view._refresh)
+            self.connect_refresh(lambda: self.leaderboard_view._refresh(force=1))
+
+        load_view(self.stack, self.loading_view, _fetch, _done, self._active_threads)
+
+    def show_trades_view(self):
+        self.header.setVisible(True)
+        self.footer.setVisible(True)
+        self.header.refresh_button.setVisible(True)
+        if self.trades_view is not None:
+            self.stack.setCurrentWidget(self.loading_view)
+            QApplication.processEvents()
+            self.stack.setCurrentWidget(self.trades_view)
+            SoundManager.play("loaded")
+            self.connect_refresh(lambda: self.trades_view._refresh(force=1))
+            return
+
+        blocked = False
+
+        def _fetch():
+            nonlocal blocked
+            Session.init_system_state()
+            if Session.blocking_state:
+                blocked = True
+                return
+            Session.init_trade_data(force=1)
+            Session.init_leaderboards(force=1)
+
+        def _done():
+            if blocked:
+                self.footer.refresh()
+                return
+            self.trades_view = TradeView(app=self)
+            self.stack.addWidget(self.trades_view)
+            SoundManager.play("loaded")
+            self.connect_refresh(lambda: self.trades_view._refresh(force=1))
 
         load_view(self.stack, self.loading_view, _fetch, _done, self._active_threads)
 
@@ -298,31 +336,12 @@ class FantasyApp(QMainWindow):
             return
 
         def _fetch():
-            Session.init_qualified_data()
+            Session.init_player_scores()
             QualifiedView.preload()
 
         def _done():
             self.qualified_view = QualifiedView(app=self)
             self.stack.addWidget(self.qualified_view)
-            SoundManager.play("loaded")
-
-        load_view(self.stack, self.loading_view, _fetch, _done, self._active_threads)
-
-    def show_trades_view(self):
-        self.header.setVisible(True)
-        self.footer.setVisible(True)
-        self.header.refresh_button.setVisible(False)
-        if self.trades_view is not None:
-            self.stack.setCurrentWidget(self.trades_view)
-            SoundManager.play("loaded")
-            return
-
-        def _fetch():
-            Session.init_trade_data()
-
-        def _done():
-            self.trades_view = TradeView(app=self)
-            self.stack.addWidget(self.trades_view)
             SoundManager.play("loaded")
 
         load_view(self.stack, self.loading_view, _fetch, _done, self._active_threads)

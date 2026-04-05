@@ -1,6 +1,7 @@
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor, QPixmap
 from PyQt6.QtWidgets import (
+    QApplication,
     QFrame,
     QGraphicsDropShadowEffect,
     QGridLayout,
@@ -15,6 +16,7 @@ from PyQt6.QtWidgets import (
 
 from app.client.controllers.resource_path import ResourcePath
 from app.client.controllers.session import Session
+from app.client.controllers.sound_manager import SoundManager
 from app.client.theme import *
 from app.client.widgets.hover_image import HoverImage
 from app.client.widgets.misc import _build_empty_label
@@ -38,7 +40,7 @@ class GlobalView(QWidget):
         content_widget = QWidget()
         content_layout = QVBoxLayout(content_widget)
         content_layout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
-        content_layout.setContentsMargins(50, 35, 50, 35)
+        content_layout.setContentsMargins(50, 15, 50, 15)
         content_layout.setSpacing(0)
 
         # scrollable if required
@@ -52,7 +54,7 @@ class GlobalView(QWidget):
         # composing content
         content_layout.addWidget(self._build_title())
 
-        subtitle = QLabel("Global stats are updated every 2 hours.")
+        subtitle = QLabel("Global stats are updated every 24 hours.")
         subtitle.setStyleSheet("color: #666666; font-style: italic;")
 
         content_layout.addWidget(subtitle, alignment= Qt.AlignmentFlag.AlignCenter)
@@ -304,7 +306,15 @@ class GlobalView(QWidget):
                 row += 1
 
         content.setVisible(False)
-        toggle.toggled.connect(content.setVisible)
+        
+        def on_toggle(checked):
+            content.setVisible(checked)
+            content.updateGeometry()
+            wrapper.updateGeometry()
+            QApplication.processEvents()
+            SoundManager.play("button")
+
+        toggle.toggled.connect(on_toggle)
 
         wrapper = QWidget()
         wrapper_layout = QVBoxLayout(wrapper)
@@ -363,7 +373,15 @@ class GlobalView(QWidget):
             content_layout.addWidget(row)
 
         content.setVisible(False)
-        toggle.toggled.connect(content.setVisible)
+
+        def on_toggle(checked):
+            content.setVisible(checked)
+            content.updateGeometry()
+            container.updateGeometry()
+            QApplication.processEvents()
+            SoundManager.play("button")
+
+        toggle.toggled.connect(on_toggle)
 
         container = QWidget()
         container_layout = QVBoxLayout(container)

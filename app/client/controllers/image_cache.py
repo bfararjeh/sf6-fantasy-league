@@ -1,4 +1,5 @@
 import json
+import time
 from pathlib import Path
 from typing import Optional
 from app.client.controllers.resource_path import ResourcePath
@@ -61,7 +62,7 @@ class ImageCache:
         path = cls._cache_path(image_type, key)
         try:
             path.write_bytes(data)
-            cls._index[cls._index_key(image_type, key)] = etag
+            cls._index[cls._index_key(image_type, key)] = {"etag": etag, "cached_at": time.time()}
             cls._save_index()
         except Exception:
             pass
@@ -80,7 +81,18 @@ class ImageCache:
     @classmethod
     def get_etag(cls, image_type: str, key: str) -> Optional[str]:
         """Return stored ETag for a cached image."""
-        return cls._index.get(cls._index_key(image_type, key))
+        entry = cls._index.get(cls._index_key(image_type, key))
+        if isinstance(entry, dict):
+            return entry.get("etag")
+        return entry  # backwards compat with old string-only entries
+
+    @classmethod
+    def get_cached_at(cls, image_type: str, key: str) -> Optional[float]:
+        """Return the Unix timestamp when the image was last cached, or None."""
+        entry = cls._index.get(cls._index_key(image_type, key))
+        if isinstance(entry, dict):
+            return entry.get("cached_at")
+        return None
 
     @classmethod
     def get_baked(cls, image_type: str, key: str) -> Optional[bytes]:

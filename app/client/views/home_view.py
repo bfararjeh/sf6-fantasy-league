@@ -140,7 +140,7 @@ class HomeView(QWidget):
         if Session.blocking_state:
             return
         
-        SoundManager.play("button")
+        SoundManager.play("prompt")
 
         # create file dialog manually
         file_dialog = QFileDialog(parent=self)

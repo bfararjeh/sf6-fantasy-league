@@ -30,35 +30,12 @@ from app.client.widgets.hover_image import HoverImage
 from app.client.widgets.point_graph import PointsChart
 from app.client.theme import *
 
-
-REGION_SVG_MAP = {
-    "Australia":          ("class", "Australia"),
-    "Belgium":            ("id",    "BE"),
-    "Brazil":             ("id",    "BR"),
-    "Cameroon":           ("id",    "CM"),
-    "Canada":             ("class", "Canada"),
-    "Chile":              ("class", "Chile"),
-    "China":              ("class", "China"),
-    "Dominican Republic": ("id",    "DO"),
-    "France":             ("class", "France"),
-    "Hong Kong":          ("class", "China"),       # proxy: China
-    "Japan":              ("class", "Japan"),
-    "Norway":             ("class", "Norway"),
-    "Saudi Arabia":       ("id",    "SA"),
-    "Singapore":          ("id",    "MY"),           # proxy: Malaysia
-    "South Korea":        ("id",    "KR"),
-    "Sweden":             ("id",    "SE"),
-    "Taiwan":             ("id",    "TW"),
-    "UAE":                ("id",    "AE"),
-    "United Kingdom":     ("class", "United Kingdom"),
-    "United States":      ("class", "United States"),
-}
+from app.client.widgets.misc import REGION_SVG_MAP
 
 class LeagueView(QWidget):
     def __init__(self, app):
         super().__init__()
         self.app = app
-        self.app.connect_refresh(lambda: self._refresh(force=1))
 
         self._stat_cache = {}
 
@@ -691,7 +668,7 @@ class LeagueView(QWidget):
             image.setStyleSheet("border: 2px solid #555555;")
 
         # update stats when clicked
-        image.mousePressEvent = lambda e, p=player: self._update_stat_container(p)
+        image.mousePressEvent = lambda e, p=player: (self._update_stat_container(p))
 
         return image
 
@@ -755,7 +732,8 @@ class LeagueView(QWidget):
                     item.widget().setParent(None)
 
             self.stat_detail_layout.addWidget(widget)
-
+            SoundManager.play("button")
+        
         def _error(e):
             while self.stat_detail_layout.count():
                 item = self.stat_detail_layout.takeAt(0)
@@ -1037,7 +1015,7 @@ class LeagueView(QWidget):
         msg.setIcon(QMessageBox.Icon.NoIcon)
         ok_btn = msg.addButton("Begin draft", QMessageBox.ButtonRole.AcceptRole)
         msg.addButton("Cancel", QMessageBox.ButtonRole.RejectRole)
-        SoundManager.play("button")
+        SoundManager.play("prompt")
         msg.exec()
 
         if msg.clickedButton() != ok_btn:
@@ -1118,6 +1096,7 @@ class LeagueView(QWidget):
         self.former_toggle_btn.setText(
             "▲ Former" if self._former_expanded else "▼ Former"
         )
+        SoundManager.play("button")
 
 
 # -- REFRESHERS --
@@ -1125,8 +1104,8 @@ class LeagueView(QWidget):
     def _refresh(self, force=0):
         draft_complete_before = getattr(self, "is_draft_complete", None)
 
-        Session.init_league_data(force)
         Session.init_player_scores()
+        Session.init_league_data(force)
 
         league              = Session.league_data or {}
         team                = Session.team_data or {}
@@ -1157,6 +1136,20 @@ class LeagueView(QWidget):
             self.app.show_league_view()
             return
 
+        new_fingerprint = (
+            self.my_league_name,
+            self.is_draft_complete,
+            self.is_league_locked,
+            self.my_next_pick,
+            self.my_team_name,
+            tuple(self.my_leaguemates),
+            tuple(p["id"] for p in (self.my_team_standings.get("players") or [])),
+        )
+
+        if getattr(self, "_last_fingerprint", None) == new_fingerprint:
+            return
+
+        self._last_fingerprint = new_fingerprint
         self._update_view()
 
     def _update_view(self):

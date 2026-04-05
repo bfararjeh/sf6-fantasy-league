@@ -34,6 +34,7 @@ def main():
 
     ImageCache.init(appdata_dir / "cache")
     SoundManager.init()
+    SoundManager.load_settings() 
 
     splash_pixmap = QPixmap(str(ResourcePath.IMAGES / "splash.png"))
     scaled_pixmap = splash_pixmap.scaled(
