@@ -1,20 +1,3 @@
-PLAYER_POOL = [
-    'Akira', 'Alphen', 'AngryBird', 'Armperor', 'Big Bird', 
-    'Blaz', 'Bonchan', 'Booce_Lee', 'Broski', 'Caba', 
-    'Chris Wong', 'Craime', 'Daigo', 'DCQ', 'Dogura', 
-    'Dual Kevin', 'EndingWalker', 'FREESER', 'Fuudo', 'Gachikun', 
-    'GO1', 'Higuchi', 'Hikaru', 'HotDog29', 'Hurricane', 
-    'iDom', 'Itabashi Zangief', 'JAK', 'John Takeuchi', 'Juicyjoe', 
-    'Kakeru', 'Kawano', 'Kilzyou', 'Kingsvega', 'Kobayan', ''
-    'Kusanagi', 'Leshar', 'Lexx', 'Mago', 'MenaRD', 
-    'Micky', 'Mister Crimson', 'Moke', 'Momochi', 'Nephew', 
-    'NL', 'NoahTheProdigy', 'NotPedro', 'NuckleDu', 'Nyanpi', 
-    'NYChrisG', 'Oil King', 'Phenom', 'Problem X', 'Psycho', 
-    'Pugera', 'Punk', 'Riddles', 'Ryukichi', 'Ryusei', 
-    'Sahara', 'Shine', 'Shuto', 'Tachikawa', 'Takamura', 
-    'Tokido', 'Torimeshi', 'Valmaster', 'vWsym', 'Vxbao', 
-    'Xian', 'Xiaohai', 'Yamaguchi', 'Zangief_bolado', 'Zhen'
-]
 
 TEST_USERS = [
     {"email": "user1@gmail.com", "password": "G!7rP2vH#9qZ", "manager_name": "Alice"},

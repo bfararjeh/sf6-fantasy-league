@@ -2,7 +2,7 @@ import supabase
 import os
 
 from copy import deepcopy
-from random import choice
+from random import choice, random
 from dotenv import load_dotenv
 
 from app.services.auth_service import AuthService
@@ -152,8 +152,8 @@ def set_a_random_leagues_forfeit():
 def main():
     create_dummy_leagues()
     join_dummy_leagues()
-    assign_draft_orders_for_all_leagues()
-    start_drafts()
+    # assign_draft_orders_for_all_leagues()
+    # start_drafts()
 
 if __name__ == "__main__":
     main()
