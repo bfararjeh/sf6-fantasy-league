@@ -10,6 +10,7 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QScrollArea,
     QSizePolicy,
+    QSpacerItem,
     QVBoxLayout,
     QWidget,
 )
@@ -69,6 +70,7 @@ class GlobalView(QWidget):
 
             layout.addStretch()
             layout.addWidget(_build_empty_label())
+            layout.addSpacerItem(QSpacerItem(0,100))
             layout.addStretch()
 
             content_layout.addWidget(cont)
@@ -106,6 +108,8 @@ class GlobalView(QWidget):
         add_row(main_grid, row, "Total Number of Managers:", str(stats.get("managers_count", 0)))
         row += 1
         add_row(main_grid, row, "Total Number of Leagues:", str(stats.get("leagues_count", 0)))
+        row += 1
+        add_row(main_grid, row, "Total Number of Trades:", str(stats.get("trades_count", 0)))
         row += 1
         add_row(main_grid, row, "Unique Players Picked:", str(stats.get("unique_players_picked", 0)))
         row += 1
