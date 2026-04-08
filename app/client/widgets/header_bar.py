@@ -125,9 +125,15 @@ class HeaderBar(QWidget):
         self.banner_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
 
         # banner created depending on message
-        if Session.banner_message != None and (datetime.now(timezone.utc) - datetime.fromisoformat(Session.updated_at)) < timedelta(days=7):
-            self.banner_label.setStyleSheet(BANNER_LABEL_STYLESHEET_IMPORTANT)
-            msg = Session.banner_message
+        if Session.banner_message != None and (
+            datetime.now(timezone.utc) - datetime.fromisoformat(Session.updated_at)) < timedelta(days=3):
+            if Session.banner_message[:6] == "Scores":
+                self.banner_label.setStyleSheet(BANNER_LABEL_STYLESHEET_NOTIFICATION)
+                msg = Session.banner_message
+            else:
+                self.banner_label.setStyleSheet(BANNER_LABEL_STYLESHEET_MESSAGE)
+                msg = Session.banner_message
+
         else:
             self.banner_label.setStyleSheet(BANNER_LABEL_STYLESHEET)
             with open(str(ResourcePath.TEXTS / "banner_flavour.txt"), "r") as f:

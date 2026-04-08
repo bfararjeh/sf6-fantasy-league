@@ -53,6 +53,9 @@ class Session:
         cls.event_data              = None
         cls.qualified_data          = None
 
+        cls.league_history          = None
+        cls.draft_history           = None
+
         cls.trade_windows           = None
         cls.trade_history           = None
         cls.trade_requests          = None
@@ -144,6 +147,14 @@ class Session(Session):
             cls.team_data = cls.team_service.get_full_team_info()
         except Exception:
             cls.team_data = None
+        
+        try:
+            cls.league_history          = cls.league_service.get_league_history()
+            cls.draft_history          = cls.league_service.get_draft_log()
+        except Exception:
+            cls.league_history = None
+            cls.draft_history = None
+
 
     @classmethod
     def init_leaderboards(cls, force=False):

@@ -27,8 +27,8 @@ def main():
     lock = QLockFile(str(lock_file_path))
     lock.setStaleLockTime(0)
 
-    if not lock.tryLock():
-        sys.exit(0)
+    # if not lock.tryLock():
+    #     sys.exit(0)
 
     app = QApplication(sys.argv)
 

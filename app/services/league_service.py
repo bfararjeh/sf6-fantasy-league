@@ -390,3 +390,48 @@ class LeagueService():
         )
 
         return True
+
+    def get_draft_log(self):
+        league_id = self.get_my_league()
+        if not league_id:
+            raise Exception("You are not in a league.")
+
+        result = self.verify_query(
+            self.supabase
+            .table("team_players")
+            .select("""
+                player_name,
+                joined_at,
+                team:teams!team_players_team_id_fkey(
+                    manager:managers!teams_team_owner_fkey(
+                        manager_name
+                    )
+                )
+            """)
+            .eq("league_id", league_id)
+            .order("joined_at", desc=True)
+        )
+
+        return [
+            {
+                "manager_name": row["team"]["manager"]["manager_name"],
+                "player_name": row["player_name"],
+                "joined_at": row["joined_at"],
+            }
+            for row in result.data
+        ]
+
+    def get_league_history(self):
+        league_id = self.get_my_league()
+        if not league_id:
+            raise Exception("You are not in a league.")
+
+        result = self.verify_query((
+            self.supabase
+            .table("league_history")
+            .select("*")
+            .eq("league_id", league_id)
+            .order("created_at", desc=False,)
+        ))
+
+        return result.data

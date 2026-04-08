@@ -26,10 +26,21 @@ QLabel {{
 }}
 """
 
-BANNER_LABEL_STYLESHEET_IMPORTANT = f"""
+BANNER_LABEL_STYLESHEET_MESSAGE = f"""
 QLabel {{
     background-color: {QColor("#4200FF").lighter(110).name()};
     color: {QColor("#FFFFFF").name()};
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 500;
+}}
+"""
+
+BANNER_LABEL_STYLESHEET_NOTIFICATION = f"""
+QLabel {{
+    background-color: {QColor("#FFBB00").lighter(120).name()};
+    color: {QColor("#C55900").name()};
     border-radius: 6px;
     padding: 8px 12px;
     font-size: 13px;

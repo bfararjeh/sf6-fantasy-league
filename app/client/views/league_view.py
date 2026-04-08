@@ -1,9 +1,8 @@
 import re
 from PyQt6.QtCore import Qt, QTimer, QSize
-from PyQt6.QtGui import QColor
+from PyQt6.QtGui import QColor, QPixmap
 from PyQt6.QtSvgWidgets import QSvgWidget
 from PyQt6.QtWidgets import (
-    QGridLayout,
     QWidget,
     QLabel,
     QPushButton,
@@ -13,7 +12,6 @@ from PyQt6.QtWidgets import (
     QLineEdit,
     QGroupBox,
     QFrame,
-    QSpacerItem,
     QSizePolicy,
     QMessageBox,
     QStackedWidget,
@@ -81,68 +79,67 @@ class LeagueView(QWidget):
         return page
 
     def _build_pre_draft_page(self):
+        # history stack page indices
+        self._HS_HISTORY = 0
+        self._HS_OWNER   = 1
+        self._HS_PICKER  = 2
+        self._HS_CREATOR = 3
+
         page = QWidget()
         page_layout = QVBoxLayout(page)
         page_layout.setContentsMargins(0, 0, 0, 0)
         page_layout.setSpacing(0)
 
-        page_layout.addSpacerItem(QSpacerItem(20, 30))
+        # Header
+        self.pre_draft_header = self._build_pre_draft_header()
+        header_divider_wrapper = QWidget()
+        header_divider_wrapper_layout = QHBoxLayout(header_divider_wrapper)
+        header_divider_wrapper_layout.setContentsMargins(30, 0, 30, 0)
+        header_divider = QFrame()
+        header_divider.setFrameShape(QFrame.Shape.HLine)
+        header_divider.setStyleSheet("color: #444444;")
+        header_divider.setFixedHeight(2)
+        header_divider_wrapper_layout.addWidget(header_divider)
 
-        main = QWidget()
-        main_layout = QHBoxLayout(main)
-        main_layout.setContentsMargins(0, 0, 0, 0)
+        # Roster bar (full-width band, hidden when no team)
+        self.team_overview = self._build_roster_overview()
 
-        # League side
-        self.league_widget = QWidget()
-        self.league_widget.setFixedWidth(600)
-        self.league_layout = QVBoxLayout(self.league_widget)
-        self.league_layout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
-        self.league_layout.setContentsMargins(20, 0, 20, 0)
-        self.league_layout.setSpacing(20)
+        # Roster divider with horizontal padding so it doesn't touch window edges
+        roster_divider_wrapper = QWidget()
+        roster_divider_wrapper_layout = QHBoxLayout(roster_divider_wrapper)
+        roster_divider_wrapper_layout.setContentsMargins(30, 0, 30, 0)
+        self.roster_divider = QFrame()
+        self.roster_divider.setFrameShape(QFrame.Shape.HLine)
+        self.roster_divider.setStyleSheet("color: #444444;")
+        self.roster_divider.setFixedHeight(2)
+        roster_divider_wrapper_layout.addWidget(self.roster_divider)
+        self._roster_divider_wrapper = roster_divider_wrapper
 
-        self.divider = QFrame()
-        self.divider.setFrameShape(QFrame.Shape.VLine)
-        self.divider.setLineWidth(2)
-        self.divider.setStyleSheet("color: #444444;")
-        self.divider.setFixedWidth(2)
+        # Body: history area + sidebar
+        body_widget = QWidget()
+        body_layout = QHBoxLayout(body_widget)
+        body_layout.setContentsMargins(0, 0, 0, 0)
+        body_layout.setSpacing(0)
 
-        # Team side
-        self.team_widget = QWidget()
-        self.team_widget.setFixedWidth(600)
-        self.team_layout = QVBoxLayout(self.team_widget)
-        self.team_layout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
-        self.team_layout.setContentsMargins(20, 0, 20, 20)
-        self.team_layout.setSpacing(20)
+        self.history_area = self._build_history_area()
+        vline = QFrame()
+        vline.setFrameShape(QFrame.Shape.VLine)
+        vline.setStyleSheet("color: #444444;")
+        vline.setFixedWidth(2)
+        self.pre_draft_sidebar = self._build_pre_draft_sidebar()
 
-        main_layout.addWidget(self.league_widget, stretch=1)
-        main_layout.addWidget(self.divider)
-        main_layout.addWidget(self.team_widget, stretch=1)
+        body_layout.addWidget(self.history_area, stretch=1)
+        body_layout.addWidget(vline)
+        body_layout.addWidget(self.pre_draft_sidebar)
 
-        page_layout.addWidget(main, stretch=1)
+        page_layout.addWidget(self.pre_draft_header)
+        page_layout.addWidget(header_divider_wrapper)
+        page_layout.addWidget(self.team_overview)
+        page_layout.addWidget(self._roster_divider_wrapper)
+        page_layout.addWidget(body_widget, stretch=1)
 
-        # League column
-        self.in_league_display    = self._build_in_league_display()
-        self.owner_controls       = self._build_owner_controls()
-        self.leave                = self._build_leave_button()
-
-        self.league_layout.addWidget(self.in_league_display)
-        self.league_layout.addStretch()
-        self.league_layout.addWidget(self.owner_controls)
-        self.league_layout.addStretch()
-        self.league_layout.addWidget(self.leave)
-
-        # Team column
-        self.team_creator   = self._build_team_creator()
-        self.team_info      = self._build_team_info()
-        self.draft_picker   = self._build_draft_picker()
-        self.team_overview  = self._build_roster_overview()
-        self.player_stats   = self._build_player_stat_section()
-
-        self.team_layout.addWidget(self.team_info)
-        self.team_layout.addWidget(self.team_overview)
-        self.team_layout.addWidget(self.draft_picker)
-        self.team_layout.addWidget(self.player_stats)
-        self.team_layout.addWidget(self.team_creator)
+        # Keep player_stats built so self.player_detail_layout exists for post-draft use
+        self.player_stats = self._build_player_stat_section()
 
         return page
 
@@ -254,12 +251,280 @@ class LeagueView(QWidget):
 
 # -- PRE DRAFT BUILDERS
 
-    def _build_owner_controls(self):
-        container = QWidget()
-        layout = QVBoxLayout(container)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
+    def _build_pre_draft_header(self):
+        header = QWidget()
+        header.setFixedHeight(84)
+        layout = QHBoxLayout(header)
+        layout.setContentsMargins(30, 0, 30, 0)
+        layout.setSpacing(20)
 
+        self.league_name_label = QLabel("")
+        self.league_name_label.setStyleSheet("font-weight: bold;")
+
+        # Members column: "Members X/5" header + username list below
+        members_col = QWidget()
+        members_col_layout = QVBoxLayout(members_col)
+        members_col_layout.setContentsMargins(0, 0, 0, 0)
+        members_col_layout.setSpacing(2)
+        members_col_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        self.capacity_label = QLabel("")
+        self.capacity_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.capacity_label.setStyleSheet("font-size: 13px; font-weight: bold; color: #BBBBBB;")
+
+        self.members_list_label = QLabel("")
+        self.members_list_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.members_list_label.setStyleSheet("font-size: 14px; color: #888888;")
+
+        members_col_layout.addWidget(self.capacity_label)
+        members_col_layout.addWidget(self.members_list_label)
+
+        self.league_id_label = QLabel("")
+        self.league_id_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        self.league_id_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        self.league_id_label.setStyleSheet("font-size: 13px; color: #888888;")
+
+        layout.addWidget(self.league_name_label)
+        layout.addStretch()
+        layout.addWidget(members_col)
+        layout.addStretch()
+        layout.addWidget(self.league_id_label)
+
+        return header
+
+    def _build_history_area(self):
+        area = QWidget()
+        area_layout = QVBoxLayout(area)
+        area_layout.setContentsMargins(30, 10, 15, 10)
+        area_layout.setSpacing(8)
+
+        # Top row: title + owner settings button + picker toggle (during draft)
+        top_row = QHBoxLayout()
+
+        title = QLabel("League History")
+        title.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        title.setStyleSheet("font-size: 24px; font-weight: bold; color: white;")
+
+        self.settings_toggle_btn = QPushButton("Settings")
+        self.settings_toggle_btn.setFixedWidth(100)
+        self.settings_toggle_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.settings_toggle_btn.setStyleSheet(BUTTON_STYLESHEET_A)
+        self.settings_toggle_btn.setVisible(False)
+        self.settings_toggle_btn.clicked.connect(self._toggle_settings)
+
+        self.picker_toggle_btn = QPushButton("Pick Player")
+        self.picker_toggle_btn.setFixedWidth(110)
+        self.picker_toggle_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.picker_toggle_btn.setStyleSheet(BUTTON_STYLESHEET_A)
+        self.picker_toggle_btn.setVisible(False)
+        self.picker_toggle_btn.clicked.connect(self._toggle_picker)
+
+        top_row.addWidget(title, stretch=1)
+        top_row.addWidget(self.settings_toggle_btn)
+        top_row.addWidget(self.picker_toggle_btn)
+
+        # Stack with 4 pages
+        self.history_stack = QStackedWidget()
+
+        self.history_content = self._build_history_feed()  # page 0: scrollable event feed
+        self.draft_controls = self._build_owner_controls()   # page 1: owner controls
+        self.pick_container = self._build_draft_picker()     # page 2: player picker
+        self.team_creator_container = self._build_team_creator()  # page 3: team creator
+
+        self.history_stack.addWidget(self.history_content)
+        self.history_stack.addWidget(self.draft_controls)
+        self.history_stack.addWidget(self.pick_container)
+        self.history_stack.addWidget(self.team_creator_container)
+
+        area_layout.addLayout(top_row)
+        area_layout.addWidget(self.history_stack, stretch=1)
+
+        return area
+
+    def _build_pre_draft_sidebar(self):
+        sidebar = QWidget()
+        sidebar.setFixedWidth(210)
+        layout = QVBoxLayout(sidebar)
+        layout.setContentsMargins(15, 15, 15, 15)
+        layout.setSpacing(12)
+
+        draft_order_hdr = QLabel("Draft Order:")
+        draft_order_hdr.setStyleSheet("font-size: 13px; font-weight: bold; color: white;")
+
+        self.draft_order_label = QLabel("N/A")
+        self.draft_order_label.setWordWrap(True)
+        self.draft_order_label.setStyleSheet("font-size: 14px; color: #CCCCCC;")
+
+        div1 = QFrame()
+        div1.setFrameShape(QFrame.Shape.HLine)
+        div1.setStyleSheet("color: #444444;")
+
+        forfeit_hdr = QLabel("Forfeit:")
+        forfeit_hdr.setStyleSheet("font-size: 13px; font-weight: bold; color: white;")
+
+        self.forfeit_label = QLabel("")
+        self.forfeit_label.setWordWrap(True)
+        self.forfeit_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #ff8168;")
+
+        # Next pick avatar slot (draft phase) — sized to fit snug inside 220px sidebar with 15px margins each side
+        avatar_size = 180
+        self.next_pick_avatar_slot = QWidget()
+        self.next_pick_avatar_slot.setFixedSize(avatar_size, avatar_size)
+        self.next_pick_avatar_slot_layout = QVBoxLayout(self.next_pick_avatar_slot)
+        self.next_pick_avatar_slot_layout.setContentsMargins(0, 0, 0, 0)
+        self.next_pick_avatar_slot.setVisible(False)
+
+        self.next_pick_label = QLabel("N/A")
+        self.next_pick_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.next_pick_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #88ff87;")
+        self.next_pick_label.setVisible(False)
+
+        div2 = QFrame()
+        div2.setFrameShape(QFrame.Shape.HLine)
+        div2.setStyleSheet("color: #444444;")
+
+        self.leave_btn = QPushButton("Leave League")
+        self.leave_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.leave_btn.setStyleSheet(BUTTON_STYLESHEET_E)
+        self.leave_btn.clicked.connect(self.leave_league)
+
+        layout.addWidget(draft_order_hdr)
+        layout.addWidget(self.draft_order_label)
+        layout.addWidget(div1)
+        layout.addWidget(forfeit_hdr)
+        layout.addWidget(self.forfeit_label)
+        layout.addStretch()
+        layout.addWidget(self.next_pick_avatar_slot, alignment=Qt.AlignmentFlag.AlignHCenter)
+        layout.addWidget(self.next_pick_label)
+        layout.addWidget(div2)
+        layout.addWidget(self.leave_btn)
+
+        return sidebar
+
+    def _build_history_feed(self):
+        # Outer scroll area
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setStyleSheet(SCROLL_STYLESHEET)
+
+        # Inner container — rows appended by _update_history_feed
+        self._history_feed_container = QWidget()
+        self._history_feed_layout = QVBoxLayout(self._history_feed_container)
+        self._history_feed_layout.setContentsMargins(0, 4, 0, 4)
+        self._history_feed_layout.setSpacing(0)
+        self._history_feed_layout.addStretch()
+
+        scroll.setWidget(self._history_feed_container)
+        return scroll
+
+    def _update_history_feed(self):
+        from datetime import datetime, timezone
+
+        # Clear existing rows (keep the trailing stretch)
+        while self._history_feed_layout.count() > 1:
+            item = self._history_feed_layout.takeAt(0)
+            if item.widget():
+                item.widget().setParent(None)
+
+        C_MANAGER = "#B39DDB"  # soft purple  — manager/username
+        C_PLAYER  = "#FFD166"  # warm gold    — drafted players
+        C_FORFEIT = "#FF6B6B"  # baby red     — forfeit values
+        C_TEAM    = "#7EB8F7"  # cool blue    — team names
+        C_LEAGUE  = "#88ff87"  # green        — league names
+
+        def _span(text, color):
+            return f"<span style='color:{color};'>{text}</span>"
+
+        def _uid_to_name(uid):
+            for m in (self.my_leaguemates_raw or []):
+                if str(m.get("user_id", "")) == str(uid):
+                    return m.get("manager_name", "Unknown")
+            return "Unknown"
+
+        def _colour_manager(text):
+            parts = text.split(" ", 1)
+            return _span(parts[0], C_MANAGER) + (" " + parts[1] if len(parts) > 1 else "")
+
+        def _format_league_msg(message):
+            if "draft order" in message:
+                uuids = re.findall(r'"([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})"', message)
+                names = [_uid_to_name(u) for u in uuids]
+                bracket_part = ", ".join(_span(n, C_MANAGER) for n in names)
+                prefix = re.sub(r'\[.+\]!?.*$', '', message)
+                return _colour_manager(prefix) + bracket_part + "!"
+
+            if "has set the forfeit to " in message:
+                m = re.match(r'^(\S+)(.+?to\s+)(.+?)(!?)$', message)
+                if m:
+                    return _colour_manager(m.group(1) + m.group(2)) + _span(m.group(3), C_FORFEIT) + m.group(4)
+
+            if "has established " in message:
+                m = re.match(r'^(\S+)(.+?established\s+)(.+?)(!?)$', message)
+                if m:
+                    return _colour_manager(m.group(1) + m.group(2)) + _span(m.group(3), C_TEAM) + m.group(4)
+
+            if any(kw in message for kw in ("has created ", "has joined ", "has left ")):
+                m = re.match(r'^(\S+)(.+?(?:created|joined|left)\s+)(.+?)(!?)$', message)
+                if m:
+                    return _colour_manager(m.group(1) + m.group(2)) + _span(m.group(3), C_LEAGUE) + m.group(4)
+
+            if "draft has begun" in message:
+                return _span(message, "#FFFFFF")
+
+            return _colour_manager(message)
+
+        events = []
+        for entry in (self.my_league_history or []):
+            msg = entry.get("message", "")
+            ts  = entry.get("created_at", "")
+            events.append((ts, _format_league_msg(msg)))
+
+        for entry in (self.my_draft_history or []):
+            manager = entry.get("manager_name", "Unknown")
+            player  = entry.get("player_name", "Unknown")
+            ts      = entry.get("joined_at", "")
+            events.append((ts, _span(manager, C_MANAGER) + " drafted " + _span(player, C_PLAYER) + "!"))
+
+        events.sort(key=lambda e: e[0], reverse=True)
+
+        for ts, html in events:
+            try:
+                dt = datetime.fromisoformat(ts).astimezone(timezone.utc)
+                ts_str = dt.strftime("%b %d, %H:%M")
+            except Exception:
+                ts_str = ts[:16] if ts else ""
+
+            row = QWidget()
+            row_layout = QHBoxLayout(row)
+            row_layout.setContentsMargins(8, 10, 8, 10)
+            row_layout.setSpacing(8)
+
+            bullet = QLabel("•")
+            bullet.setStyleSheet("font-size: 18px; color: #555555;")
+            bullet.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
+
+            msg_label = QLabel(f"<span style='font-size:18px; color:#888888;'>{html}</span>")
+            msg_label.setTextFormat(Qt.TextFormat.RichText)
+            msg_label.setWordWrap(True)
+            msg_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+
+            ts_label = QLabel(ts_str)
+            ts_label.setStyleSheet("font-size: 12px; color: #555555;")
+            ts_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            ts_label.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
+
+            row_layout.addWidget(bullet, alignment=Qt.AlignmentFlag.AlignTop)
+            row_layout.addWidget(msg_label)
+            row_layout.addWidget(ts_label, alignment=Qt.AlignmentFlag.AlignTop)
+
+            self._history_feed_layout.insertWidget(
+                self._history_feed_layout.count() - 1,
+                row
+            )
+
+    def _build_owner_controls(self):
         self.draft_input = QLineEdit()
         self.draft_input.setPlaceholderText("Alice, Bob, Charlie")
         self.draft_input.returnPressed.connect(self.assign_draft_order)
@@ -297,6 +562,8 @@ class LeagueView(QWidget):
 
         cont = QWidget()
         cont_layout = QVBoxLayout(cont)
+        cont_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        cont_layout.setContentsMargins(40, 20, 40, 20)
 
         row = QHBoxLayout()
         row.addWidget(group)
@@ -312,112 +579,8 @@ class LeagueView(QWidget):
         cont_layout.addLayout(row)
         cont_layout.addLayout(forfeit_row)
 
-        cont.setVisible(False)
-
-        self.draft_controls  = cont
-        layout.addWidget(cont)
-        
-        return container
-
-    def _build_in_league_display(self):
-        container = QWidget()
-        layout = QVBoxLayout(container)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(20)
-
-        self.league_info           = self._build_league_info()
-        self.draft_info_container  = self._build_draft_info()
-
-        layout.addWidget(self.league_info)
-        layout.addWidget(self.draft_info_container)
-
-        container.setVisible(False)
-        return container
-
-    def _build_leave_button(self):
-        container = QWidget()
-        layout = QVBoxLayout(container)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignBottom)
-
-        self.leave_btn = QPushButton("Leave League")
-        self.leave_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.leave_btn.setStyleSheet(BUTTON_STYLESHEET_D)
-        self.leave_btn.clicked.connect(self.leave_league)
-        layout.addWidget(self.leave_btn)
-
-        return container
-
-    def _build_league_info(self):
-        container = QWidget()
-        layout = QVBoxLayout(container)
-        layout.setSpacing(10)
-
-        self.league_name_label = QLabel("")
-        self.league_name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.league_name_label.setStyleSheet("font-weight: bold;")
-
-        self.league_owner = QLabel("")
-        self.league_owner.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Preferred)
-        self.league_owner.setStyleSheet(BUTTON_STYLESHEET_D)
-
-        layout.addWidget(self.league_name_label, alignment=Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(self.league_owner, alignment=Qt.AlignmentFlag.AlignHCenter)
-        layout.addSpacerItem(QSpacerItem(20, 25))
-
-        self.league_id_label = QLabel("")
-        self.league_id_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-        self.league_id_label.setAlignment(Qt.AlignmentFlag.AlignRight)
-        self.league_id_label.setStyleSheet("QLabel { color: white; font-size: 14px; }")
-
-        self.forfeit_label = QLabel("")
-        self.forfeit_label.setStyleSheet("font-weight:bold; color:#ff8168;")
-
-        self.leaguemates = QLabel("")
-        self.leaguemates.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-        self.leaguemates.setStyleSheet("QLabel { color: white; font-size: 16px; }")
-        self.leaguemates.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        self.leaguemates.setFixedWidth(400)
-
-        grid = QGridLayout()
-        grid.setColumnStretch(1, 1)
-        grid.setColumnMinimumWidth(1, 400)
-
-        grid.addWidget(QLabel("League ID:"), 0, 0, Qt.AlignmentFlag.AlignLeft)
-        grid.addWidget(self.league_id_label,  0, 1, Qt.AlignmentFlag.AlignRight)
-        grid.addWidget(QLabel("Members:"),    1, 0, Qt.AlignmentFlag.AlignLeft)
-        grid.addWidget(self.leaguemates,      1, 1, Qt.AlignmentFlag.AlignRight)
-        grid.addWidget(QLabel("Forfeit:"),    2, 0, Qt.AlignmentFlag.AlignLeft)
-        grid.addWidget(self.forfeit_label,    2, 1, Qt.AlignmentFlag.AlignRight)
-
-        layout.addLayout(grid)
-        return container
-
-    def _build_draft_info(self):
-        container = QWidget()
-        layout = QVBoxLayout(container)
-        layout.setSpacing(10)
-
-        self.draft_order_label = QLabel("N/A")
-        self.draft_order_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        self.draft_order_label.setFixedWidth(400)
-
-        self.next_pick_label = QLabel("N/A")
-        self.next_pick_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        self.next_pick_label.setStyleSheet("font-size: 16px; font-weight: bold; color: #88ff87;")
-
-        grid = QGridLayout()
-        grid.setColumnStretch(0, 1)
-        grid.setColumnStretch(1, 3)
-
-        grid.addWidget(QLabel("Draft Order:"), 0, 0, Qt.AlignmentFlag.AlignLeft)
-        grid.addWidget(self.draft_order_label, 0, 1, Qt.AlignmentFlag.AlignRight)
-        grid.addWidget(QLabel("Next Pick:"),   1, 0, Qt.AlignmentFlag.AlignLeft)
-        grid.addWidget(self.next_pick_label,   1, 1, Qt.AlignmentFlag.AlignRight)
-
-        layout.addLayout(grid)
-        container.setVisible(False)
-        return container
+        self.draft_controls = cont
+        return cont
 
     def _build_team_creator(self):
         self.team_creator_container = QWidget()
@@ -454,30 +617,24 @@ class LeagueView(QWidget):
         layout.addLayout(create_layout)
         return self.team_creator_container
 
-    def _build_team_info(self):
-        container = QWidget()
-        layout = QVBoxLayout(container)
-        layout.setSpacing(25)
-        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        self.team_name_label = QLabel("")
-        self.team_name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(self.team_name_label)
-        return container
-
     def _build_draft_picker(self):
         self.pick_container = QWidget()
         layout = QVBoxLayout(self.pick_container)
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.setSpacing(20)
+        layout.setContentsMargins(40, 20, 40, 20)
+        layout.setSpacing(16)
+
+        label = QLabel("It's your turn to pick a player!")
+        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        label.setStyleSheet("font-size: 24px; font-weight: bold;")
 
         self.pick_input = QComboBox()
         player_names = sorted([p["name"] for p in Session.player_scores], key=str.casefold)
         self.pick_input.addItems(player_names)
         self.pick_input.setEditable(True)
         self.pick_input.setStyleSheet("""
-                                        QComboBox QAbstractItemView { 
-                                        color: white; 
+                                        QComboBox QAbstractItemView {
+                                        color: white;
                                         }
                                         QComboBox::drop-down {
                                             width: 20px;
@@ -485,42 +642,46 @@ class LeagueView(QWidget):
                                     """)
         self.pick_input.setPlaceholderText("Blaz, MenaRD, Leshar...")
         self.pick_input.lineEdit().returnPressed.connect(self.pick_player)
+        self.pick_input.currentTextChanged.connect(self._update_pick_preview)
 
-        group = QGroupBox("Pick a Player!")
-        group.setStyleSheet("QGroupBox { color: white; }")
-        group_layout = QVBoxLayout()
-        group_layout.addWidget(self.pick_input)
-        group.setLayout(group_layout)
-
-        label = QLabel("It's your turn to pick a player!")
-        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        label.setStyleSheet("font-size: 24px; font-weight: bold;")
+        # Placeholder pixmap for when no selection is made
+        self._pick_preview_pixmap = Session.get_pixmap("players", "")
+        self.pick_preview_image = HoverImage(
+            self._pick_preview_pixmap, size=160, border_width=2, border_color="#BBBBBB"
+        )
 
         btn = QPushButton("Pick")
+        btn.setFixedWidth(100)
         btn.setCursor(Qt.CursorShape.PointingHandCursor)
         btn.setStyleSheet(BUTTON_STYLESHEET_A)
         btn.clicked.connect(self.pick_player)
 
-        pick_layout = QHBoxLayout()
-        pick_layout.addWidget(group, stretch=1)
-        pick_layout.addWidget(btn, stretch=1)
-        pick_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
         layout.addWidget(label)
-        layout.addSpacing(10)
-        layout.addLayout(pick_layout)
+        layout.addWidget(self.pick_input)
+        layout.addWidget(self.pick_preview_image, alignment=Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(btn, alignment=Qt.AlignmentFlag.AlignCenter)
         return self.pick_container
 
     def _build_roster_overview(self):
         container = QWidget()
         layout = QVBoxLayout(container)
-        layout.setSpacing(10)
+        layout.setContentsMargins(0, 4, 0, 4)
+        layout.setSpacing(0)
+
+        self.team_name_label = QLabel("")
+        self.team_name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.team_name_label.setStyleSheet("font-size: 24px; font-weight: bold; color: white;")
 
         self.team_bar_layout = QHBoxLayout()
-        self.team_bar_layout.setSpacing(10)
-        self.team_bar_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.team_bar_layout.setSpacing(4)
 
-        layout.addLayout(self.team_bar_layout)
+        slots_row = QHBoxLayout()
+        slots_row.addStretch()
+        slots_row.addLayout(self.team_bar_layout)
+        slots_row.addStretch()
+
+        layout.addWidget(self.team_name_label)
+        layout.addLayout(slots_row)
         return container
 
     def _build_player_slot(self, player: dict):
@@ -538,8 +699,6 @@ class LeagueView(QWidget):
 
             pixmap = Session.get_pixmap("players", player_name)
             image = HoverImage(pixmap, size=85, border_width=2, border_color="#BBBBBB")
-            
-            image.setCursor(Qt.CursorShape.PointingHandCursor)
         else:
             image.setStyleSheet("border: 2px dashed #555; background-color: #333; color: #eee;")
             image.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -943,7 +1102,7 @@ class LeagueView(QWidget):
             set_status(self, f"Failed to create league: {error}", code=2)
 
         set_status(self, "Creating League...")
-        run_async(parent_widget=self.league_widget, fn=Session.league_service.create_then_join_league, args=(name,), on_success=_success, on_error=_error)
+        run_async(parent_widget=self.history_area, fn=Session.league_service.create_then_join_league, args=(name,), on_success=_success, on_error=_error)
 
     def join_league(self):
         league_id = self.join_input.text().strip()
@@ -961,7 +1120,7 @@ class LeagueView(QWidget):
             set_status(self, f"Failed to join league: {error}", code=2)
 
         set_status(self, "Joining League...")
-        run_async(parent_widget=self.league_widget, fn=Session.league_service.join_league, args=(league_id,), on_success=_success, on_error=_error)
+        run_async(parent_widget=self.history_area, fn=Session.league_service.join_league, args=(league_id,), on_success=_success, on_error=_error)
 
     def leave_league(self):
         msg = QMessageBox(self)
@@ -987,7 +1146,7 @@ class LeagueView(QWidget):
             set_status(self, f"Failed to leave league: {error}", code=2)
 
         set_status(self, "Leaving League...")
-        run_async(parent_widget=self.league_widget, fn=Session.league_service.leave_league, args=(), on_success=_success, on_error=_error)
+        run_async(parent_widget=self.history_area, fn=Session.league_service.leave_league, args=(), on_success=_success, on_error=_error)
 
     def assign_draft_order(self):
         usernames = self.draft_input.text().strip()
@@ -1005,7 +1164,7 @@ class LeagueView(QWidget):
             set_status(self, f"Failed to assign draft order: {error}", code=2)
 
         set_status(self, "Assigning draft order...")
-        run_async(parent_widget=self.league_widget, fn=Session.league_service.assign_draft_order, args=(user_list,), on_success=_success, on_error=_error)
+        run_async(parent_widget=self.history_area, fn=Session.league_service.assign_draft_order, args=(user_list,), on_success=_success, on_error=_error)
 
     def begin_draft(self):
         msg = QMessageBox(self)
@@ -1031,7 +1190,7 @@ class LeagueView(QWidget):
             set_status(self, f"Failed to begin draft: {error}", code=2)
 
         set_status(self, "Beginning draft...")
-        run_async(parent_widget=self.league_widget, fn=Session.league_service.begin_draft, args=(), on_success=_success, on_error=_error)
+        run_async(parent_widget=self.history_area, fn=Session.league_service.begin_draft, args=(), on_success=_success, on_error=_error)
 
     def set_forfeit(self):
         forfeit = self.forfeit_input.text().strip()
@@ -1049,11 +1208,10 @@ class LeagueView(QWidget):
         def _error(error):
             set_status(self, f"Failed to set forfeit: {error}", code=2)
 
-        run_async(parent_widget=self.league_widget, fn=Session.league_service.set_forfeit, args=(forfeit,), on_success=_success, on_error=_error)
+        run_async(parent_widget=self.history_area, fn=Session.league_service.set_forfeit, args=(forfeit,), on_success=_success, on_error=_error)
 
     def pick_player(self):
         player = self.pick_input.currentText()
-        self.pick_input.setCurrentIndex(-1)
         if not player:
             set_status(self, "Please enter a player name.", 2)
             return
@@ -1070,7 +1228,7 @@ class LeagueView(QWidget):
             set_status(self, f"Failed to pick player: {error}", 2)
 
         set_status(self, "Picking player...", 0)
-        run_async(parent_widget=self.team_widget, fn=Session.team_service.pick_player, args=(player,), on_success=_success, on_error=_error)
+        run_async(parent_widget=self.history_area, fn=Session.team_service.pick_player, args=(player,), on_success=_success, on_error=_error)
 
     def create_team(self):
         team_name = self.create_team_input.text().strip()
@@ -1088,7 +1246,25 @@ class LeagueView(QWidget):
             set_status(self, f"Failed to create team: {error}", 2)
 
         set_status(self, "Creating team...", 0)
-        run_async(parent_widget=self.team_widget, fn=Session.team_service.create_team, args=(team_name,), on_success=_success, on_error=_error)
+        run_async(parent_widget=self.history_area, fn=Session.team_service.create_team, args=(team_name,), on_success=_success, on_error=_error)
+
+    def _toggle_settings(self):
+        if self.history_stack.currentIndex() == self._HS_OWNER:
+            self.history_stack.setCurrentIndex(self._HS_HISTORY)
+            self.settings_toggle_btn.setText("Settings")
+        else:
+            self.history_stack.setCurrentIndex(self._HS_OWNER)
+            self.settings_toggle_btn.setText("Close")
+        SoundManager.play("button")
+
+    def _toggle_picker(self):
+        if self.history_stack.currentIndex() == self._HS_PICKER:
+            self.history_stack.setCurrentIndex(self._HS_HISTORY)
+            self.picker_toggle_btn.setText("Pick Player")
+        else:
+            self.history_stack.setCurrentIndex(self._HS_PICKER)
+            self.picker_toggle_btn.setText("View History")
+        SoundManager.play("button")
 
     def toggle_former_players(self):
         self._former_expanded = not self._former_expanded
@@ -1110,6 +1286,9 @@ class LeagueView(QWidget):
         league              = Session.league_data or {}
         team                = Session.team_data or {}
 
+        self.my_league_history  = Session.league_history or []
+        self.my_draft_history   = Session.draft_history or []
+
         self.my_username        = Session.user
         self.my_user_id         = Session.user_id
 
@@ -1122,6 +1301,7 @@ class LeagueView(QWidget):
         self.my_draft_order     = league.get("draft_order") or []
         self.my_next_pick       = league.get("next_pick")
         leaguemates             = league.get("leaguemates") or []
+        self.my_leaguemates_raw = leaguemates
         self.my_leaguemates     = [d["manager_name"] for d in leaguemates]
         self.my_capacity        = f"{len(leaguemates)}/5"
 
@@ -1144,6 +1324,8 @@ class LeagueView(QWidget):
             self.my_team_name,
             tuple(self.my_leaguemates),
             tuple(p["id"] for p in (self.my_team_standings.get("players") or [])),
+            len(self.my_league_history),
+            len(self.my_draft_history),
         )
 
         if getattr(self, "_last_fingerprint", None) == new_fingerprint:
@@ -1167,60 +1349,76 @@ class LeagueView(QWidget):
     def _show_pre_draft_state(self):
         self.view_stack.setCurrentWidget(self.pre_draft_page)
 
-        # League column visibility
-        self.in_league_display.setVisible(self.my_league_id is not None)
-        self.owner_controls.setVisible(bool(self.is_owner))
-        self.draft_controls.setVisible(not self.is_league_locked)
-        self.divider.setVisible(self.my_league_id is not None)
-        self.team_widget.setVisible(self.my_league_id is not None)
-
-        leave_visible = (
-            self.my_league_id is not None
-            and not self.is_league_locked
-            and not self.is_draft_complete
-        )
-        self.leave.setVisible(leave_visible)
-
-        if self.my_league_id:
-            self.league_owner.setVisible(self.is_owner)
-            if self.is_owner:
-                self.league_owner.setText("Owner")
-
-            self.league_id_label.setText(str(self.my_league_id))
-            fit_text_to_width(label=self.league_name_label, text=self.my_league_name, max_width=400)
-            fit_text_to_width(label=self.leaguemates, text=", ".join(self.my_leaguemates), max_width=400, max_font_size=14, bold=False)
-
-            if self.my_league_forfeit:
-                fit_text_to_width(label=self.forfeit_label, text=self.my_league_forfeit, max_width=400, max_font_size=12)
-            else:
-                self.forfeit_label.setText("Forfeit not yet set.")
-
-            self.draft_info_container.setVisible(True)
-            if self.my_draft_order:
-                fit_text_to_width(label=self.draft_order_label, text=", ".join(self.my_draft_order), max_width=400, max_font_size=14, bold=False)
-            if self.is_league_locked:
-                self.next_pick_label.setText(str(self.my_next_pick))
-            if self.is_draft_complete:
-                self.draft_info_container.setVisible(False)
-
-        # Team column
         has_team = bool(self.my_team_name)
-        self.team_creator.setVisible(not has_team)
-        self.team_info.setVisible(has_team)
+
+        # Header
+        fit_text_to_width(label=self.league_name_label, text=self.my_league_name or "", max_width=400)
+        self.league_id_label.setText(str(self.my_league_id or ""))
+        self.capacity_label.setText(f"Members: {self.my_capacity}")
+        self.members_list_label.setText(", ".join(self.my_leaguemates))
+        self._update_history_feed()
+
+        # Sidebar draft order
+        if self.my_draft_order:
+            self.draft_order_label.setText(", ".join(self.my_draft_order))
+        else:
+            self.draft_order_label.setText("Not set")
+
+        # Sidebar forfeit
+        if self.my_league_forfeit:
+            self.forfeit_label.setText(self.my_league_forfeit)
+        else:
+            self.forfeit_label.setText("Not yet set.")
+
+        # Roster bar
         self.team_overview.setVisible(has_team)
-        self.draft_picker.setVisible(
-            has_team
+        self._roster_divider_wrapper.setVisible(has_team)
+        if has_team:
+            self.team_name_label.setText(self.my_team_name or "")
+            self._update_player_slots()
+
+        # Leave button
+        self.leave_btn.setVisible(not self.is_league_locked and not self.is_draft_complete)
+
+        # Next pick avatar (draft phase only)
+        if self.is_league_locked:
+            self._refresh_next_pick_avatar()
+            self.next_pick_label.setText(f"Next: {self.my_next_pick or '?'}")
+        self.next_pick_avatar_slot.setVisible(self.is_league_locked)
+        self.next_pick_label.setVisible(self.is_league_locked)
+
+        # Owner settings toggle only shown pre-lock; never during draft
+        self.settings_toggle_btn.setVisible(self.is_owner and not self.is_league_locked)
+        # Reset settings button label if hidden (e.g. draft just started)
+        if not self.settings_toggle_btn.isVisible():
+            self.settings_toggle_btn.setText("Settings")
+
+        # history_stack page selection — state always wins over manual toggle
+        is_my_pick = (
+            self.is_league_locked
             and not self.is_draft_complete
             and self.my_username == self.my_next_pick
-            and self.is_league_locked
         )
 
-        if self.draft_picker.isVisible() == True:
-            self._update_player_stat(None)
-
-        if has_team:
-            fit_text_to_width(label=self.team_name_label, text=self.my_team_name, max_width=400)
-            self._update_player_slots()
+        if is_my_pick and not has_team:
+            self.history_stack.setCurrentIndex(self._HS_CREATOR)
+            self.picker_toggle_btn.setVisible(False)
+        elif is_my_pick and has_team:
+            self.history_stack.setCurrentIndex(self._HS_PICKER)
+            self._update_pick_preview(self.pick_input.currentText())
+            # Picker toggle: lets user glance at history and come back
+            self.picker_toggle_btn.setText("View History")
+            self.picker_toggle_btn.setVisible(True)
+        elif self.is_league_locked and has_team:
+            # Draft is running but it's not this user's turn — force back to history
+            if self.history_stack.currentIndex() == self._HS_PICKER:
+                self.history_stack.setCurrentIndex(self._HS_HISTORY)
+            self.picker_toggle_btn.setVisible(False)
+        else:
+            self.picker_toggle_btn.setVisible(False)
+            # Only reset to history if not currently in the owner panel
+            if self.history_stack.currentIndex() not in (self._HS_OWNER,):
+                self.history_stack.setCurrentIndex(self._HS_HISTORY)
 
     def _show_post_draft_state(self):
         self.view_stack.setCurrentWidget(self.post_draft_page)
@@ -1243,89 +1441,45 @@ class LeagueView(QWidget):
             if widget:
                 widget.setParent(None)
 
-        self.player_buttons = []
         for i in range(5):
             if i < len(players):
                 slot = self._build_player_slot(players[i])
-                slot.mousePressEvent = lambda e, p=players[i]: self._update_player_stat(p)
-                self.player_buttons.append(slot)
             else:
                 slot = self._build_player_slot({})
             self.team_bar_layout.addWidget(slot, stretch=1)
 
-    def _update_player_stat(self, player: dict | None):
-        while self.player_detail_layout.count():
-            item = self.player_detail_layout.takeAt(0)
+   
+# -- HELPERS --
+
+    def _refresh_next_pick_avatar(self):
+        while self.next_pick_avatar_slot_layout.count():
+            item = self.next_pick_avatar_slot_layout.takeAt(0)
             if item.widget():
                 item.widget().setParent(None)
 
-        if self.draft_picker.isVisible() or not player:
+        user_id = self._get_user_id_for_username(self.my_next_pick)
+        if not user_id:
             return
 
-        name      = player["id"]
-        region    = player.get("region", "Unknown")
-        points    = player["points"]
-        joined_at = player["joined_at"]
+        avatar_bytes = Session.init_avatar(user_id)
+        if not avatar_bytes:
+            return
 
-        frame = QFrame()
-        frame.setFrameShape(QFrame.Shape.StyledPanel)
-        frame.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        frame.setObjectName("frame")
-        frame.setStyleSheet("""
-            QFrame#frame {
-                background-color: #090E2B;
-                border: 2px solid #444444;
-                border-radius: 4px;
-            }
-        """)
+        pixmap = QPixmap()
+        pixmap.loadFromData(avatar_bytes)
+        if not pixmap.isNull():
+            avatar = HoverImage(pixmap, size=172, border_width=2, border_color="#88ff87")
+            self.next_pick_avatar_slot_layout.addWidget(avatar, alignment=Qt.AlignmentFlag.AlignCenter)
 
-        layout = QVBoxLayout(frame)
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(10)
+    def _get_user_id_for_username(self, username: str):
+        for m in (self.my_leaguemates_raw or []):
+            if m.get("manager_name") == username:
+                return str(m.get("user_id", ""))
+        return None
 
-        image = QLabel()
-        image.setStyleSheet("border: 2px solid #FFFFFF;")
-        image.setFixedSize(200, 200)
-        image.setAlignment(Qt.AlignmentFlag.AlignHCenter)
-        image.setPixmap(
-            Session.get_pixmap("players", name).scaled(
-                200, 200,
-                Qt.AspectRatioMode.IgnoreAspectRatio,
-                Qt.TransformationMode.SmoothTransformation
-            )
-        )
-
-        region_img = ResourcePath.FLAGS / f"{region}.png"
-        if not region_img.exists():
-            region_img = ResourcePath.FLAGS / "placeholder.png"
-
-        info_label = QLabel()
-        info_label.setText(
-            "<div style='line-height: 1;'>"
-            f"<span style='font-size:20px; font-weight: bold;'>{name}</span><br/>"
-            f"<span style='font-size:16px; color:#BBBBBB;'>{region}  </span>"
-            f"<img src='{region_img}' width='18' height='12'><br/>"
-            "</div>"
-        )
-        info_label.setTextFormat(Qt.TextFormat.RichText)
-        info_label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
-
-        points_label = QLabel(f"Points: {points}")
-        points_label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
-
-        joined_label = QLabel(f"Joined At: {joined_at.split('T')[0]}")
-        joined_label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
-
-        layout.addWidget(image, alignment=Qt.AlignmentFlag.AlignHCenter)
-        layout.addWidget(info_label)
-        layout.addStretch()
-        layout.addWidget(points_label)
-        layout.addWidget(joined_label)
-
-        self.player_detail_layout.addWidget(frame)
-
-   
-# -- HELPERS --
+    def _update_pick_preview(self, name: str):
+        pixmap = Session.get_pixmap("players", name) if name else self._pick_preview_pixmap
+        self.pick_preview_image.update_pixmap(pixmap)
 
     def showEvent(self, event):
         super().showEvent(event)

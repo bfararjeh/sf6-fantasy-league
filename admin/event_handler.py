@@ -33,7 +33,7 @@ class EventHandler():
                 start_str = "N/A"
             print(f"{e['id']} | {e['name'][:25]:25} | {start_str:20} | {e['tier']:4} | {e['complete']}")
 
-    def append_event(self, name, tier=0, start_weekend=None):
+    def append_event(self, name, tier=0, start_weekend=None, end_date=None):
         tier_exists = (
             self.admin_client
             .table("distributions")
@@ -49,6 +49,7 @@ class EventHandler():
             "name": name,
             "tier": tier,
             "start_weekend": datetime.strptime(start_weekend, "%d-%m-%Y").strftime("%Y-%m-%d"),
+            "end_date": datetime.strptime(end_date, "%d-%m-%Y").strftime("%Y-%m-%d"),
             "image": image_path,
             "complete": "False"
         }

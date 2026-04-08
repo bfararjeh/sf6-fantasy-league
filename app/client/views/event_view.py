@@ -14,6 +14,7 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QScrollArea,
     QSizePolicy,
+    QSpacerItem,
     QStackedWidget,
     QToolTip,
     QVBoxLayout,
@@ -111,6 +112,7 @@ class EventView(QWidget):
         self.content_layout.addWidget(self.next_up_label, alignment=Qt.AlignmentFlag.AlignCenter)
         self.content_layout.addStretch()
         self.content_layout.addWidget(self.timeline_widget)
+        self.content_layout.addStretch()
 
 
 # -- MAIN BUILDERS --
@@ -153,7 +155,7 @@ class EventView(QWidget):
     def _build_carousel(self):
         container = QWidget()
         layout = QHBoxLayout(container)
-        layout.setSpacing(10)
+        layout.setSpacing(20)
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         # skeleton
@@ -202,10 +204,11 @@ class EventView(QWidget):
         hint_label.setStyleSheet("font-size: 11px; color: #666666;")
         
         center_layout.addWidget(self.event_name_label)
-        center_layout.addWidget(hint_label)
         center_layout.addWidget(self.center_display)
+        center_layout.addWidget(hint_label)
+        center_layout.addSpacerItem(QSpacerItem(0, 20))
         center_layout.addWidget(self.event_date_label)
-        center_layout.addWidget(self.event_tier_label)
+        # center_layout.addWidget(self.event_tier_label)
 
         # adding widgets
         layout.addWidget(self.left_arrow)
@@ -839,7 +842,7 @@ class EventView(QWidget):
             "Tier " + str(tier_val) if tier_val > 0 else "Non-standard Tier"
         )
 
-        self._update_next_up(center_idx=center_idx)
+        self._update_next_up(center_idx=center_idx, event=event)
         self._update_timeline(str(datetime.fromisoformat(event.get("start_weekend", "")).date()))
 
     def _update_timeline(self, event_date_str: str):
@@ -864,11 +867,30 @@ class EventView(QWidget):
 
             dot.setStyleSheet(f"background-color: {color}; border-radius: 7px;")
 
-    def _update_next_up(self, center_idx: int):
+    def _update_next_up(self, center_idx: int, event: dict = None):
+        now = datetime.now(timezone.utc)
+        start_raw = event.get("start_weekend") if event else None
+        end_raw = event.get("end_date") if event else None
+        if start_raw and end_raw:
+            start_dt = datetime.fromisoformat(start_raw)
+            end_dt = datetime.fromisoformat(end_raw)
+            if start_dt <= now <= end_dt:
+                color, text = "#B0131E", "Live!"
+                self.next_up_label.setText(text)
+                self.next_up_label.setStyleSheet(f"""
+                    font-size: 18px;
+                    font-weight: bold;
+                    color: white;
+                    background-color: {color};
+                    padding: 6px 10px;
+                    border-radius: 8px;
+                """)
+                return
+
         if center_idx < self.next_up_index:
             color, text = "#DB5A0F", "Past Event"
         elif center_idx == self.next_up_index:
-            color, text = "#3EA702", "Next Up!"
+            color, text = "#3EA702", "Next Up"
         else:
             color, text = "#339FF8", "Future Event"
 
