@@ -4,6 +4,7 @@ from PyQt6.QtCore import QPoint, QSize, Qt, QTimer
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import (
     QApplication,
+    QDialog,
     QFrame,
     QGraphicsOpacityEffect,
     QHBoxLayout,
@@ -1621,3 +1622,41 @@ class TradeView(QWidget):
             SoundManager.play("boot")
         else:
             self._refresh()
+
+    def _view_help(self):
+        SoundManager.play("button")
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Info")
+        dialog.setStyleSheet("background: #10194D;")
+        dialog.setFixedSize(800, 600)
+        layout = QVBoxLayout(dialog)
+        layout.setContentsMargins(20, 10, 20, 10)
+
+        title = QLabel("Trades")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignTop)
+        title.setStyleSheet("font-weight: bold; font-size: 24px")
+
+        with open(str(ResourcePath.TEXTS / "trades_help.txt"), "r") as file:
+            text_list = file.read().splitlines()
+
+        def _create_label(text):
+            label = QLabel(text)
+            label.setWordWrap(True)
+            label.setStyleSheet("font-size: 14px")
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            return label
+
+        layout.addWidget(title)
+        for idx, text in enumerate(text_list):
+            if idx==1:
+                img_label = QLabel()
+                img_label.setPixmap(QPixmap(str(ResourcePath.IMAGES / "trade_example.png")).scaled(500, 500, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+                img_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+                layout.addWidget(img_label)
+                layout.addWidget(_create_label(text))
+            else:
+                layout.addWidget(_create_label(text))
+
+        dialog.exec()

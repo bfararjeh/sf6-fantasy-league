@@ -113,6 +113,9 @@ class EventService():
             .eq("event", event_id)
         ).data
 
+        if len(score_history) < 64:
+            score_history = [e for e in score_history if e["rank"] <= 32]
+
         return score_history
     
     def get_user_event_scores(self, team_id, event_id):

@@ -1,0 +1,3 @@
+This is the home page!
+The footer below takes you to each of the individual views, where this help button will also change to describe those pages. Some views also have a refresh button, which is necessary to get the latest information. The settings button and logout button are pretty self-explanatory.
+Also, you can change your avatar! Keep it clean, I can see them all...

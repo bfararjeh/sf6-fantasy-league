@@ -1,0 +1,3 @@
+This here is the events view. You can take a look at all events that count towards the fantasy league, including past, live, and future events. You can also check out all the players who have qualified for Capcom Cup 13!
+For each event, there'll be "All", "Me", and "League" standings. These standings show the overall top 64 for the event, how many points your team scored, and how many points you and all your leaguemates scored.
+There are different tiers of events and different point distributions for each. You can check these out in detail on the FAQs page, found in the settings.

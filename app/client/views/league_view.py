@@ -349,35 +349,16 @@ class LeagueView(QWidget):
         self.settings_toggle_btn.setVisible(False)
         self.settings_toggle_btn.clicked.connect(self._toggle_settings)
 
-        self.picker_toggle_btn = QPushButton("Pick Player")
-        self.picker_toggle_btn.setFixedWidth(110)
+        self.picker_toggle_btn = QPushButton("Draft")
+        self.picker_toggle_btn.setFixedWidth(100)
         self.picker_toggle_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.picker_toggle_btn.setStyleSheet(BUTTON_STYLESHEET_A)
         self.picker_toggle_btn.setVisible(False)
         self.picker_toggle_btn.clicked.connect(self._toggle_picker)
 
-        live_tag = QLabel("Live")
-        live_tag.setStyleSheet(f"""
-            QLabel {{
-                background-color: {QColor("#B80000").name()};
-                color: {QColor("#ffffff").name()};
-                border-radius: 6px;
-                padding: 8px 8px;
-                font-size: 14px;
-                font-weight: bold;
-            }}
-            QLabel:disabled {{
-                background-color: {QColor("#9C4444").name()};
-                color: #888888;
-            }}
-            """)
-        live_tag.setFixedWidth(50)
-        live_tag.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
         top_row.addStretch()
         top_row.addWidget(self.settings_toggle_btn)
         top_row.addWidget(self.picker_toggle_btn)
-        top_row.addWidget(live_tag)
 
         # Stack with 4 pages
         self.history_stack = QStackedWidget()
@@ -1489,6 +1470,49 @@ class LeagueView(QWidget):
         )
         SoundManager.play("button")
 
+    def _view_help(self):
+        SoundManager.play("button")
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Info")
+        dialog.setStyleSheet("background: #10194D;")
+        dialog.setFixedSize(800,600)
+        layout = QVBoxLayout(dialog)
+        layout.setContentsMargins(20,10,20,10)
+
+        title = QLabel("Leagues")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignTop)
+        title.setStyleSheet("font-weight: bold; font-size: 24px")
+
+        with open(str(ResourcePath.TEXTS / "league_help.txt"), "r") as file:
+            text_list = file.read().splitlines()
+
+        def _create_label(text):
+            label = QLabel(text)
+            label.setWordWrap(True)
+            label.setStyleSheet("font-size: 14px")
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+            return label
+
+        layout.addWidget(title)
+        for idx, text in enumerate(text_list):
+            if idx==2:
+                tempC = QWidget()
+                tempL = QHBoxLayout(tempC)
+
+                tempL.addWidget(_create_label(text))
+                img_label = QLabel()
+                img_label.setPixmap(QPixmap(str(ResourcePath.IMAGES / "draft_example.png")).scaled(260, 260, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+                img_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                tempL.addWidget(img_label)
+
+                layout.addWidget(tempC)
+            else:
+                layout.addWidget(_create_label(text))
+
+
+        dialog.exec()
 
 # -- REFRESHERS --
 

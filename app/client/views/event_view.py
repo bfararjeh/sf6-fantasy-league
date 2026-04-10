@@ -2,19 +2,19 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Optional
 
-from PyQt6.QtCore import QEasingCurve, QPoint, QPropertyAnimation, Qt
-from PyQt6.QtGui import QColor, QIcon
+from PyQt6.QtCore import QEasingCurve, QPoint, QPropertyAnimation, QRunnable, Qt, QThreadPool
+from PyQt6.QtGui import QColor, QIcon, QImage, QPixmap
 from PyQt6.QtWidgets import (
     QApplication,
+    QDialog,
     QGraphicsColorizeEffect,
     QGraphicsDropShadowEffect,
-    QGraphicsOpacityEffect,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QPushButton,
     QScrollArea,
     QSizePolicy,
-    QSpacerItem,
     QStackedWidget,
     QToolTip,
     QVBoxLayout,
@@ -58,6 +58,8 @@ class EventView(QWidget):
         self.event_data = Session.event_data
         self.event_detail_cache = {}
         self.current_detail_event_id = None
+        self._image_cache: dict[int, QImage] = {}   # built off main thread
+        self._pixmap_cache: dict[int, QPixmap] = {}  # converted on main thread
 
         self.RANK_STYLES = {
             1: "#FFD700",
@@ -75,7 +77,6 @@ class EventView(QWidget):
         )
 
         self.next_up_index = self.current_event_idx
-        self.event_images = []
 
         self._build_static()
 
@@ -108,8 +109,12 @@ class EventView(QWidget):
         self.next_up_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.content_layout.addWidget(info_widget)
+        self.content_layout.addWidget(self._build_search_bar())
+        self.content_layout.addStretch()
         self.content_layout.addWidget(self._build_carousel())
+        self.content_layout.addStretch()
         self.content_layout.addWidget(self.next_up_label, alignment=Qt.AlignmentFlag.AlignCenter)
+        self.content_layout.addStretch()
         self.content_layout.addStretch()
         self.content_layout.addWidget(self.timeline_widget)
         self.content_layout.addStretch()
@@ -152,81 +157,242 @@ class EventView(QWidget):
 
         return container
 
+    def _build_search_bar(self):
+        mainC = QWidget()
+        mainL = QVBoxLayout(mainC)
+        mainL.setContentsMargins(0, 0, 0, 0)
+        mainL.setSpacing(6)
+
+        row = QWidget()
+        row_layout = QHBoxLayout(row)
+        row_layout.setContentsMargins(0, 4, 0, 4)
+        row_layout.setSpacing(8)
+        row_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        self._search_input = QLineEdit()
+        self._search_input.setPlaceholderText("Search events...")
+        self._search_input.setFixedWidth(300)
+        self._search_input.setFixedHeight(34)
+        self._search_input.setStyleSheet("""
+            QLineEdit {
+                background-color: #090E2B;
+                color: #FFFFFF;
+                border: 2px solid #2A3380;
+                border-radius: 8px;
+                padding: 0 10px;
+                font-size: 13px;
+            }
+            QLineEdit:focus {
+                border-color: #4200FF;
+            }
+        """)
+        self._search_input.returnPressed.connect(self._search_event)
+
+        search_btn = QPushButton("Go")
+        search_btn.setFixedHeight(34)
+        search_btn.setFixedWidth(100)
+        search_btn.setStyleSheet(BUTTON_STYLESHEET_A)
+        search_btn.clicked.connect(self._search_event)
+
+        row_layout.addStretch()
+        row_layout.addWidget(self._search_input)
+        row_layout.addWidget(search_btn)
+        row_layout.addStretch()
+
+        # Chips row — always visible to keep layout stable, populated on search
+        self._chips_row = QWidget()
+        self._chips_row.setFixedHeight(36)
+        chips_layout = QHBoxLayout(self._chips_row)
+        chips_layout.setContentsMargins(0, 0, 0, 0)
+        chips_layout.setSpacing(8)
+        chips_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        mainL.addWidget(row)
+        mainL.addWidget(self._chips_row)
+
+        return mainC
+
+    def _search_event(self):
+        query = self._search_input.text().strip().lower()
+        if not query:
+            self._clear_chips()
+            return
+
+        matches = [i for i, e in enumerate(self.event_data) if query in e.get("name", "").lower()]
+
+        if not matches:
+            self._clear_chips()
+            self._show_chips([])   # reuse to display "no match" chip
+            return
+
+        if len(matches) == 1:
+            self._clear_chips()
+            self._jump_to_event(matches[0])
+            return
+
+        # Multiple matches — show chips for every one, highlight current if present
+        self._show_chips(matches)
+
+    def _show_chips(self, matches: list[int]):
+        layout = self._chips_row.layout()
+
+        # Remove old chips
+        while layout.count():
+            item = layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+
+        if not matches:
+            no_match = QLabel("No match found.")
+            no_match.setStyleSheet("font-size: 12px; color: #888888;")
+            layout.addWidget(no_match)
+            return
+
+        visible, overflow = matches[:6], matches[6:]
+
+        for idx in visible:
+            name = self.event_data[idx].get("name", "?")
+            btn = QPushButton(name)
+            btn.setFixedHeight(28)
+            btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            is_current = idx == self.current_event_idx
+            btn.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: {"#4200FF" if is_current else "#1A1F4D"};
+                    color: #FFFFFF;
+                    border: 1px solid {"#7755FF" if is_current else "#2A3380"};
+                    border-radius: 6px;
+                    padding: 0 12px;
+                    font-size: 12px;
+                }}
+                QPushButton:hover {{
+                    background-color: #2A1D7A;
+                    border-color: #7755FF;
+                }}
+            """)
+            btn.clicked.connect(lambda _, i=idx: self._on_chip_clicked(i))
+            self._prewarm_pixmap(idx)
+            layout.addWidget(btn)
+
+        if overflow:
+            more = QLabel(f"+ {len(overflow)} more — refine your search")
+            more.setStyleSheet("font-size: 12px; color: #555555;")
+            layout.addWidget(more)
+
+    def _clear_chips(self):
+        layout = self._chips_row.layout()
+        while layout.count():
+            item = layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+
+    def _on_chip_clicked(self, idx: int):
+        self._clear_chips()
+        self._search_input.clear()
+        self._jump_to_event(idx)
+
+    def _jump_to_event(self, idx: int):
+        if idx == self.current_event_idx:
+            return
+        self._prewarm_pixmap(idx)
+        self._delta = 1 if idx > self.current_event_idx else -1
+        self._search_target_idx = idx
+        clip_w = self._center_clip.width()
+        end_x = -clip_w if self._delta > 0 else clip_w
+
+        if hasattr(self, "_slide_anim") and self._slide_anim.state() == QPropertyAnimation.State.Running:
+            return
+
+        self._slide_anim = QPropertyAnimation(self.center_container, b"pos")
+        self._slide_anim.setDuration(150)
+        self._slide_anim.setStartValue(QPoint(0, 0))
+        self._slide_anim.setEndValue(QPoint(end_x, 0))
+        self._slide_anim.setEasingCurve(QEasingCurve.Type.InCubic)
+        self._slide_anim.finished.connect(self._swap_and_slide_in)
+        self._slide_anim.start()
+        SoundManager.play("button")
+
     def _build_carousel(self):
         container = QWidget()
         layout = QHBoxLayout(container)
-        layout.setSpacing(20)
+        layout.setSpacing(12)
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        # skeleton
         self.left_arrow = self._make_arrow_button("arrow_left.svg", lambda: self._change_event(-1))
         self.right_arrow = self._make_arrow_button("arrow_right.svg", lambda: self._change_event(1))
 
-        self.left_preview = QLabel()
-        self.left_preview.setFixedWidth(200)
-        self.left_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        # Clipping container — card slides inside without overflow
+        CLIP_W, CLIP_H = 700, 320
+        self._center_clip = QWidget()
+        self._center_clip.setFixedSize(CLIP_W, CLIP_H)
+        self._center_clip.setStyleSheet("background: transparent;")
 
-        self.right_preview = QLabel()
-        self.right_preview.setFixedWidth(200)
-        self.right_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        center_container = QWidget()
-        center_layout = QVBoxLayout(center_container)
-        center_layout.setSpacing(0)
-
-        # center
-        self.center_display = QLabel()
-        self.center_display.setFixedWidth(300)
-        self.center_display.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.center_display.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.center_display.mousePressEvent = lambda e: self._on_event_clicked(
+        self.center_container = QWidget(self._center_clip)
+        self.center_container.setFixedSize(CLIP_W, CLIP_H)
+        self.center_container.move(0, 0)
+        self.center_container.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.center_container.mousePressEvent = lambda _: self._on_event_clicked(
             self.event_data[self.current_event_idx]
         )
+        self.center_container.setStyleSheet("""
+            QWidget {
+                background-color: #090E2B;
+                border: 2px solid #FFFFFF;
+                border-radius: 12px;
+            }
+        """)
+
+        card_layout = QHBoxLayout(self.center_container)
+        card_layout.setContentsMargins(40, 30, 30, 30)
+        card_layout.setSpacing(30)
+
+        # Left side: text info
+        info_widget = QWidget()
+        info_widget.setStyleSheet("QWidget { background: transparent; border: none; }")
+        info_layout = QVBoxLayout(info_widget)
+        info_layout.setContentsMargins(0, 0, 0, 0)
+        info_layout.setSpacing(12)
+        info_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
 
         self.event_name_label = QLabel("")
-        self.event_name_label.setFixedHeight(60)
-        self.event_name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.event_name_label.setStyleSheet("font-weight: bold;")
+        self.event_name_label.setWordWrap(True)
+        self.event_name_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        self.event_name_label.setStyleSheet("font-weight: bold; font-size: 26px; background: transparent; border: none;")
 
         self.event_date_label = QLabel("")
-        self.event_date_label.setFixedHeight(30)
-        self.event_date_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.event_date_label.setStyleSheet("font-weight: bold; font-size: 20px;")
+        self.event_date_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        self.event_date_label.setStyleSheet("font-size: 18px; color: #AAAAAA; background: transparent; border: none;")
 
         self.event_tier_label = QLabel("")
-        self.event_tier_label.setFixedHeight(30)
-        self.event_tier_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.event_tier_label.setStyleSheet("font-size: 20px;")
+        self.event_tier_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        self.event_tier_label.setStyleSheet("font-size: 16px; color: #666666; background: transparent; border: none;")
 
-        hint_label = QLabel("Click to view details")
-        hint_label.setFixedHeight(30)
-        hint_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        hint_label.setStyleSheet("font-size: 11px; color: #666666;")
-        
-        center_layout.addWidget(self.event_name_label)
-        center_layout.addWidget(self.center_display)
-        center_layout.addWidget(hint_label)
-        center_layout.addSpacerItem(QSpacerItem(0, 20))
-        center_layout.addWidget(self.event_date_label)
-        # center_layout.addWidget(self.event_tier_label)
+        hint_label = QLabel("Click to view details →")
+        hint_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        hint_label.setStyleSheet("font-size: 13px; color: #FFFFFF; background: transparent; border: none;")
 
-        # adding widgets
+        info_layout.addWidget(self.event_name_label)
+        info_layout.addWidget(self.event_date_label)
+        info_layout.addWidget(self.event_tier_label)
+        info_layout.addStretch()
+        info_layout.addWidget(hint_label)
+
+        # Right side: image
+        self.center_display = QLabel()
+        self.center_display.setFixedSize(260, 260)
+        self.center_display.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.center_display.setStyleSheet("background: transparent; border: none;")
+
+        card_layout.addWidget(info_widget, stretch=1)
+        card_layout.addWidget(self.center_display)
+
         layout.addWidget(self.left_arrow)
-        layout.addStretch()
-        layout.addWidget(self.left_preview)
-        layout.addWidget(center_container)
-        layout.addWidget(self.right_preview)
-        layout.addStretch()
+        layout.addWidget(self._center_clip)
         layout.addWidget(self.right_arrow)
 
-        # build images once
-        self.event_images = [
-            self._build_event_image(event, size=250)
-            for event in self.event_data
-        ]
-
-        if self.event_images:
+        if self.event_data:
             self._update_event_display()
+            self._prewarm_all()
 
         return container
 
@@ -782,58 +948,64 @@ class EventView(QWidget):
 # -- LAYOUT STUFF --
 
     def _change_event(self, delta: int):
-        if not self.event_images:
+        if not self.event_data:
+            return
+        # Block rapid clicks while animating
+        if hasattr(self, "_slide_anim") and self._slide_anim.state() == QPropertyAnimation.State.Running:
             return
 
         self._delta = delta
+        self._search_target_idx = None
+        clip_w = self._center_clip.width()
 
-        # fade out
-        effect = QGraphicsOpacityEffect(self.center_display)
-        self.center_display.setGraphicsEffect(effect)
-        self._fade_out = QPropertyAnimation(effect, b"opacity")
-        self._fade_out.setDuration(120)
-        self._fade_out.setStartValue(1.0)
-        self._fade_out.setEndValue(0.0)
-        self._fade_out.setEasingCurve(QEasingCurve.Type.OutQuad)
-        self._fade_out.finished.connect(self._swap_and_fade_in)
-        self._fade_out.start()
+        # Scale the incoming pixmap off the main thread so it's ready in cache
+        # by the time the slide-out finishes; no UI freeze on first load
+        next_idx = (self.current_event_idx + delta) % len(self.event_data)
+        self._prewarm_pixmap(next_idx)
+
+        end_x = -clip_w if delta > 0 else clip_w
+
+        self._slide_anim = QPropertyAnimation(self.center_container, b"pos")
+        self._slide_anim.setDuration(150)
+        self._slide_anim.setStartValue(QPoint(0, 0))
+        self._slide_anim.setEndValue(QPoint(end_x, 0))
+        self._slide_anim.setEasingCurve(QEasingCurve.Type.InCubic)
+        self._slide_anim.finished.connect(self._swap_and_slide_in)
+        self._slide_anim.start()
 
         SoundManager.play("button")
 
-    def _swap_and_fade_in(self):
-        self.current_event_idx = (self.current_event_idx + self._delta) % len(self.event_images)
+    def _swap_and_slide_in(self):
+        if hasattr(self, "_search_target_idx") and self._search_target_idx is not None:
+            self.current_event_idx = self._search_target_idx
+            self._search_target_idx = None
+        else:
+            self.current_event_idx = (self.current_event_idx + self._delta) % len(self.event_data)
         self._update_event_display()
 
-        effect = self.center_display.graphicsEffect()
-        self._fade_in = QPropertyAnimation(effect, b"opacity")
-        self._fade_in.setDuration(120)
-        self._fade_in.setStartValue(0.0)
-        self._fade_in.setEndValue(1.0)
-        self._fade_in.setEasingCurve(QEasingCurve.Type.InQuad)
-        self._fade_in.finished.connect(lambda: self.center_display.setGraphicsEffect(None))
-        self._fade_in.start()
+        clip_w = self._center_clip.width()
+        # Position the incoming panel on the opposite side before sliding in
+        enter_x = clip_w if self._delta > 0 else -clip_w
+        self.center_container.move(enter_x, 0)
+
+        self._slide_in = QPropertyAnimation(self.center_container, b"pos")
+        self._slide_in.setDuration(150)
+        self._slide_in.setStartValue(QPoint(enter_x, 0))
+        self._slide_in.setEndValue(QPoint(0, 0))
+        self._slide_in.setEasingCurve(QEasingCurve.Type.OutCubic)
+        self._slide_in.start()
 
     def _update_event_display(self):
-        total = len(self.event_images)
+        total = len(self.event_data)
         if total == 0:
             return
 
         center_idx = self.current_event_idx
-        left_idx   = (center_idx - 1) % total
-        right_idx  = (center_idx + 1) % total
 
-        scale = lambda pix: pix.scaled(
-            150, 150,
-            Qt.AspectRatioMode.KeepAspectRatio,
-            Qt.TransformationMode.SmoothTransformation,
-        )
-
-        self.center_display.setPixmap(self.event_images[center_idx].pixmap())
-        self.left_preview.setPixmap(scale(self.event_images[left_idx].pixmap()))
-        self.right_preview.setPixmap(scale(self.event_images[right_idx].pixmap()))
+        self.center_display.setPixmap(self._get_event_pixmap(center_idx))
 
         event = self.event_data[center_idx]
-        fit_text_to_width(self.event_name_label, event.get("name", "N/A"), 250)
+        fit_text_to_width(self.event_name_label, event.get("name", "N/A"), 380)
         self.event_date_label.setText(
             str(datetime.fromisoformat(event.get("start_weekend", "")).date())
         )
@@ -916,6 +1088,55 @@ class EventView(QWidget):
         btn.mousePressEvent = lambda e: callback()
         return btn
 
+    def _get_event_pixmap(self, idx: int, size: int = 260) -> QPixmap:
+        """Return a cached QPixmap, converting from QImage if already built."""
+        if idx in self._pixmap_cache:
+            return self._pixmap_cache[idx]
+        if idx in self._image_cache:
+            pm = QPixmap.fromImage(self._image_cache[idx])
+            self._pixmap_cache[idx] = pm
+            return pm
+        # Fallback: build synchronously if background worker hasn't finished
+        self._build_image_cache(idx, size)
+        pm = QPixmap.fromImage(self._image_cache[idx])
+        self._pixmap_cache[idx] = pm
+        return pm
+
+    def _build_image_cache(self, idx: int, size: int = 260):
+        """Fetch bytes and scale into a QImage (safe to call off main thread)."""
+        event = self.event_data[idx]
+        raw_bytes = Session.get_image("events", event.get("name", ""))
+        img = QImage()
+        img.loadFromData(raw_bytes)
+        self._image_cache[idx] = img.scaled(
+            size, size,
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation,
+        )
+
+    def _prewarm_pixmap(self, idx: int):
+        """Kick off a background worker to fetch+scale idx if not yet cached."""
+        if idx in self._image_cache or idx in self._pixmap_cache:
+            return
+        image_cache = self._image_cache
+
+        class _Worker(QRunnable):
+            def __init__(self, view, i):
+                super().__init__()
+                self._view = view
+                self._i = i
+
+            def run(self):
+                if self._i not in image_cache:
+                    self._view._build_image_cache(self._i)
+
+        QThreadPool.globalInstance().start(_Worker(self, idx))
+
+    def _prewarm_all(self):
+        """Queue background workers for every event not yet in cache."""
+        for idx in range(len(self.event_data)):
+            self._prewarm_pixmap(idx)
+
     def _build_event_image(self, event, size=300):
         image = QLabel()
         pixmap = Session.get_pixmap("events", event.get("name", ""))
@@ -927,3 +1148,33 @@ class EventView(QWidget):
             )
         )
         return image
+
+    def _view_help(self):
+        SoundManager.play("button")
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Info")
+        dialog.setStyleSheet("background: #10194D;")
+        dialog.setFixedSize(600, 350)
+        layout = QVBoxLayout(dialog)
+        layout.setContentsMargins(20, 10, 20, 10)
+
+        title = QLabel("Events")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignTop)
+        title.setStyleSheet("font-weight: bold; font-size: 24px")
+
+        with open(str(ResourcePath.TEXTS / "events_help.txt"), "r") as file:
+            text_list = file.read().splitlines()
+
+        def _create_label(text):
+            label = QLabel(text)
+            label.setWordWrap(True)
+            label.setStyleSheet("font-size: 14px")
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            return label
+
+        layout.addWidget(title)
+        for line in text_list:
+            layout.addWidget(_create_label(line))
+
+        dialog.exec()

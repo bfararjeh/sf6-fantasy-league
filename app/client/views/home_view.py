@@ -1,6 +1,10 @@
-from PyQt6.QtCore import Qt
+from copy import deepcopy
+
+from PyQt6.QtCore import QSize, Qt
+from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import (
     QApplication,
+    QDialog,
     QFileDialog,
     QHBoxLayout,
     QLabel,
@@ -45,7 +49,9 @@ class HomeView(QWidget):
     def _build_sections(self):
         if not Session.blocking_state:
             self.content_layout.addWidget(self._build_welcome())
+            self.content_layout.addStretch()
             self.content_layout.addWidget(self._build_home_yap())
+            self.content_layout.addStretch()
         else:
             self.content_layout.addWidget(self._build_blocked())
 
@@ -103,7 +109,7 @@ class HomeView(QWidget):
     def _build_home_yap(self):
         cont = QWidget()
         layout = QVBoxLayout(cont)
-        layout.setContentsMargins(50,0,50,0)
+        layout.setContentsMargins(75,0,75,0)
 
         main = QLabel()
         with open(str(ResourcePath.TEXTS / "home_yap.txt"), "r") as file:
@@ -203,3 +209,33 @@ class HomeView(QWidget):
                 Qt.TransformationMode.SmoothTransformation
             )
         )
+
+    def _view_help(self):
+        SoundManager.play("button")
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Info")
+        dialog.setStyleSheet("background: #10194D;")
+        dialog.setFixedSize(600, 250)
+        layout = QVBoxLayout(dialog)
+        layout.setContentsMargins(20, 10, 20, 10)
+
+        title = QLabel("Home")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignTop)
+        title.setStyleSheet("font-weight: bold; font-size: 24px")
+
+        with open(str(ResourcePath.TEXTS / "home_help.txt"), "r") as file:
+            text_list = file.read().splitlines()
+
+        def _create_label(text):
+            label = QLabel(text)
+            label.setWordWrap(True)
+            label.setStyleSheet("font-size: 14px")
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            return label
+
+        layout.addWidget(title)
+        for line in text_list:
+            layout.addWidget(_create_label(line))
+
+        dialog.exec()

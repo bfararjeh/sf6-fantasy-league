@@ -1,0 +1,1 @@
+This is the global stats page. Take a look at the best team globally, as well as other random stats like most/least picked players and points by region.
