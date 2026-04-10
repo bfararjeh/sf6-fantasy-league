@@ -74,6 +74,7 @@ class LoginView(QWidget):
             }
         """)
         return_to_login.clicked.connect(self.app.show_signup_view)
+        return_to_login.clicked.connect(lambda: SoundManager.play("button"))
 
         # login button
         self.submit_button = QPushButton("Login")

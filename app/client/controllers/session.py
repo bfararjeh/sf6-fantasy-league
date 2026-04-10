@@ -16,6 +16,7 @@ class Session:
     """
     VERSION = "1.3.0"
     SEASON = 13
+    FORCE_COOLDOWN_SECONDS = 1
 
     _on_block: callable = None
 
@@ -54,7 +55,7 @@ class Session:
         cls.qualified_data          = None
 
         cls.league_history          = None
-        cls.draft_history           = None
+        cls.league_chat             = None
 
         cls.trade_windows           = None
         cls.trade_history           = None
@@ -149,12 +150,11 @@ class Session(Session):
             cls.team_data = None
         
         try:
-            cls.league_history          = cls.league_service.get_league_history()
-            cls.draft_history          = cls.league_service.get_draft_log()
+            cls.league_history = cls.league_service.get_league_history()
+            cls.league_chat    = cls.league_service.get_league_chat()
         except Exception:
             cls.league_history = None
-            cls.draft_history = None
-
+            cls.league_chat    = None
 
     @classmethod
     def init_leaderboards(cls, force=False):
@@ -305,7 +305,11 @@ class Session(Session):
 
     @classmethod
     def _should_refresh(cls, grabbed_at, force=False):
-        if force or grabbed_at is None:
+        if force:
+            if grabbed_at is None:
+                return True
+            return grabbed_at <= datetime.now() - timedelta(seconds=cls.FORCE_COOLDOWN_SECONDS)
+        if grabbed_at is None:
             return True
         seconds = cls.get_refresh_interval()
         return grabbed_at <= datetime.now() - timedelta(seconds=seconds)

@@ -299,13 +299,13 @@ class TradeView(QWidget):
         layout.addWidget(sub)
 
         if tag:
-            self._pending_label = QLabel(f"{len(self.trade_requests)} pending requests.")
+            self._pending_label = QLabel(f"No pending requests.")
             self._pending_label.setFixedHeight(22)
             self._pending_label.setStyleSheet(f"""
                 font-size: 11px; font-weight: bold;
                 color: {"#C6DFC3"};
-                background-color: {"#02830D"};
-                border: 1px solid {"#16C506"};
+                background-color: {"#86551C"};
+                border: 1px solid {"#F79400"};
                 border-radius: 4px;
                 padding: 2px 10px;
             """)
@@ -499,7 +499,7 @@ class TradeView(QWidget):
         player_joined = player.get("joined_at", "-").split("T")[0]
         pixmap = Session.get_pixmap("players", player_name)
 
-        image = HoverImage(pixmap, size=135)
+        image = HoverImage(pixmap, size=130)
         name = QLabel(player_name)
         name.setAlignment(Qt.AlignmentFlag.AlignCenter)
         name.setStyleSheet("font-size: 16px; font-weight: bold;")
@@ -545,6 +545,7 @@ class TradeView(QWidget):
     def _utp_on_pool_select(self, player):
         if self._utp_selected_pool_player == player:
             self._utp_selected_pool_player = None
+            self._utp_search_bar.clear()
         else:
             self._utp_selected_pool_player = player
         self._utp_refresh_carousel()
@@ -1575,7 +1576,26 @@ class TradeView(QWidget):
             self.remaining.setText(f"{self.trades_remaining} trades remaining!")
         
         if getattr(self, "_pending_label", None):
-            self._pending_label.setText(f"{len(self.trade_requests)} pending requests.")
+            if len(self.trade_requests) != 0:
+                self._pending_label.setText(f"{len(self.trade_requests)} pending requests.")
+                self._pending_label.setStyleSheet(f"""
+                font-size: 11px; font-weight: bold;
+                color: {"#C6DFC3"};
+                background-color: {"#02830D"};
+                border: 1px solid {"#16C506"};
+                border-radius: 4px;
+                padding: 2px 10px;
+            """)
+            else:
+                self._pending_label.setText(f"No pending requests.")
+                self._pending_label.setStyleSheet(f"""
+                font-size: 11px; font-weight: bold;
+                color: {"#C6DFC3"};
+                background-color: {"#86551C"};
+                border: 1px solid {"#F79400"};
+                border-radius: 4px;
+                padding: 2px 10px;
+            """)
 
         new_fingerprint = (
             bool(self.current_window),

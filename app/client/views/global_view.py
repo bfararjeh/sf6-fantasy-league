@@ -63,6 +63,7 @@ class GlobalView(QWidget):
 
         if bool(self.global_stats):
             content_layout.addWidget(self._build_stats(self.global_stats[0]))
+            pass
         else:
             cont = QWidget()
             layout = QVBoxLayout(cont)
@@ -360,18 +361,17 @@ class GlobalView(QWidget):
 
                 image = HoverImage(Session.get_pixmap("players", name), size=160, border_color="#BBBBBB")
 
-                info_label = QLabel()
-                info_label.setTextFormat(Qt.TextFormat.RichText)
-                info_label.setText(
-                    "<div style='line-height: 1.5; text-align:center;'>"
-                    f"<span style='font-size:20px; font-weight:bold'>{name}</span><br/>"
-                    f"<span style='font-size:20px; font-weight:bold'>{picked_count}</span>"
-                    "</div>"
-                )
-                info_label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+                name_label = QLabel(name)
+                name_label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+                name_label.setStyleSheet("font-size: 20px; font-weight: bold;")
+
+                count_label = QLabel(str(picked_count))
+                count_label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+                count_label.setStyleSheet("font-size: 20px; font-weight: bold;")
 
                 player_layout.addWidget(image)
-                player_layout.addWidget(info_label)
+                player_layout.addWidget(name_label)
+                player_layout.addWidget(count_label)
                 row_layout.addWidget(player_cont)
 
             content_layout.addWidget(row)
@@ -400,7 +400,7 @@ class GlobalView(QWidget):
         stats = Session.global_stats
         if not stats:
             return
-
+        
         best_team = stats[0].get("best_scoring_team", {})
         if best_team:
             user_id = best_team.get("user_id")
