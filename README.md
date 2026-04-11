@@ -2,17 +2,17 @@
 
 ## **What is this app?**
 
-This application is a Street Fighter 6 Fantasy League creator. You and up to 4 friends can all set up a fantasy league amongst yourselves, create a team of your favourite players, and watch your team score throughout the season as events come and go. For those who don't know, a "Fantasy League" is a fictional league that takes place over the course of a real season. In this "league" different players can make different "teams" that comprise of their favourite pros - or the pros they think will win the most. Then, after each real event in the season, that event's results are used to determine how well your fantasy team did! If you've ever bet on players to win certain matches, just imagine that: but over the entire season.
+This application is a Street Fighter 6 Fantasy League creator. You and up to 4 friends can all set up a fantasy league amongst yourselves, create a team of your favourite players, and watch your team score throughout the season as events come and go. For those who don't know, a "Fantasy League" is a fictional league that takes place over the course of a real season. In this "league" different players can make different "fantasy" teams that consist of their favourite pros - or the pros they think will win the most. Then, after each real event in the season, that event's results are used to determine how well your fantasy team did! If you've ever bet on players to win certain matches, just imagine that: but over the entire season.
 
 Furthermore, you and your friends can decide on a forfeit for the loser: or come up with your own rules outside of the system. This app simply servers as an easy way for you and all your friends to keep track of your teams as opposed to complicated spreadsheets (which is how this all started).
 
-The app is solely developed by me: it won't be perfect, small bugs always escape the cracks, but I'll keep pushing new releases to incrementaly make the user experience better, and hopefully by the end of the season, the entire SF6 community will have their own fantasy team!
+The app is solely developed by me: it won't be perfect, small bugs always show through the cracks, but I'll keep pushing new releases to incrementaly make the user experience better, and hopefully by the end of the season, the entire SF6 community will have their own fantasy team!
 
 ## **So how does it work?**
 
 Before anything, you'll need a username, email, and password to sign up, which can all be done on the new user page.
 
-To start, head on over to the league page where you can either create a league or join an existing one via a code members of the league can share with you. Leagues have a maximum capacity of 5 people, and whoever creates the league will be the league owner. The owner is the one responsible for setting the draft order, writing down the forfeit, and calling for the draft to begin. Once you and all your friends are in a league, you can set up a draft order however you please (FT1 random select perhaps?) and begin the draft. Do note: beginning the draft means the order is final, and once it has started the league is locked meaning no one can leave or join. There is also no time limit to picking a player, so make sure your friends and only your friends are all in before you start!
+To start, head on over to the league page where you can either create a league or join an existing one via a code your friends can share with you. Leagues have a maximum capacity of 5 people, and whoever creates the league will be the league owner. The owner is the one responsible for setting the draft order, writing down the forfeit, and calling for the draft to begin. Once you and all your friends are in a league, you can set up a draft order however you please (FT1 random select perhaps?) and begin the draft. Do note: beginning the draft means the order is final, and once it has started the league is locked meaning no one can leave or join. Also, you cannot forcibly remove players from your league, so only share the code with people you trust!
 
 During the draft, users will pick players in a snake draft order, that is:
 
@@ -24,30 +24,42 @@ If you start a league after a couple of events, nothing will be missed. The only
 
 ## **How does scoring work?**
 
-*This information is not final*
+After any event displayed in the events tab, points are awarded to the top 64/32/8 players of that event based on whether it was a tier 1/2/3 event. The event list will grow throughout the season as tournaments are announced, but they fit into three main categories: CPT tournaments, Big majors, and World Warrior Finals. Tier 1 events are the big ones: almost exclusviely CPT circuit tournaments with the exception of some big ones (think 1000+ entrants). Tier 2 events aren't CPT, but will still boast solid competition, think your city's annual major. Tier 3 events comprise mainly of World Warrior Regional Finals, and maybe other minor events. 
 
-After any event displayed in the events tab, points are awarded to the top 64 players of that event according to the event tier. The event list will grow throughout the season as tournaments are announced, but they fit into two main categories: Tier 1 events and Tier 2 events. Tier 1 events are the big ones: almost exclusviely CPT circuit tournaments with the exception of some big ones (think 1000+ entrants). Tier 2 events aren't the best of the best, but they're events that still have solid competition. You can take a look at the distribution tables below:
+Points are awarded to a different top cut of players per the tier: some tier 3 events don't even have 64 players, and a placing 48th in a tier 2 event with 100 players won't give you any points. These were all intentional balance decisions, as well as the exclusion of all WW qualifier events. The inclusion of 5 WW qualifiers and then a regional final would likely promote a strategy where you pick players who dominate their region: not fun for anyone! 
 
-| Position       | Tier 1 | Tier 2 |
-|----------------|--------|--------|
-| 1              | 125    | 75     |
-| 2              | 80     | 40     |
-| 3              | 70     | 35     |
-| 4              | 60     | 30     |
-| 5 (tied)       | 50     | 25     |
-| 7 (tied)       | 40     | 20     |
-| 9 (tied)       | 30     | 15     |
+You can take a look at the distribution tables below:
+
+| Position       | Tier 1 | Tier 2 | Tier 3 |
+|----------------|--------|--------|--------|
+| 1              | 125    | 75     | 25     |
+| 2              | 80     | 40     | 20     |
+| 3              | 70     | 35     | 15     |
+| 4              | 60     | 30     | 10     |
+| 5 (tied)       | 50     | 25     | 5      |
+| 7 (tied)       | 40     | 20     | 3      |
+| 9 (tied)       | 30     | 15     | 
 | 13 (tied)      | 20     | 10     |
 | 17 (tied)      | 10     | 5      |
-| 25 (tied)      | 6      | 3      |
-| 33 (tied)      | 4      | 2      |
-| 49 (tied)      | 1      | 1      |
+| 25 (tied)      | 6      | 1      |
+| 33 (tied)      | 4      |
+| 49 (tied)      | 1      |
 
-Once event standings are live and updated, all players in your team will score based on how they placed. If your lineup ends up all in the top 8 of Evo for example, you'll be raking in the big bucks. Also, should the top 64 contains players not currently in the player pool, they'll be added. Ensuring that ultimately, every player present in the league has scored some points. Wanna see your face in the app? Better get to winning!
+Once event standings are live and updated, all players in your team will score based on how they placed. If your lineup ends up all in the top 8 of Evo for example, you'll be raking in the big bucks. Also, should the top cut contain players not currently in the player pool, they'll be added. Ensuring that ultimately, every player present in the league has scored some points. Wanna see your face in the app? Better get to winning!
 
 ## **How does trading work?**
 
-At 4 pre-determined points throughout the season, trade windows will open. You can keep an eye on the trade window schedule via the app, as well as note when the next one is live. These will last two days, starting and ending at midnight, and allow you to trade players within your team. You may trade up to 2 players during each trade window, and you can trade them with your leaguemates or with the open player pool. If two people want the same player and they're in the open market, then it's simply first come first serve!
+At 5 pre-determined points throughout the season, trade windows will open at 00:00UTC.. You can keep an eye on the trade window schedule via the app, as well as note when the next one is live. These will last two days, starting and ending at midnight, and allow you to trade players within your team. You may trade up to 2 players during each trade window, and you can trade them with your leaguemates or with the open player pool. If two people want the same player and they're in the open market, then it's simply first come first serve! 
+
+You can take a look at the trade window's below:
+
+| Season      | From               | To                 |
+| ----------- | ------------------ | ------------------ |
+| Spring      | 2 May, 00:00       | 3 May, 23:59       |
+| Summer      | 4 July, 00:00      | 5 July, 23:59      |
+| Late Summer | 5 September, 00:00 | 6 September, 23:59 |
+| Autumn      | 7 November, 00:00  | 8 November, 23:59  |
+| Winter      | 2 January, 00:00   | 3 January, 23:59   |
 
 In regards to scoring:
 
