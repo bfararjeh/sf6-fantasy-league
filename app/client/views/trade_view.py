@@ -4,6 +4,7 @@ from PyQt6.QtCore import QPoint, QSize, Qt, QTimer
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import (
     QApplication,
+    QDialog,
     QFrame,
     QGraphicsOpacityEffect,
     QHBoxLayout,
@@ -299,13 +300,13 @@ class TradeView(QWidget):
         layout.addWidget(sub)
 
         if tag:
-            self._pending_label = QLabel(f"{len(self.trade_requests)} pending requests.")
+            self._pending_label = QLabel(f"No pending requests.")
             self._pending_label.setFixedHeight(22)
             self._pending_label.setStyleSheet(f"""
                 font-size: 11px; font-weight: bold;
                 color: {"#C6DFC3"};
-                background-color: {"#02830D"};
-                border: 1px solid {"#16C506"};
+                background-color: {"#86551C"};
+                border: 1px solid {"#F79400"};
                 border-radius: 4px;
                 padding: 2px 10px;
             """)
@@ -499,7 +500,7 @@ class TradeView(QWidget):
         player_joined = player.get("joined_at", "-").split("T")[0]
         pixmap = Session.get_pixmap("players", player_name)
 
-        image = HoverImage(pixmap, size=135)
+        image = HoverImage(pixmap, size=130)
         name = QLabel(player_name)
         name.setAlignment(Qt.AlignmentFlag.AlignCenter)
         name.setStyleSheet("font-size: 16px; font-weight: bold;")
@@ -545,6 +546,7 @@ class TradeView(QWidget):
     def _utp_on_pool_select(self, player):
         if self._utp_selected_pool_player == player:
             self._utp_selected_pool_player = None
+            self._utp_search_bar.clear()
         else:
             self._utp_selected_pool_player = player
         self._utp_refresh_carousel()
@@ -1575,7 +1577,26 @@ class TradeView(QWidget):
             self.remaining.setText(f"{self.trades_remaining} trades remaining!")
         
         if getattr(self, "_pending_label", None):
-            self._pending_label.setText(f"{len(self.trade_requests)} pending requests.")
+            if len(self.trade_requests) != 0:
+                self._pending_label.setText(f"{len(self.trade_requests)} pending requests.")
+                self._pending_label.setStyleSheet(f"""
+                font-size: 11px; font-weight: bold;
+                color: {"#C6DFC3"};
+                background-color: {"#02830D"};
+                border: 1px solid {"#16C506"};
+                border-radius: 4px;
+                padding: 2px 10px;
+            """)
+            else:
+                self._pending_label.setText(f"No pending requests.")
+                self._pending_label.setStyleSheet(f"""
+                font-size: 11px; font-weight: bold;
+                color: {"#C6DFC3"};
+                background-color: {"#86551C"};
+                border: 1px solid {"#F79400"};
+                border-radius: 4px;
+                padding: 2px 10px;
+            """)
 
         new_fingerprint = (
             bool(self.current_window),
@@ -1601,3 +1622,41 @@ class TradeView(QWidget):
             SoundManager.play("boot")
         else:
             self._refresh()
+
+    def _view_help(self):
+        SoundManager.play("button")
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Info")
+        dialog.setStyleSheet("background: #10194D;")
+        dialog.setFixedSize(800, 600)
+        layout = QVBoxLayout(dialog)
+        layout.setContentsMargins(20, 10, 20, 10)
+
+        title = QLabel("Trades")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignTop)
+        title.setStyleSheet("font-weight: bold; font-size: 24px")
+
+        with open(str(ResourcePath.TEXTS / "trades_help.txt"), "r") as file:
+            text_list = file.read().splitlines()
+
+        def _create_label(text):
+            label = QLabel(text)
+            label.setWordWrap(True)
+            label.setStyleSheet("font-size: 14px")
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            return label
+
+        layout.addWidget(title)
+        for idx, text in enumerate(text_list):
+            if idx==1:
+                img_label = QLabel()
+                img_label.setPixmap(QPixmap(str(ResourcePath.IMAGES / "trade_example.png")).scaled(500, 500, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+                img_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+                layout.addWidget(img_label)
+                layout.addWidget(_create_label(text))
+            else:
+                layout.addWidget(_create_label(text))
+
+        dialog.exec()

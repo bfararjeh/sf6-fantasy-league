@@ -30,6 +30,7 @@ REGION_SVG_MAP = {
     "Germany":                      ("id",    "DE"),
     "South Africa":                 ("id",    "ZA"),
     "Netherlands":                 ("id",     "NL"),
+    "Portugal":                 ("id",     "PT"),
 }
 
 def fit_text_to_width(label: QLabel, text: str, max_width: int,

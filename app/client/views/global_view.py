@@ -2,6 +2,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor, QPixmap
 from PyQt6.QtWidgets import (
     QApplication,
+    QDialog,
     QFrame,
     QGraphicsDropShadowEffect,
     QGridLayout,
@@ -10,6 +11,7 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QScrollArea,
     QSizePolicy,
+    QSpacerItem,
     QVBoxLayout,
     QWidget,
 )
@@ -62,6 +64,7 @@ class GlobalView(QWidget):
 
         if bool(self.global_stats):
             content_layout.addWidget(self._build_stats(self.global_stats[0]))
+            pass
         else:
             cont = QWidget()
             layout = QVBoxLayout(cont)
@@ -69,6 +72,7 @@ class GlobalView(QWidget):
 
             layout.addStretch()
             layout.addWidget(_build_empty_label())
+            layout.addSpacerItem(QSpacerItem(0,100))
             layout.addStretch()
 
             content_layout.addWidget(cont)
@@ -106,6 +110,8 @@ class GlobalView(QWidget):
         add_row(main_grid, row, "Total Number of Managers:", str(stats.get("managers_count", 0)))
         row += 1
         add_row(main_grid, row, "Total Number of Leagues:", str(stats.get("leagues_count", 0)))
+        row += 1
+        add_row(main_grid, row, "Total Number of Trades:", str(stats.get("trades_count", 0)))
         row += 1
         add_row(main_grid, row, "Unique Players Picked:", str(stats.get("unique_players_picked", 0)))
         row += 1
@@ -356,18 +362,17 @@ class GlobalView(QWidget):
 
                 image = HoverImage(Session.get_pixmap("players", name), size=160, border_color="#BBBBBB")
 
-                info_label = QLabel()
-                info_label.setTextFormat(Qt.TextFormat.RichText)
-                info_label.setText(
-                    "<div style='line-height: 1.5; text-align:center;'>"
-                    f"<span style='font-size:20px; font-weight:bold'>{name}</span><br/>"
-                    f"<span style='font-size:20px; font-weight:bold'>{picked_count}</span>"
-                    "</div>"
-                )
-                info_label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+                name_label = QLabel(name)
+                name_label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+                name_label.setStyleSheet("font-size: 20px; font-weight: bold;")
+
+                count_label = QLabel(str(picked_count))
+                count_label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+                count_label.setStyleSheet("font-size: 20px; font-weight: bold;")
 
                 player_layout.addWidget(image)
-                player_layout.addWidget(info_label)
+                player_layout.addWidget(name_label)
+                player_layout.addWidget(count_label)
                 row_layout.addWidget(player_cont)
 
             content_layout.addWidget(row)
@@ -391,12 +396,42 @@ class GlobalView(QWidget):
         container_layout.addWidget(content)
         return container
 
+    def _view_help(self):
+        SoundManager.play("button")
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Info")
+        dialog.setStyleSheet("background: #10194D;")
+        dialog.setFixedSize(600, 150)
+        layout = QVBoxLayout(dialog)
+        layout.setContentsMargins(20, 10, 20, 10)
+
+        title = QLabel("Global Stats")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignTop)
+        title.setStyleSheet("font-weight: bold; font-size: 24px")
+
+        with open(str(ResourcePath.TEXTS / "global_help.txt"), "r") as file:
+            text_list = file.read().splitlines()
+
+        def _create_label(text):
+            label = QLabel(text)
+            label.setWordWrap(True)
+            label.setStyleSheet("font-size: 14px")
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            return label
+
+        layout.addWidget(title)
+        for line in text_list:
+            layout.addWidget(_create_label(line))
+
+        dialog.exec()
+
     @staticmethod
     def preload():
         stats = Session.global_stats
         if not stats:
             return
-
+        
         best_team = stats[0].get("best_scoring_team", {})
         if best_team:
             user_id = best_team.get("user_id")

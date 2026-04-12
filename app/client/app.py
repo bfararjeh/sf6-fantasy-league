@@ -1,9 +1,5 @@
-import webbrowser
-
 from PyQt6.QtWidgets import QMainWindow, QApplication, QStackedWidget
-
 from PyQt6.QtGui import QKeySequence, QShortcut
-
 
 from PyQt6.QtCore import QEvent
 from PyQt6.QtWidgets import QApplication
@@ -350,10 +346,10 @@ class FantasyApp(QMainWindow):
 # -- HEADER --
 
     def open_help(self):
-        webbrowser.open(
-            "https://github.com/bfararjeh/sf6-fantasy-league/blob/main/README.md#faqs"
-        )
-        SoundManager.play("button")
+        view = self.stack.currentWidget()
+        help_fn = getattr(view, "_view_help", None)
+        if callable(help_fn):
+            help_fn()
 
     def logout(self):
         Session.reset()

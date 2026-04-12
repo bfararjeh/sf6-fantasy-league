@@ -1,4 +1,7 @@
 import re
+
+from datetime import datetime, timezone
+
 from app.services.base_service import BaseService
 
 class LeagueService():
@@ -289,16 +292,17 @@ class LeagueService():
         ).data
 
         manager_map = {m["manager_name"]: m["user_id"] for m in managers}
+        manager_map_lower = {name.lower(): name for name in manager_map}
 
         if len(ordered_usernames) != len(managers):
             raise Exception("Draft order list must consist of all managers in the league.")
 
         for username in ordered_usernames:
-            if username not in manager_map:
+            if username.lower() not in manager_map_lower:
                 raise Exception(f"Invalid username in draft list: {username}")
 
         # updates draft order and pick turn
-        draft_order = [manager_map[name] for name in ordered_usernames]
+        draft_order = [manager_map[manager_map_lower[name.lower()]] for name in ordered_usernames]
 
         self.verify_query(
             self.supabase
@@ -390,3 +394,62 @@ class LeagueService():
         )
 
         return True
+
+    def get_league_history(self):
+        league_id = self.get_my_league()
+        if not league_id:
+            raise Exception("You are not in a league.")
+
+        result = self.verify_query((
+            self.supabase
+            .table("league_history")
+            .select("*")
+            .eq("league_id", league_id)
+            .order("created_at", desc=False,)
+        ))
+
+        return result.data
+
+    def get_league_chat(self):
+        league_id = self.get_my_league()
+        if not league_id:
+            return []
+
+        result = self.verify_query((
+            self.supabase
+            .table("league_chat")
+            .select("*")
+            .eq("league_id", league_id)
+            .order("created_at", desc=False)
+        ))
+
+        return result.data if result else []
+
+    _last_chat_sent: float = 0.0
+
+    def send_chat_message(self, message, username):
+        import time
+        if time.time() - self.__class__._last_chat_sent < 1.0:
+            raise Exception("Please wait before sending another message.")
+        self.__class__._last_chat_sent = time.time()
+
+        # simple message filtering
+        pattern = r"^[A-Za-z0-9 .,!?#*'|]{1,128}$"
+        if not bool(re.fullmatch(pattern, message)):
+            raise Exception("Message contains illegal characters.")
+
+        # validate league state
+        league_id = self.get_my_league()
+        if not league_id:
+            raise Exception("You are not currently in a league.")
+
+        result = self.verify_query(
+            self.supabase
+            .table("league_chat")
+            .insert({
+                "league_id": league_id,
+                "message": message,
+                "sender": username,
+                "created_at": datetime.now(timezone.utc).isoformat()
+                })
+            )

@@ -1,5 +1,6 @@
 import requests
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from app.services.base_service import BaseService
 
@@ -60,32 +61,37 @@ class EventService():
 
         BUCKET = "events"
 
-        for event in events:
+        from app.client.controllers.image_cache import ImageCache
+
+        def _fetch_image(event):
             image_name = event.get("image")
-            if not image_name:
-                event["image_bytes"] = None
-                continue
+            if not image_name or not isinstance(image_name, str) or not image_name.endswith(".webp"):
+                return None
 
+            cache_key = image_name[:-5]  # strip .webp
+
+            # 1. disk cache hit — skip network entirely
+            cached = ImageCache.get_cached("events", cache_key)
+            if cached:
+                return cached
+
+            # 2. fetch from network and store to disk
             try:
-                # validate image_name looks like a filename
-                if not isinstance(image_name, str) or not image_name.endswith(".webp"):
-                    event["image_bytes"] = None
-                    continue
-
-                # get public URL from storage
                 image_url = self.supabase.storage.from_(BUCKET).get_public_url(image_name)
                 if not image_url:
-                    event["image_bytes"] = None
-                    continue
-
-                # fetch raw bytes
-                response = requests.get(image_url)
+                    return None
+                response = requests.get(image_url, timeout=10)
                 response.raise_for_status()
-                event["image_bytes"] = response.content
+                data = response.content
+                ImageCache.store("events", cache_key, data, etag="")
+                return data
+            except Exception:
+                return None
 
-            except Exception as e:
-                # store None if fetching fails
-                event["image_bytes"] = None
+        with ThreadPoolExecutor(max_workers=10) as pool:
+            futures = {pool.submit(_fetch_image, event): event for event in events}
+            for future in as_completed(futures):
+                futures[future]["image_bytes"] = future.result()
         
         
         sorted_events = sorted(
@@ -113,6 +119,9 @@ class EventService():
             .eq("event", event_id)
         ).data
 
+        if len(score_history) < 64:
+            score_history = [e for e in score_history if e["rank"] <= 32]
+
         return score_history
     
     def get_user_event_scores(self, team_id, event_id):
@@ -122,6 +131,18 @@ class EventService():
         '''
         if team_id == None:
             raise Exception("You don't have a team!")
+
+        league_id = self.get_my_league()
+        if league_id:
+            league = self.verify_query(
+                self.supabase
+                .table("leagues")
+                .select("draft_complete")
+                .eq("league_id", league_id)
+                .single()
+            ).data
+            if league.get("draft_complete") != True:
+                raise Exception("Your league's draft is not complete yet!")
 
         event = self.verify_query(
             self.supabase
@@ -190,7 +211,17 @@ class EventService():
         """
         if league_id == None:
             raise Exception("You are not part of a league!")
-        
+
+        league = self.verify_query(
+            self.supabase
+            .table("leagues")
+            .select("draft_complete")
+            .eq("league_id", league_id)
+            .single()
+        ).data
+        if league.get("draft_complete") != True:
+            raise Exception("Your league's draft is not complete yet!")
+
         # fetch event date and completion
         event = self.verify_query(
             self.supabase

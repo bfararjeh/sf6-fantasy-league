@@ -31,6 +31,10 @@ class HoverImage(QLabel):
 
     scale = pyqtProperty(float, get_scale, set_scale)
 
+    def update_pixmap(self, pixmap):
+        self._pixmap = pixmap
+        self.update()
+
     def enterEvent(self, event):
         self._animation.stop()
         self._animation.setStartValue(self._scale)

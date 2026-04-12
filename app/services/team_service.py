@@ -56,7 +56,8 @@ class TeamService():
                 "id": r["player_name"],
                 "points": r["points"],
                 "region": r["players"]["region"],
-                "joined_at": r["joined_at"]
+                "joined_at": r["joined_at"],
+                "left_at": r["left_at"]
             }
 
         return {

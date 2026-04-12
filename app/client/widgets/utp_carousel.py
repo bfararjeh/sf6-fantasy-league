@@ -116,11 +116,14 @@ class _UTPCarousel(QWidget):
     def _card_at(self, x):
         center_x = self.width() // 2
         card_w = self._card_width()
-        for i, _ in enumerate(self._players):
-            offset = (i - self._index) * card_w
-            cx = center_x + offset
+        wrapping = len(self._players) > 7
+        for offset in range(-3, 4):
+            i = int(round(self._index)) + offset
+            if not wrapping and (i < 0 or i >= len(self._players)):
+                continue
+            cx = center_x + offset * card_w
             if abs(cx - x) < card_w // 2:
-                return i
+                return i % len(self._players) if wrapping else i
         return None
 
     def paintEvent(self, event):
@@ -159,7 +162,7 @@ class _UTPCarousel(QWidget):
                 img_y = (base_img_size - img_size) // 2
                 painter.drawPixmap(img_x, img_y, px)
 
-                if self._selected == player and len(self._players) == 1:
+                if self._selected == player:
                     painter.setOpacity(1.0)
                     pen = QPen(QColor("#FFFFFF"), 3)
                     painter.setPen(pen)

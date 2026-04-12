@@ -1,0 +1,2 @@
+The leaderboards page is where you can find the rankings for your league. You can see who is ahead, who's in the danger zone, and everyone in between. Teams shown are the current lineups, with former players being noted underneath.
+From this page you can also access the global stats page and the player pool page.

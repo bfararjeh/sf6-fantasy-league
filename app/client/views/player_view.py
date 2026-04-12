@@ -1,8 +1,10 @@
 import re
 from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtGui import QPixmap
 from PyQt6.QtSvgWidgets import QSvgWidget
 from PyQt6.QtWidgets import (
     QApplication,
+    QDialog,
     QFrame,
     QGridLayout,
     QHBoxLayout,
@@ -204,7 +206,7 @@ class PlayerView(QWidget):
         info_label.setText(
             "<div style='line-height: 1;'>"
             f"<span style='font-size:20px; font-weight: bold;;'>{name}</span><br/>"
-            f"<span style='font-size:16px; color:#BBBBBB;'>{region}  </span>"
+            f"<span style='font-size:14px; color:#BBBBBB;'>{region}  </span>"
             f"<img src='{img_path}' width='18' height='12'><br/>"
             "</div>"
         )
@@ -532,6 +534,36 @@ class PlayerView(QWidget):
             svg_text
         )
         return svg_text.encode("utf-8")
+
+    def _view_help(self):
+        SoundManager.play("button")
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Info")
+        dialog.setStyleSheet("background: #10194D;")
+        dialog.setFixedSize(600, 300)
+        layout = QVBoxLayout(dialog)
+        layout.setContentsMargins(20, 10, 20, 10)
+
+        title = QLabel("Player Pool")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignTop)
+        title.setStyleSheet("font-weight: bold; font-size: 24px")
+
+        with open(str(ResourcePath.TEXTS / "players_help.txt"), "r") as file:
+            text_list = file.read().splitlines()
+
+        def _create_label(text):
+            label = QLabel(text)
+            label.setWordWrap(True)
+            label.setStyleSheet("font-size: 14px")
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            return label
+
+        layout.addWidget(title)
+        for line in text_list:
+            layout.addWidget(_create_label(line))
+
+        dialog.exec()
 
     @staticmethod
     def preload():

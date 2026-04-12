@@ -1,5 +1,5 @@
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from packaging import version
 
 from app.services.league_service import LeagueService
@@ -14,8 +14,9 @@ class Session:
     Local cache connecting the frontend to backend services.
     All state is stored as class attributes and refreshed on demand.
     """
-    VERSION = "1.3.0"
+    VERSION = "1.4.0"
     SEASON = 13
+    FORCE_COOLDOWN_SECONDS = 1
 
     _on_block: callable = None
 
@@ -52,6 +53,9 @@ class Session:
         cls.global_stats            = None
         cls.event_data              = None
         cls.qualified_data          = None
+
+        cls.league_history          = None
+        cls.league_chat             = None
 
         cls.trade_windows           = None
         cls.trade_history           = None
@@ -144,6 +148,13 @@ class Session(Session):
             cls.team_data = cls.team_service.get_full_team_info()
         except Exception:
             cls.team_data = None
+        
+        try:
+            cls.league_history = cls.league_service.get_league_history()
+            cls.league_chat    = cls.league_service.get_league_chat()
+        except Exception:
+            cls.league_history = None
+            cls.league_chat    = None
 
     @classmethod
     def init_leaderboards(cls, force=False):
@@ -266,7 +277,8 @@ class Session(Session):
     def _image_filename(cls, image_type: str, key: str) -> str:
         if image_type == "avatars":
             return f"{key}.webp"
-        return key.replace(" ", "_") + ".webp"
+        filename = key.replace(" ", "_") + ".webp"
+        return filename
 
     @classmethod
     def init_avatar(cls, user_id: str) -> bytes:
@@ -294,7 +306,11 @@ class Session(Session):
 
     @classmethod
     def _should_refresh(cls, grabbed_at, force=False):
-        if force or grabbed_at is None:
+        if force:
+            if grabbed_at is None:
+                return True
+            return grabbed_at <= datetime.now() - timedelta(seconds=cls.FORCE_COOLDOWN_SECONDS)
+        if grabbed_at is None:
             return True
         seconds = cls.get_refresh_interval()
         return grabbed_at <= datetime.now() - timedelta(seconds=seconds)

@@ -1,7 +1,8 @@
 from PyQt6.QtCore import Qt, QSize
-from PyQt6.QtGui import QColor
+from PyQt6.QtGui import QColor, QPixmap
 from PyQt6.QtWidgets import (
     QApplication,
+    QDialog,
     QFrame,
     QGridLayout,
     QHBoxLayout,
@@ -15,6 +16,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from app.client.controllers.resource_path import ResourcePath
 from app.client.controllers.session import Session
 from app.client.controllers.sound_manager import SoundManager
 from app.client.theme import *
@@ -431,3 +433,33 @@ class LeaderboardView(QWidget):
     def showEvent(self, event):
         super().showEvent(event)
         self._refresh()
+
+    def _view_help(self):
+        SoundManager.play("button")
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Info")
+        dialog.setStyleSheet("background: #10194D;")
+        dialog.setFixedSize(600, 250)
+        layout = QVBoxLayout(dialog)
+        layout.setContentsMargins(20, 10, 20, 10)
+
+        title = QLabel("Leaderboards")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignTop)
+        title.setStyleSheet("font-weight: bold; font-size: 24px")
+
+        with open(str(ResourcePath.TEXTS / "leaderboard_help.txt"), "r") as file:
+            text_list = file.read().splitlines()
+
+        def _create_label(text):
+            label = QLabel(text)
+            label.setWordWrap(True)
+            label.setStyleSheet("font-size: 14px")
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            return label
+
+        layout.addWidget(title)
+        for line in text_list:
+            layout.addWidget(_create_label(line))
+
+        dialog.exec()
