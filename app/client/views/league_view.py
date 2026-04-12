@@ -1410,6 +1410,7 @@ class LeagueView(QWidget):
 
     def pick_player(self):
         selected = self.pick_list.currentItem()
+        self.pick_search.setText("")
         if not selected:
             set_status(self, "Please select a player from the list.", 2)
             return
@@ -1514,6 +1515,7 @@ class LeagueView(QWidget):
 
         dialog.exec()
 
+
 # -- REFRESHERS --
 
     def _refresh(self, force=0):
@@ -1527,6 +1529,7 @@ class LeagueView(QWidget):
 
         self.my_league_history  = Session.league_history or []
         self.my_league_chat     = Session.league_chat or []
+        self._seen_chat_ids     = {e["id"] for e in self.my_league_chat if e.get("id")}
 
         self.my_username        = Session.user
         self.my_user_id         = Session.user_id
@@ -1581,7 +1584,8 @@ class LeagueView(QWidget):
                 new_chat = Session.league_service.get_league_chat() or []
             except Exception:
                 return
-            new_entries = new_chat[len(self.my_league_chat):]
+            new_entries = [e for e in new_chat if e.get("id") not in self._seen_chat_ids]
+            self._seen_chat_ids.update(e["id"] for e in new_entries if e.get("id"))
             self.my_league_chat = new_chat
             for entry in new_entries:
                 self._prepend_chat_row(entry)

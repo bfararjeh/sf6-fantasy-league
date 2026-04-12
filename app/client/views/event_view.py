@@ -252,7 +252,8 @@ class EventView(QWidget):
 
         for idx in visible:
             name = self.event_data[idx].get("name", "?")
-            btn = QPushButton(name)
+            display_name = name[:15] + "…" if len(name) > 15 else name
+            btn = QPushButton(display_name)
             btn.setFixedHeight(28)
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
             is_current = idx == self.current_event_idx
@@ -275,7 +276,7 @@ class EventView(QWidget):
             layout.addWidget(btn)
 
         if overflow:
-            more = QLabel(f"+ {len(overflow)} more — refine your search")
+            more = QLabel(f"+ {len(overflow)} more")
             more.setStyleSheet("font-size: 12px; color: #555555;")
             layout.addWidget(more)
 
@@ -413,7 +414,20 @@ class EventView(QWidget):
         dots_layout.setSpacing(0)
         dots_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
+        start_year = 2013 + Session.SEASON
+
         for i, month in enumerate(month_names):
+            total_months = 3 + i
+            dot_year  = start_year + (total_months - 1) // 12
+            dot_month = ((total_months - 1) % 12) + 1
+
+            event_idx = next(
+                (j for j, e in enumerate(self.event_data)
+                 if datetime.fromisoformat(e["start_weekend"]).month == dot_month
+                 and datetime.fromisoformat(e["start_weekend"]).year == dot_year),
+                None,
+            )
+
             dot = QLabel()
             dot.setFixedSize(12, 12)
             dot.setStyleSheet("background-color: #444; border-radius: 2px;")
@@ -428,6 +442,10 @@ class EventView(QWidget):
             dot_wrapper_layout.addWidget(dot)
             dots_layout.addWidget(dot_wrapper)
 
+            if event_idx is not None:
+                dot_wrapper.setCursor(Qt.CursorShape.PointingHandCursor)
+                dot_wrapper.mousePressEvent = lambda _, idx=event_idx: self._jump_to_event(idx)
+
             if i < len(month_names) - 1:
                 line = QWidget()
                 line.setFixedSize(40, 2)
@@ -441,12 +459,27 @@ class EventView(QWidget):
         labels_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         for i, month in enumerate(month_names):
+            total_months = 3 + i
+            dot_year  = start_year + (total_months - 1) // 12
+            dot_month = ((total_months - 1) % 12) + 1
+
+            event_idx = next(
+                (j for j, e in enumerate(self.event_data)
+                 if datetime.fromisoformat(e["start_weekend"]).month == dot_month
+                 and datetime.fromisoformat(e["start_weekend"]).year == dot_year),
+                None,
+            )
+
             label = QLabel(month)
             label.setFixedWidth(40)
             label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             label.setStyleSheet("font-size: 12px; color: #AAAAAA; font-weight: bold;")
             self.timeline_labels.append(label)
             labels_layout.addWidget(label)
+
+            if event_idx is not None:
+                label.setCursor(Qt.CursorShape.PointingHandCursor)
+                label.mousePressEvent = lambda _, idx=event_idx: self._jump_to_event(idx)
 
             if i < len(month_names) - 1:
                 spacer = QWidget()
@@ -1076,6 +1109,7 @@ class EventView(QWidget):
             border-radius: 8px;
         """)
 
+
 # -- HELPERS --
 
     def _make_arrow_button(self, icon_filename: str, callback) -> QLabel:
@@ -1105,7 +1139,7 @@ class EventView(QWidget):
     def _build_image_cache(self, idx: int, size: int = 260):
         """Fetch bytes and scale into a QImage (safe to call off main thread)."""
         event = self.event_data[idx]
-        raw_bytes = Session.get_image("events", event.get("name", ""))
+        raw_bytes = event.get("image_bytes") or b""
         img = QImage()
         img.loadFromData(raw_bytes)
         self._image_cache[idx] = img.scaled(

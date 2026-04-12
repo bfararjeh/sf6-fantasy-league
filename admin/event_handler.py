@@ -49,7 +49,7 @@ class EventHandler():
             "name": name,
             "tier": tier,
             "start_weekend": datetime.strptime(start_weekend, "%d-%m-%Y").strftime("%Y-%m-%d"),
-            "end_date": datetime.strptime(end_date, "%d-%m-%Y").strftime("%Y-%m-%d"),
+            "end_date": datetime.strptime(end_date, "%d-%m-%Y").strftime("%Y-%m-%d") + " 23:59:59",
             "image": image_path,
             "complete": "False"
         }

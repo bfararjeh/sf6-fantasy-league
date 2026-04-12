@@ -292,16 +292,17 @@ class LeagueService():
         ).data
 
         manager_map = {m["manager_name"]: m["user_id"] for m in managers}
+        manager_map_lower = {name.lower(): name for name in manager_map}
 
         if len(ordered_usernames) != len(managers):
             raise Exception("Draft order list must consist of all managers in the league.")
 
         for username in ordered_usernames:
-            if username not in manager_map:
+            if username.lower() not in manager_map_lower:
                 raise Exception(f"Invalid username in draft list: {username}")
 
         # updates draft order and pick turn
-        draft_order = [manager_map[name] for name in ordered_usernames]
+        draft_order = [manager_map[manager_map_lower[name.lower()]] for name in ordered_usernames]
 
         self.verify_query(
             self.supabase

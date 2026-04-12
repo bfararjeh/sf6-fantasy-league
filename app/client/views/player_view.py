@@ -206,7 +206,7 @@ class PlayerView(QWidget):
         info_label.setText(
             "<div style='line-height: 1;'>"
             f"<span style='font-size:20px; font-weight: bold;;'>{name}</span><br/>"
-            f"<span style='font-size:16px; color:#BBBBBB;'>{region}  </span>"
+            f"<span style='font-size:14px; color:#BBBBBB;'>{region}  </span>"
             f"<img src='{img_path}' width='18' height='12'><br/>"
             "</div>"
         )

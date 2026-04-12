@@ -1,5 +1,5 @@
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from packaging import version
 
 from app.services.league_service import LeagueService
@@ -14,7 +14,7 @@ class Session:
     Local cache connecting the frontend to backend services.
     All state is stored as class attributes and refreshed on demand.
     """
-    VERSION = "1.3.0"
+    VERSION = "1.4.0"
     SEASON = 13
     FORCE_COOLDOWN_SECONDS = 1
 
@@ -277,7 +277,8 @@ class Session(Session):
     def _image_filename(cls, image_type: str, key: str) -> str:
         if image_type == "avatars":
             return f"{key}.webp"
-        return key.replace(" ", "_") + ".webp"
+        filename = key.replace(" ", "_") + ".webp"
+        return filename
 
     @classmethod
     def init_avatar(cls, user_id: str) -> bytes:

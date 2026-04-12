@@ -77,7 +77,7 @@ class SettingsDialog(QDialog):
     def _view_credits(self):
         SoundManager.play("button")
 
-        dialog = QDialog(self)
+        dialog = QDialog(self.parent())
         dialog.setWindowTitle("Credits")
         dialog.setStyleSheet("background: #10194D; color: white;")
         dialog.setFixedSize(800, 600)
@@ -105,7 +105,7 @@ class SettingsDialog(QDialog):
         bio_label = QLabel(bios["fararjeh"])
         bio_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         bio_label.setWordWrap(True)
-        bio_label.setStyleSheet("font-size: 16px; color: white; padding: 10px;")
+        bio_label.setStyleSheet("font-size: 14px; color: white; padding: 10px;")
 
         # Image row
         image_cont = QWidget()
@@ -130,10 +130,11 @@ class SettingsDialog(QDialog):
             col.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
             img_label = QLabel()
-            img_label.setStyleSheet("background: transparent;")
+            # Padding gives the drop shadow room to bleed without clipping
+            img_label.setStyleSheet("background: transparent; padding: 20px;")
             pixmap = QPixmap(image_path)
             img_label.setPixmap(pixmap.scaled(
-                220, 220,
+                180, 180,
                 Qt.AspectRatioMode.KeepAspectRatio,
                 Qt.TransformationMode.SmoothTransformation
             ))
@@ -175,5 +176,6 @@ class SettingsDialog(QDialog):
         layout.addWidget(bio_label, stretch=1)
         layout.addStretch()
 
+        self.accept()
         dialog.exec()
 
