@@ -15,6 +15,7 @@ REGION_SVG_MAP = {
     "China":              ("class", "China"),
     "Dominican Republic": ("id",    "DO"),
     "France":             ("class", "France"),
+    "Italy":              ("class", "Italy"),
     "Hong Kong":          ("class", "China"),       # proxy: China
     "Japan":              ("class", "Japan"),
     "Norway":             ("class", "Norway"),

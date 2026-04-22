@@ -5,6 +5,7 @@ from PyQt6.QtCore import QEvent
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtWidgets import (
     QApplication,
+    QLabel,
     QLineEdit,
     QTextEdit,
     QPlainTextEdit,
@@ -102,7 +103,7 @@ class FantasyApp(QMainWindow):
         if event.type() == QEvent.Type.MouseButtonPress:
             focused = QApplication.focusWidget()
             if focused and not isinstance(
-                obj, (QLineEdit, QTextEdit, QPlainTextEdit, QComboBox, QAbstractSpinBox)
+                obj, (QLabel, QLineEdit, QTextEdit, QPlainTextEdit, QComboBox, QAbstractSpinBox)
             ):
                 focused.clearFocus()
         return super().eventFilter(obj, event)

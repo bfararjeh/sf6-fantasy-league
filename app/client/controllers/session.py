@@ -115,12 +115,12 @@ class Session(Session):
             client_version = version.parse(cls.VERSION.strip('"'))
             server_version = version.parse(cls.min_version.strip('"'))
 
-            if server_version.release[1] > client_version.release[1]:
+            if server_version.release[0] > client_version.release[0]:
                 cls.blocking_state  = True
                 cls.warning_message = (
                     f"Unsupported Version, please download the latest version "
-                    f"({server_version}) from the GitHub page: "
-                    f"https://github.com/bfararjeh/sf6-fantasy-league/releases"
+                    f"({server_version}) at: "
+                    f"https://fararjeh-fgc.com/fantasysf6"
                 )
             return cls.blocking_state
 

@@ -419,7 +419,7 @@ class LeagueView(QWidget):
         self.forfeit_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #ff8168;")
 
         # Next pick avatar slot (draft phase) — sized to fit snug inside 220px sidebar with 15px margins each side
-        avatar_size = 180
+        avatar_size = 90
         self.next_pick_avatar_slot = QWidget()
         self.next_pick_avatar_slot.setFixedSize(avatar_size, avatar_size)
         self.next_pick_avatar_slot_layout = QVBoxLayout(self.next_pick_avatar_slot)
@@ -1826,7 +1826,7 @@ class LeagueView(QWidget):
         pixmap = QPixmap()
         pixmap.loadFromData(avatar_bytes)
         if not pixmap.isNull():
-            avatar = HoverImage(pixmap, size=172, border_width=2, border_color="#88ff87")
+            avatar = HoverImage(pixmap, size=86, border_width=2, border_color="#88ff87")
             self.next_pick_avatar_slot_layout.addWidget(avatar, alignment=Qt.AlignmentFlag.AlignCenter)
 
     def _get_user_id_for_username(self, username: str):
