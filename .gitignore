@@ -5,6 +5,7 @@ notes/
 *~
 *.swp
 release/
+release_notes.md
 admin/pyinstaller/app
 admin/pyinstaller/build
 admin/pyinstaller/dist

@@ -14,7 +14,7 @@ class Session:
     Local cache connecting the frontend to backend services.
     All state is stored as class attributes and refreshed on demand.
     """
-    VERSION = "1.4.0"
+    VERSION = "1.5.0"
     SEASON = 13
     FORCE_COOLDOWN_SECONDS = 1
 

@@ -1410,11 +1410,11 @@ class LeagueView(QWidget):
 
     def pick_player(self):
         selected = self.pick_list.currentItem()
-        self.pick_search.setText("")
         if not selected:
             set_status(self, "Please select a player from the list.", 2)
             return
         player = selected.text()
+        self.pick_search.setText("")
 
         def _success(success):
             if success:
@@ -1552,10 +1552,12 @@ class LeagueView(QWidget):
         self.my_ex_players      = team.get("inactive_players") or []
 
         if draft_complete_before is not None and draft_complete_before != self.is_draft_complete:
-            self.app.stack.removeWidget(self.app.league_view)
-            self.app.league_view.deleteLater()
-            self.app.league_view = None
-            self.app.show_league_view()
+            def _transition():
+                self.app.stack.removeWidget(self.app.league_view)
+                self.app.league_view.deleteLater()
+                self.app.league_view = None
+                self.app.show_league_view()
+            QTimer.singleShot(0, _transition)
             return
 
         new_fingerprint = (

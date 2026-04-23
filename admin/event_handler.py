@@ -1,5 +1,5 @@
 from app.db.admin_client import get_admin_client
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 
 class EventHandler():
     def __init__(self, client):
@@ -33,7 +33,7 @@ class EventHandler():
                 start_str = "N/A"
             print(f"{e['id']} | {e['name'][:25]:25} | {start_str:20} | {e['tier']:4} | {e['complete']}")
 
-    def append_event(self, name, tier=0, start_weekend=None, end_date=None):
+    def append_event(self, name, tier=0, start_weekend=None, end_date=None, utc_offset=0):
         tier_exists = (
             self.admin_client
             .table("distributions")
@@ -44,12 +44,16 @@ class EventHandler():
         if not tier_exists:
             raise ValueError(f"Tier {tier} does not exist in distributions table.")
 
-        image_path = f"{name.replace(" ", "_")}.webp"
+        tz = timezone(timedelta(hours=utc_offset))
+        start_local = datetime.strptime(start_weekend, "%d-%m-%Y").replace(hour=0,  minute=0,  second=0,  tzinfo=tz)
+        end_local   = datetime.strptime(end_date,      "%d-%m-%Y").replace(hour=23, minute=59, second=59, tzinfo=tz)
+
+        image_path = f"{name.replace(' ', '_')}.webp"
         payload = {
             "name": name,
             "tier": tier,
-            "start_weekend": datetime.strptime(start_weekend, "%d-%m-%Y").strftime("%Y-%m-%d"),
-            "end_date": datetime.strptime(end_date, "%d-%m-%Y").strftime("%Y-%m-%d") + " 23:59:59",
+            "start_weekend": start_local.isoformat(),
+            "end_date":      end_local.isoformat(),
             "image": image_path,
             "complete": "False"
         }
