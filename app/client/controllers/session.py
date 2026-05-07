@@ -250,6 +250,10 @@ class Session(Session):
         if baked:
             return baked
 
+        # players are baked-in only — skip network entirely
+        if image_type == "players":
+            return ImageCache.get_placeholder(image_type) or b""
+
         # 2. disk cache
         cached = ImageCache.get_cached(image_type, key)
         cached_etag = ImageCache.get_etag(image_type, key)
