@@ -14,7 +14,7 @@ class Session:
     Local cache connecting the frontend to backend services.
     All state is stored as class attributes and refreshed on demand.
     """
-    VERSION = "1.5.0"
+    VERSION = "2.0.0"
     SEASON = 13
     FORCE_COOLDOWN_SECONDS = 1
 
@@ -38,9 +38,11 @@ class Session:
         # system state
         cls.blocking_state          = True
         cls.warning_message         = None
+        cls.prompt_message          = None
         cls.banner_message          = None
         cls.updated_at              = None
-        cls.min_version             = cls.VERSION
+        cls.latest_version          = None
+        cls.min_version             = None
 
         # avatars
         cls.avatar_cache            = {}
@@ -109,17 +111,24 @@ class Session(Session):
             cls.blocking_state      = system_state["blocking"]
             cls.banner_message      = system_state["banner_message"]
             cls.warning_message     = system_state["warning_message"]
-            cls.min_version         = system_state["version"]
+            cls.latest_version      = system_state["version"]
+            cls.min_version         = system_state["min_version"]
             cls.updated_at          = system_state["updated_at"]
 
             client_version = version.parse(cls.VERSION.strip('"'))
             server_version = version.parse(cls.min_version.strip('"'))
+            latest_version = version.parse(cls.latest_version.strip('"'))
 
-            if server_version.release[0] > client_version.release[0]:
+            if server_version.release > client_version.release or latest_version.release[0] > client_version.release[0]:
                 cls.blocking_state  = True
                 cls.warning_message = (
-                    f"Unsupported Version, please download the latest version "
+                    f"This version is no longer supported. You can download the latest version "
                     f"({server_version}) at: "
+                    f"https://fararjeh-fgc.com/fantasysf6"
+                )
+            elif latest_version.release > client_version.release:
+                cls.prompt_message = (
+                    f"A new version ({cls.latest_version}) is available at: "
                     f"https://fararjeh-fgc.com/fantasysf6"
                 )
             return cls.blocking_state

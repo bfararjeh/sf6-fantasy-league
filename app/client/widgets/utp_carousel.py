@@ -133,7 +133,7 @@ class _UTPCarousel(QWidget):
         try:
             center_x = self.width() // 2
             card_w = self._card_width()
-            base_img_size = 135
+            base_img_size = 115
 
             for offset in range(-3, 4):
                 i = int(round(self._index)) + offset
@@ -159,7 +159,8 @@ class _UTPCarousel(QWidget):
                     Qt.TransformationMode.SmoothTransformation
                 )
                 img_x = cx - img_size // 2
-                img_y = (base_img_size - img_size) // 2
+                v_pad = (self.height() - base_img_size) // 2
+                img_y = v_pad + (base_img_size - img_size) // 2
                 painter.drawPixmap(img_x, img_y, px)
 
                 if self._selected == player:

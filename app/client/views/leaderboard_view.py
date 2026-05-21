@@ -3,6 +3,7 @@ from PyQt6.QtGui import QColor, QPixmap
 from PyQt6.QtWidgets import (
     QApplication,
     QDialog,
+    QFileDialog,
     QFrame,
     QGridLayout,
     QHBoxLayout,
@@ -60,7 +61,7 @@ class LeaderboardView(QWidget):
         self.content_layout = QVBoxLayout(self.content_widget)
         self.content_layout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
         self.content_layout.setContentsMargins(50, 15, 50, 15)
-        self.content_layout.setSpacing(10)
+        self.content_layout.setSpacing(0)
 
         scroll.setWidget(self.content_widget)
 
@@ -135,6 +136,13 @@ class LeaderboardView(QWidget):
         self.leaguemate_layout = QVBoxLayout()
         self.leaguemate_layout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
 
+        self.export_btn = QPushButton("Export League")
+        self.export_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.export_btn.setStyleSheet(BUTTON_STYLESHEET_A)
+        self.export_btn.clicked.connect(self._export_league)
+
+        layout.addWidget(self.export_btn, alignment=Qt.AlignmentFlag.AlignCenter)
+        layout.addSpacerItem(QSpacerItem(0,15))
         layout.addLayout(self.leaguemate_layout)
 
         return container
@@ -360,7 +368,7 @@ class LeaderboardView(QWidget):
         return slot
 
 
-# -- LAYOUT STUFF --
+# -- HELPERS --
 
     def _refresh(self, force=0):
         Session.init_leaderboards(force)
@@ -389,6 +397,7 @@ class LeaderboardView(QWidget):
             if widget:
                 widget.deleteLater()
 
+        self.export_btn.setVisible(bool(self.leaguemate_data))
         if self.leaguemate_data:
             self.leaguemate_container.setVisible(True)
 
@@ -429,6 +438,138 @@ class LeaderboardView(QWidget):
             ranked.append(team)
 
         return ranked
+
+    def _export_league(self):
+        SoundManager.play("button")
+
+        data = self.leaguemate_data
+        if not data:
+            return
+
+        league_name = data[0].get("league_name", "League")
+        sorted_teams = sorted(data, key=lambda t: t["total_points"], reverse=True)
+        ranked_teams = self._apply_ranks(sorted_teams)
+
+        AVATAR_SIZE  = 120
+        PLAYER_SIZE  = 100
+        ROW_H        = 160
+        dialog_w     = 980
+        dialog_h     = 100 + len(ranked_teams) * (ROW_H + 14) + 60
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle(league_name)
+        dialog.setStyleSheet("background: #0A0F2E;")
+        dialog.setFixedSize(dialog_w, dialog_h)
+
+        root = QVBoxLayout(dialog)
+        root.setContentsMargins(20, 16, 20, 16)
+        root.setSpacing(10)
+
+        # league name header
+        title = QLabel(league_name)
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title.setStyleSheet("font-size: 64px; font-weight: bold; color: #FFFFFF;")
+        root.addWidget(title)
+
+        for team in ranked_teams:
+            rank       = team.get("rank", 0)
+            rank_color = self.RANK_STYLES.get(rank, "#FFFFFF")
+
+            row_frame = QFrame()
+            row_frame.setObjectName("rowFrame")
+            row_frame.setStyleSheet("""
+                QFrame#rowFrame {
+                    background-color: #090E2B;
+                    border: 1px solid #2A2F5A;
+                    border-radius: 8px;
+                }
+            """)
+            row_frame.setFixedHeight(ROW_H)
+
+            row_layout = QHBoxLayout(row_frame)
+            row_layout.setContentsMargins(12, 8, 12, 8)
+            row_layout.setSpacing(12)
+
+            # avatar
+            avatar_lbl = QLabel()
+            avatar_lbl.setFixedSize(AVATAR_SIZE, AVATAR_SIZE)
+            avatar_lbl.setStyleSheet("border: 2px solid #FFFFFF; border-radius: 4px;")
+            avatar_lbl.setPixmap(
+                Session.get_pixmap("avatars", str(team["user_id"])).scaled(
+                    AVATAR_SIZE, AVATAR_SIZE,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
+            )
+            row_layout.addWidget(avatar_lbl, alignment=Qt.AlignmentFlag.AlignVCenter)
+
+            # username + team name + points
+            info = QVBoxLayout()
+            info.setSpacing(2)
+            info.setAlignment(Qt.AlignmentFlag.AlignVCenter)
+
+            user_lbl = QLabel(f"#{rank}  {team['user_name']}")
+            user_lbl.setStyleSheet(f"font-size: 22px; font-weight: bold; color: {rank_color};")
+
+            team_lbl = QLabel(team["team_name"])
+            team_lbl.setStyleSheet("font-size: 16px; color: #AAAAAA;")
+
+            pts_lbl = QLabel(f"{team['total_points']} pts")
+            pts_lbl.setStyleSheet("font-size: 16px; color: #3EA702; font-weight: bold;")
+
+            info.addWidget(user_lbl)
+            info.addWidget(team_lbl)
+            info.addWidget(pts_lbl)
+
+            row_layout.addLayout(info)
+            row_layout.addStretch()
+
+            # player images + points
+            for i in range(5):
+                players = team.get("players", [])
+                p_col = QVBoxLayout()
+                p_col.setSpacing(2)
+                p_col.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignHCenter)
+
+                img_lbl = QLabel()
+                img_lbl.setFixedSize(PLAYER_SIZE, PLAYER_SIZE)
+                img_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+                pts_lbl = QLabel()
+                pts_lbl.setFixedWidth(PLAYER_SIZE)
+                pts_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                pts_lbl.setStyleSheet("font-size: 13px; color: #CCCCCC;")
+
+                if i < len(players):
+                    p = players[i]
+                    img_lbl.setPixmap(
+                        Session.get_pixmap("players", p["player_name"]).scaled(
+                            PLAYER_SIZE, PLAYER_SIZE,
+                            Qt.AspectRatioMode.KeepAspectRatio,
+                            Qt.TransformationMode.SmoothTransformation,
+                        )
+                    )
+                    pts_lbl.setText(str(p.get("points", 0)))
+                else:
+                    img_lbl.setStyleSheet("border: 1px dashed #444; background: #1A1F4D; color: #555;")
+                    img_lbl.setText("?")
+
+                p_col.addWidget(img_lbl, alignment=Qt.AlignmentFlag.AlignHCenter)
+                p_col.addWidget(pts_lbl)
+                row_layout.addLayout(p_col)
+
+            root.addWidget(row_frame)
+
+        dialog.show()
+        QApplication.processEvents()
+
+        path, _ = QFileDialog.getSaveFileName(
+            dialog, "Save Image", f"{league_name}.png", "PNG Image (*.png)"
+        )
+        if path:
+            dialog.grab().save(path)
+
+        dialog.exec()
 
     def showEvent(self, event):
         super().showEvent(event)

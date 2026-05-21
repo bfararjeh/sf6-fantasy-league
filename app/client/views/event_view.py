@@ -70,7 +70,13 @@ class EventView(QWidget):
         now = datetime.now(timezone.utc)
         self.now_year, self.now_month = now.year, now.month
 
-        self.current_event_idx = next(
+        live_idx = next(
+            (i for i, item in enumerate(self.event_data)
+             if datetime.fromisoformat(item["start_weekend"]) <= now
+             and datetime.fromisoformat(item["end_date"]) >= now),
+            None,
+        )
+        self.current_event_idx = live_idx if live_idx is not None else next(
             (i for i, item in enumerate(self.event_data)
              if datetime.fromisoformat(item["start_weekend"]) > now),
             len(self.event_data) - 1

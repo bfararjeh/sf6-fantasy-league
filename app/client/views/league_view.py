@@ -190,8 +190,8 @@ class LeagueView(QWidget):
         self.post_draft_feed = self._build_post_draft_feed()
 
         self.right_panel = QStackedWidget()
-        self.right_panel.addWidget(self.stat_container)   # page 0: stats
-        self.right_panel.addWidget(self.post_draft_feed)  # page 1: feed + chat
+        self.right_panel.addWidget(self.post_draft_feed)  # page 0: feed + chat
+        self.right_panel.addWidget(self.stat_container)   # page 1: stats
 
         vline = QFrame()
         vline.setFrameShape(QFrame.Shape.VLine)
@@ -990,7 +990,7 @@ class LeagueView(QWidget):
 
         # update stats when clicked; switch off feed if open
         def _on_click(e, p=player):
-            self.right_panel.setCurrentIndex(0)
+            self.right_panel.setCurrentIndex(1)
             self._update_stat_container(p)
         image.mousePressEvent = _on_click
 

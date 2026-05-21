@@ -33,8 +33,11 @@ class LeaderboardService():
             .select("""
                 team_id,
                 team_name,
+                league:leagues!teams_league_id_fkey(
+                    league_name
+                ),
                 owner:managers!teams_team_owner_fkey(
-                    manager_name, 
+                    manager_name,
                     user_id
                 ),
                 roster:team_players(
@@ -48,6 +51,7 @@ class LeaderboardService():
             .eq("league_id", my_league)
         ).data
 
+        league_name = data[0]["league"]["league_name"] if data else None
         team_name_map = {t["team_id"]: t["team_name"] for t in data}
 
         owner_map = {
@@ -88,6 +92,7 @@ class LeaderboardService():
 
         return [
             {
+                "league_name": league_name,
                 "team_name": data["team_name"],
                 "user_name": data["owner_username"]["username"],
                 "user_id": data["user_id"],

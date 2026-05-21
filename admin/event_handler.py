@@ -44,7 +44,7 @@ class EventHandler():
         if not tier_exists:
             raise ValueError(f"Tier {tier} does not exist in distributions table.")
 
-        tz = timezone(timedelta(hours=utc_offset))
+        tz = timezone(timedelta(hours=int(utc_offset)))
         start_local = datetime.strptime(start_weekend, "%d-%m-%Y").replace(hour=0,  minute=0,  second=0,  tzinfo=tz)
         end_local   = datetime.strptime(end_date,      "%d-%m-%Y").replace(hour=23, minute=59, second=59, tzinfo=tz)
 
