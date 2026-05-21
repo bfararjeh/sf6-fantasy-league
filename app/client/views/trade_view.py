@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from PyQt6.QtCore import QPoint, QSize, Qt, QTimer
 from PyQt6.QtGui import QPixmap
@@ -268,8 +268,21 @@ class TradeView(QWidget):
         "background-color: #b0131e; padding: 5px 10px; border-radius: 8px;"
         )
 
+        self._window_end_label = QLabel()
+        self._window_end_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._window_end_label.setStyleSheet("font-size: 12px; color: #AAAAAA;")
+
+        self._window_timer = QTimer()
+        self._window_timer.setTimerType(Qt.TimerType.PreciseTimer)
+        self._window_timer.setInterval(500)
+        self._window_timer.timeout.connect(self._tick_window)
+        self._window_timer.start()
+        self._tick_window()
+
         layout.addStretch()
         layout.addWidget(self.remaining, alignment=Qt.AlignmentFlag.AlignCenter)
+        layout.addSpacerItem(QSpacerItem(0,10))
+        layout.addWidget(self._window_end_label, alignment=Qt.AlignmentFlag.AlignCenter)
 
         return widget
 
@@ -1489,6 +1502,8 @@ class TradeView(QWidget):
             self.view_stack.setCurrentWidget(self._countdown_page)
 
     def _invalidate_pages(self):
+        if hasattr(self, "_window_timer") and self._window_timer.isActive():
+            self._window_timer.stop()
         for attr in ("_countdown_page", "_selection_page", "_utp_page", "_utu_page", "_utu_create_page", "_history_page"):
             if hasattr(self, attr):
                 widget = getattr(self, attr)
@@ -1511,6 +1526,23 @@ class TradeView(QWidget):
 
     def _hide_spinner(self):
         self._spinner.stop()
+
+    def _tick_window(self):
+        if not getattr(self, "_window_end_label", None) or not self.current_window:
+            return
+        target = datetime.fromisoformat(self.current_window["end_date"])
+        remaining = target - datetime.now(timezone.utc)
+        total = int(remaining.total_seconds())
+        if total <= 0:
+            self._window_end_label.setText("Window closing...")
+            if hasattr(self, "_window_timer"):
+                self._window_timer.stop()
+            return
+        days    = total // 86400
+        hours   = (total % 86400) // 3600
+        minutes = (total % 3600) // 60
+        seconds = total % 60
+        self._window_end_label.setText(f"Window closes in {days:02d}d {hours:02d}h {minutes:02d}m {seconds:02d}s")
 
     def _tick(self):
         if self.current_window:

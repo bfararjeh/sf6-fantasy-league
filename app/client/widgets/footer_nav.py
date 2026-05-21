@@ -39,6 +39,8 @@ class FooterNav(QWidget):
         if Session.blocking_state:
             self._show_warning()
         else:
+            if Session.prompt_message:
+                self._show_prompt()
             self._show_buttons()
 
     def _clear(self):
@@ -53,7 +55,6 @@ class FooterNav(QWidget):
         self.setFixedHeight(48)
 
     def _show_buttons(self):
-        self.setFixedHeight(48)
         for text, method in self._BUTTONS:
             btn = QPushButton(text)
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -61,6 +62,22 @@ class FooterNav(QWidget):
             btn.setStyleSheet(FOOTER_BUTTON_STYLE)
             btn.clicked.connect(getattr(self.app, method))
             self.button_bar.addWidget(btn, stretch=1)
+
+    def _show_prompt(self):
+        prompt_label = QLabel(Session.prompt_message)
+        prompt_label.setWordWrap(True)
+        prompt_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        prompt_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        prompt_label.setFixedHeight(24)
+        prompt_label.setStyleSheet("""
+            background-color: #2E7D32;
+            color: #FFFFFF;
+            font-size: 12px;
+            font-weight: bold;
+            padding: 0 8px;
+        """)
+        self.root_layout.insertWidget(0, prompt_label)
+        self.setFixedHeight(72)
 
     def _show_warning(self):
         self.setFixedHeight(100)
